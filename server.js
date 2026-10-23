@@ -2,7 +2,8 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
-const { Table } = require('./game');
+const db = require('./db');
+const { CashRoom, TourneyRoom } = require('./rooms');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,21 +12,34 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/health', (req, res) => res.send('ok'));
 
-const tables = new Map();
+const rooms = new Map();
+const userRoom = new Map();   // userId -> room code
+const userSocket = new Map(); // userId -> socket id
 
-const hooks = {
-  emit(table) {
-    for (const s of table.seats) {
-      if (s && s.connected) io.to(s.socketId).emit('state', table.viewFor(s.id));
-    }
+function me(u) {
+  return Object.assign(db.pub(u), { room: userRoom.get(u.id) || null });
+}
+
+let lobbyTimer = null;
+const ctx = {
+  io,
+  userRoom,
+  lobbyChanged() {
+    if (lobbyTimer) return;
+    lobbyTimer = setTimeout(() => { lobbyTimer = null; io.to('lobby').emit('rooms', roomList()); }, 500);
   },
-  log(table, text) {
-    const msg = { system: true, text, ts: Date.now() };
-    table.chat.push(msg);
-    if (table.chat.length > 150) table.chat.shift();
-    io.to(table.code).emit('chat', msg);
+  pushMe(uid) {
+    const sid = userSocket.get(uid);
+    const u = db.byId(uid);
+    if (sid && u) io.to(sid).emit('me', me(u));
   },
 };
+
+function roomList() {
+  return [...rooms.values()]
+    .filter(r => !(r.mode === 'tourney' && r.status === 'finished'))
+    .map(r => r.summary());
+}
 
 function newCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -33,99 +47,210 @@ function newCode() {
   do {
     code = '';
     for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  } while (tables.has(code));
+  } while (rooms.has(code));
   return code;
 }
 
+function closeRoom(code) {
+  const r = rooms.get(code);
+  if (!r) return;
+  r.close();
+  rooms.delete(code);
+  ctx.lobbyChanged();
+}
+
 io.on('connection', socket => {
-  let table = null;
-  let pid = null;
+  let user = null;
+  let token = null;
 
-  function join(code, name, playerId, cb) {
-    code = String(code || '').trim().toUpperCase();
-    const t = tables.get(code);
-    if (!t) return cb && cb({ error: '방을 찾을 수 없어요. 코드를 확인해주세요.' });
-    name = String(name || '').trim().slice(0, 12) || '플레이어';
-    playerId = String(playerId || '').slice(0, 64);
-    if (!playerId) return cb && cb({ error: '잘못된 요청이에요' });
+  const guard = fn => (...args) => {
+    const cb = typeof args[args.length - 1] === 'function' ? args.pop() : () => {};
+    if (!user) return cb({ error: '로그인이 필요해요' });
+    try { fn(cb, ...args); } catch (e) { console.error(e); cb({ error: '서버 오류가 났어요' }); }
+  };
 
-    if (table && table !== t) {
-      table.removePlayer(pid);
-      socket.leave(table.code);
-    }
-    const r = t.addPlayer(playerId, name, socket.id);
-    if (r.error) return cb && cb(r);
-    table = t;
-    pid = playerId;
-    socket.join(code);
-    cb && cb({ ok: true, code });
-    socket.emit('chatHistory', t.chat);
-    if (!r.rejoined) t.log(`${name} 님이 입장했어요`);
-    t.emit();
+  function bind(u, t) {
+    user = u;
+    token = t;
+    const old = userSocket.get(u.id);
+    if (old && old !== socket.id) io.to(old).emit('kicked', '다른 곳에서 로그인해서 연결이 끊겼어요');
+    userSocket.set(u.id, socket.id);
+    socket.join('lobby');
   }
 
-  socket.on('create', ({ name, playerId } = {}, cb) => {
+  function roomOfUser() {
+    const code = userRoom.get(user.id);
+    return code ? rooms.get(code) : null;
+  }
+
+  function enterRoom(room, buyIn, cb) {
+    const cur = userRoom.get(user.id);
+    if (cur && cur !== room.code && rooms.has(cur)) return cb({ error: '이미 다른 방에 참여 중이에요', room: cur });
+    const r = room.join(user, socket.id, buyIn);
+    if (r.error || r.needBuyIn) return cb(r);
+    userRoom.set(user.id, room.code);
+    socket.join('room:' + room.code);
+    socket.emit('chatHistory', room.chat);
+    room.emit();
+    ctx.pushMe(user.id);
+    cb({ ok: true, code: room.code });
+  }
+
+  socket.on('register', ({ username, password } = {}, cb = () => {}) => {
+    const r = db.register(username, password);
+    if (r.error) return cb(r);
+    bind(r.user, r.token);
+    cb({ token: r.token, user: me(r.user) });
+  });
+
+  socket.on('login', ({ username, password } = {}, cb = () => {}) => {
+    const r = db.login(username, password);
+    if (r.error) return cb(r);
+    bind(r.user, r.token);
+    cb({ token: r.token, user: me(r.user) });
+  });
+
+  socket.on('auth', ({ token: t } = {}, cb = () => {}) => {
+    const u = db.byToken(t);
+    if (!u) return cb({ error: '다시 로그인해주세요' });
+    bind(u, t);
+    cb({ user: me(u) });
+  });
+
+  socket.on('logout', guard(cb => {
+    const r = roomOfUser();
+    if (r) { r.leave(user.id); socket.leave('room:' + r.code); }
+    db.logout(token);
+    userSocket.delete(user.id);
+    user = null;
+    cb({ ok: true });
+  }));
+
+  socket.on('rooms', guard(cb => cb(roomList())));
+  socket.on('ranking', guard(cb => cb(db.ranking())));
+  socket.on('me', guard(cb => cb(me(user))));
+
+  socket.on('avatar', guard((cb, pixels) => {
+    if (!/^[0-9a-f]{256}$/.test(String(pixels))) return cb({ error: '잘못된 그림이에요' });
+    user.avatar = pixels;
+    db.save();
+    const r = roomOfUser();
+    if (r) { const s = r.table.seat(user.id); if (s) { s.avatar = pixels; r.emit(); } }
+    ctx.pushMe(user.id);
+    cb({ ok: true });
+  }));
+
+  socket.on('buyTicket', guard((cb, n) => {
+    n = Math.floor(Number(n)) || 1;
+    if (n < 1 || n > 10) return cb({ error: '1~10장까지 살 수 있어요' });
+    const cost = n * db.TICKET_PRICE;
+    if (user.assets < cost) return cb({ error: '자산이 부족해요' });
+    user.assets -= cost;
+    user.tickets += n;
+    db.save();
+    ctx.pushMe(user.id);
+    cb({ ok: true });
+  }));
+
+  socket.on('createRoom', guard((cb, opts = {}) => {
+    const cur = userRoom.get(user.id);
+    if (cur && rooms.has(cur)) return cb({ error: '이미 다른 방에 참여 중이에요', room: cur });
     const code = newCode();
-    tables.set(code, new Table(code, hooks));
-    join(code, name, playerId, cb);
-  });
+    let room;
+    if (opts.mode === 'tourney') {
+      if (user.tickets < 1) return cb({ error: '토너먼트 티켓이 필요해요 (1억)', needTicket: true });
+      room = new TourneyRoom(ctx, code, opts.name, user, opts);
+    } else {
+      room = new CashRoom(ctx, code, opts.name, user, opts);
+      if (opts.buyIn == null) return cb({ needBuyIn: { min: room.buyMin, max: room.buyMax, def: room.buyDef, sb: room.table.sb, bb: room.table.bb } });
+    }
+    rooms.set(code, room);
+    enterRoom(room, opts.buyIn, res => {
+      if (res.error) rooms.delete(code);
+      cb(res);
+      ctx.lobbyChanged();
+    });
+  }));
 
-  socket.on('join', ({ room, name, playerId } = {}, cb) => join(room, name, playerId, cb));
+  socket.on('joinRoom', guard((cb, { code, buyIn } = {}) => {
+    const room = rooms.get(String(code || '').trim().toUpperCase());
+    if (!room) return cb({ error: '방을 찾을 수 없어요' });
+    enterRoom(room, buyIn, cb);
+  }));
 
-  socket.on('start', () => {
-    if (!table) return;
-    const r = table.start(pid);
-    if (r.error) socket.emit('toast', r.error);
-  });
+  socket.on('leaveRoom', guard(cb => {
+    const r = roomOfUser();
+    if (r) {
+      r.leave(user.id);
+      socket.leave('room:' + r.code);
+      if (r.isEmpty()) closeRoom(r.code);
+    }
+    ctx.pushMe(user.id);
+    cb({ ok: true });
+  }));
 
-  socket.on('action', ({ type, amount } = {}) => {
-    if (!table) return;
-    const r = table.act(pid, type, amount);
-    if (r && r.error) socket.emit('toast', r.error);
-  });
+  socket.on('start', guard(cb => {
+    const r = roomOfUser();
+    if (!r || r.mode !== 'tourney') return cb({ error: '토너먼트 방이 아니에요' });
+    cb(r.start(user.id));
+  }));
 
-  socket.on('rebuy', () => {
-    if (!table) return;
-    const r = table.rebuy(pid);
-    if (r.error) socket.emit('toast', r.error);
-  });
+  socket.on('action', guard((cb, { type, amount } = {}) => {
+    const r = roomOfUser();
+    if (!r) return cb({ error: '방에 없어요' });
+    cb(r.table.act(user.id, type, amount));
+  }));
 
-  socket.on('chat', text => {
-    if (!table) return;
-    const i = table.seatOf(pid);
-    if (i < 0) return;
+  socket.on('rebuy', guard(cb => {
+    const r = roomOfUser();
+    if (!r || r.mode !== 'tourney') return cb({ error: '토너먼트가 아니에요' });
+    cb(r.rebuy(user));
+  }));
+
+  socket.on('withdraw', guard(cb => {
+    const r = roomOfUser();
+    if (!r || r.mode !== 'tourney') return cb({ error: '토너먼트가 아니에요' });
+    cb(r.withdraw(user.id));
+  }));
+
+  socket.on('topUp', guard((cb, amount) => {
+    const r = roomOfUser();
+    if (!r || r.mode !== 'cash') return cb({ error: '일반모드가 아니에요' });
+    cb(r.topUp(user, amount));
+  }));
+
+  socket.on('chat', guard((cb, text) => {
+    const r = roomOfUser();
+    if (!r) return cb({ error: '방에 없어요' });
     text = String(text || '').trim().slice(0, 200);
-    if (!text) return;
-    const msg = { name: table.seats[i].name, seat: i, text, ts: Date.now() };
-    table.chat.push(msg);
-    if (table.chat.length > 150) table.chat.shift();
-    io.to(table.code).emit('chat', msg);
-  });
-
-  socket.on('leave', () => {
-    if (!table) return;
-    const s = table.seats[table.seatOf(pid)];
-    if (s) table.log(`${s.name} 님이 나갔어요`);
-    table.removePlayer(pid);
-    socket.leave(table.code);
-    table = null;
-  });
+    if (!text) return cb({ ok: true });
+    r.pushChat({ name: user.username, uid: user.id, text, ts: Date.now() });
+    cb({ ok: true });
+  }));
 
   socket.on('disconnect', () => {
-    if (table) table.setConnected(pid, socket.id, false);
+    if (!user || userSocket.get(user.id) !== socket.id) return;
+    userSocket.delete(user.id);
+    const r = roomOfUser();
+    if (r) r.setConnected(user.id, socket.id, false);
   });
 });
 
-// 아무도 접속 안 한 방은 30분 뒤 정리
+// 정리: 일반모드에서 3분 넘게 끊긴 사람은 자동 정산 퇴장, 빈 방/끝난 토너먼트 정리
 setInterval(() => {
   const now = Date.now();
-  for (const [code, t] of tables) {
-    if (t.connectedCount() === 0 && now - t.lastActive > 30 * 60 * 1000) {
-      t.destroy();
-      tables.delete(code);
+  for (const [code, r] of rooms) {
+    if (r.mode === 'cash') {
+      for (const s of r.seated) {
+        if (!s.connected && s.awaySince && now - s.awaySince > 3 * 60 * 1000) r.leave(s.id);
+      }
     }
+    const anyone = r.seated.some(s => s.connected);
+    if (r.isEmpty()) closeRoom(code);
+    else if (r.mode === 'tourney' && r.status === 'finished' && now - r.finishedAt > 10 * 60 * 1000) closeRoom(code);
+    else if (!anyone && now - r.lastActive > 30 * 60 * 1000) closeRoom(code);
   }
-}, 5 * 60 * 1000);
+}, 30 * 1000);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`홀덤 서버 실행 중: http://localhost:${PORT}`));

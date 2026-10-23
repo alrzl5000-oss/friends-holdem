@@ -1,73 +1,30 @@
-# 친구 홀덤 ♠♥♣♦
+# FRIENDS HOLD'EM ♠♥♣♦
 
-친구들끼리 하는 텍사스 홀덤 웹게임 (실시간 채팅 포함). 진짜 돈 없이 칩으로만 플레이.
+친구들끼리 하는 텍사스 홀덤 웹게임. 진짜 돈 없이 게임 머니로만 플레이. 폰 세로 화면 기준.
 
-- 방 만들기 → 4자리 코드 / 초대 링크로 입장 (최대 8명)
-- 노리밋 홀덤, 사이드팟·스플릿팟 자동 계산
-- 내 차례 30초 제한 (시간 넘으면 자동 체크/폴드)
-- 새로고침·접속 끊김 후 다시 들어오면 같은 자리로 복귀
-- 칩 다 잃으면 리바이 버튼
-- 모바일 지원
+## 기능
+- 회원가입/로그인 (가입 시 초기 자산 10억원)
+- 총 자산 = 보유 현금 + 테이블 금액 + 티켓, 랭킹은 총 자산 순
+- **일반모드**: 블라인드 3단계 중 선택, 바이인 40~200BB, 나가면 남은 금액 자산으로 정산, 다 잃으면 충전
+- **토너먼트**: 티켓 1장(1억) 필요 · 시작 1억 · 블라인드 50만/100만부터 레벨마다 상승(3/5/7/10분)
+  - 리바이 2회까지 (레벨 6까지, 티켓 1장씩) · 중간 기권 가능
+  - 상금 = 사용된 티켓 합계 · 2~4명 우승 독식 / 5~6명 70·30% / 7~8명 50·30·20%
+- 도트(16×16) 프로필 그리기
+- 족보 버튼 + 리버까지 메이드 확률, 내 패/보드 족보 표시
+- 메이드·승리·패배·우승 이펙트, 실시간 채팅
 
-## 1. 내 컴퓨터에서 실행해보기
-
-[Node.js](https://nodejs.org) (18 이상) 설치 후:
-
+## 실행
 ```bash
 npm install
 npm start
 ```
+http://localhost:3000
 
-브라우저에서 http://localhost:3000 열기. 창을 여러 개 띄우면 혼자서도 테스트 가능 (시크릿 창 써야 서로 다른 사람으로 인식돼요).
-
-## 2. GitHub에 올리기
-
-1. https://github.com/new 에서 새 저장소 만들기 (예: `friends-holdem`, README 추가 체크 해제)
-2. 이 폴더에서:
-
-```bash
-git init
-git add .
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/내아이디/friends-holdem.git
-git push -u origin main
-```
-
-> 터미널이 불편하면 GitHub 저장소 페이지의 **uploading an existing file** 링크로 파일을 드래그해서 올려도 돼요. (`node_modules` 폴더는 올리지 마세요)
-
-## 3. Railway로 배포
-
-1. https://railway.com 로그인 (GitHub 계정으로)
-2. **New Project → Deploy from GitHub repo** → 방금 만든 저장소 선택
-3. 배포가 끝나면 서비스 클릭 → **Settings → Networking → Generate Domain**
-4. 생긴 주소(`xxx.up.railway.app`)로 접속 → 방 만들고 **초대 링크 복사** 해서 친구들한테 보내기
-
-별도 설정 필요 없어요. Railway가 `npm start`로 실행하고 포트도 자동으로 잡아요.
-GitHub에 새로 push하면 Railway가 자동으로 다시 배포해요.
-
-> 서버가 재시작되면(재배포 등) 진행 중인 방은 사라져요. 게임 중엔 push 하지 마세요.
+## Railway 배포
+- GitHub 저장소 연결 → 자동 배포
+- **볼륨을 `/data`에 붙이고 환경변수 `DATA_DIR=/data`** 설정 (회원·자산 저장용 — 없으면 재배포 때 초기화됨)
 
 ## 설정 바꾸기
-
-`game.js` 맨 위에서 수정:
-
-| 항목 | 기본값 |
-|---|---|
-| `START_CHIPS` 시작 칩 | 1000 |
-| `SMALL_BLIND` / `BIG_BLIND` | 10 / 20 |
-| `TURN_MS` 차례 제한시간 | 30초 |
-| `MAX_SEATS` 최대 인원 | 8 |
-
-## 파일 구조
-
-```
-server.js        서버 (방, 채팅, 접속 관리)
-game.js          홀덤 규칙 (셔플, 베팅, 족보 판정, 팟 분배)
-public/
-  index.html     화면
-  style.css      디자인
-  client.js      화면 동작
-```
-
-카드는 서버에서만 섞고, 각 사람에게는 자기 카드만 보내기 때문에 개발자도구로 남의 패를 훔쳐볼 수 없어요.
+- 초기 자산 / 티켓 가격: `db.js` 맨 위
+- 토너먼트 블라인드 표, 리바이 규칙, 상금 비율: `rooms.js` 맨 위
+- 일반모드 블라인드 단계: `rooms.js`의 `CASH_TIERS`

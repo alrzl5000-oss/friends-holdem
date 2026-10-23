@@ -1,18 +1,8 @@
-// 텍사스 홀덤 게임 로직 (서버에서만 실행 — 카드는 서버가 섞고 관리)
+// 텍사스 홀덤 테이블 엔진 (서버에서만 카드를 섞고 관리)
 const crypto = require('crypto');
+const { bestHand, compareScore } = require('./public/poker.js');
 
-// ===== 설정값 (원하면 여기만 바꾸면 됨) =====
-const MAX_SEATS = 8;
-const START_CHIPS = 1000;
-const SMALL_BLIND = 10;
-const BIG_BLIND = 20;
-const TURN_MS = 30000;      // 내 차례 제한시간
-const AWAY_TURN_MS = 8000;  // 접속 끊긴 사람 제한시간
-const NEXT_HAND_MS = 6000;  // 핸드 끝나고 다음 핸드까지
-const RUNOUT_MS = 1300;     // 올인 후 보드 깔리는 간격
-
-const HAND_NAMES = ['하이카드', '원페어', '투페어', '트리플', '스트레이트', '플러시', '풀하우스', '포카드', '스트레이트 플러시'];
-const STAGE_NAMES = { preflop: '프리플랍', flop: '플랍', turn: '턴', river: '리버' };
+const STAGE_NAMES = { preflop: '프리플랍', flop: '플랍', turn: '턴', river: '리버', showdown: '쇼다운' };
 
 function newDeck() {
   const deck = [];
@@ -24,99 +14,50 @@ function newDeck() {
   return deck;
 }
 
-// 5장 점수: [족보, 타이브레이커...] — 배열 앞에서부터 비교
-function score5(cards) {
-  const rs = cards.map(c => c.r).sort((a, b) => b - a);
-  const flush = cards.every(c => c.s === cards[0].s);
-  const uniq = [...new Set(rs)];
-  let straightHigh = 0;
-  if (uniq.length === 5) {
-    if (uniq[0] - uniq[4] === 4) straightHigh = uniq[0];
-    else if (uniq[0] === 14 && uniq[1] === 5) straightHigh = 5; // A-2-3-4-5
-  }
-  const cnt = {};
-  rs.forEach(r => { cnt[r] = (cnt[r] || 0) + 1; });
-  const groups = Object.entries(cnt).map(([r, c]) => [c, +r]).sort((a, b) => b[0] - a[0] || b[1] - a[1]);
-  const gr = groups.map(g => g[1]);
-  if (straightHigh && flush) return [8, straightHigh];
-  if (groups[0][0] === 4) return [7, ...gr];
-  if (groups[0][0] === 3 && groups[1][0] === 2) return [6, ...gr];
-  if (flush) return [5, ...rs];
-  if (straightHigh) return [4, straightHigh];
-  if (groups[0][0] === 3) return [3, ...gr];
-  if (groups[0][0] === 2 && groups[1][0] === 2) return [2, ...gr];
-  if (groups[0][0] === 2) return [1, ...gr];
-  return [0, ...rs];
-}
-
-function compareScore(a, b) {
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const d = (a[i] || 0) - (b[i] || 0);
-    if (d) return d;
-  }
-  return 0;
-}
-
-function handName(score) {
-  if (score[0] === 8 && score[1] === 14) return '로열 플러시';
-  return HAND_NAMES[score[0]];
-}
-
-// 7장 중 최고의 5장
-function bestHand(cards) {
-  let best = null;
-  const n = cards.length;
-  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) for (let c = b + 1; c < n; c++)
-    for (let d = c + 1; d < n; d++) for (let e = d + 1; e < n; e++) {
-      const five = [cards[a], cards[b], cards[c], cards[d], cards[e]];
-      const sc = score5(five);
-      if (!best || compareScore(sc, best.score) > 0) best = { score: sc, cards: five };
-    }
-  best.name = handName(best.score);
-  return best;
-}
-
 class Table {
-  constructor(code, hooks) {
-    this.code = code;
-    this.hooks = hooks; // { emit(table), log(table, text) }
-    this.seats = new Array(MAX_SEATS).fill(null);
-    this.sb = SMALL_BLIND;
-    this.bb = BIG_BLIND;
-    this.hostId = null;
+  // hooks: emit(), log(text), blinds() -> {sb,bb}, beforeHand() -> bool, handEnd(), seatRemoved(seat)
+  constructor(opts) {
+    this.opts = Object.assign({
+      maxSeats: 8, sb: 10, bb: 20, turnMs: 30000, awayMs: 8000,
+      nextHandMs: 6500, runoutMs: 1400, dealDisconnected: false,
+    }, opts);
+    this.hooks = opts.hooks;
+    this.seats = new Array(this.opts.maxSeats).fill(null);
+    this.sb = this.opts.sb;
+    this.bb = this.opts.bb;
     this.running = false;
-    this.stage = 'waiting'; // waiting | preflop | flop | turn | river | showdown
+    this.stage = 'waiting';
     this.dealer = -1;
     this.deck = [];
     this.community = [];
     this.currentBet = 0;
-    this.minRaise = BIG_BLIND;
+    this.minRaise = this.bb;
     this.turn = -1;
     this.turnDeadline = 0;
     this.handNo = 0;
     this.turnSeq = 0;
     this.result = null;
-    this.chat = [];
-    this.lastActive = Date.now();
     this.timer = null;
     this.runoutTimer = null;
     this.nextHandTimer = null;
   }
 
   // ---------- 유틸 ----------
-  emit() { this.lastActive = Date.now(); this.hooks.emit(this); }
-  log(text) { this.hooks.log(this, text); }
+  emit() { this.hooks.emit(); }
+  log(t) { this.hooks.log(t); }
+  get max() { return this.opts.maxSeats; }
   seatOf(id) { return this.seats.findIndex(s => s && s.id === id); }
+  seat(id) { return this.seats[this.seatOf(id)] || null; }
   inBetting() { return ['preflop', 'flop', 'turn', 'river'].includes(this.stage); }
   canAct(s) { return s && s.inHand && !s.folded && !s.allIn; }
   needsAct(s) { return this.canAct(s) && (!s.acted || s.bet < this.currentBet); }
   live() { return this.seats.map((s, i) => i).filter(i => this.seats[i] && this.seats[i].inHand && !this.seats[i].folded); }
   pot() { return this.seats.reduce((sum, s) => sum + (s ? s.total : 0), 0); }
-  readyCount() { return this.seats.filter(s => s && s.chips > 0 && s.connected && !s.leaving).length; }
-  connectedCount() { return this.seats.filter(s => s && s.connected).length; }
+  eligible(s) { return s && s.chips > 0 && !s.leaving && (this.opts.dealDisconnected || s.connected); }
+  readyCount() { return this.seats.filter(s => this.eligible(s)).length; }
   nextIdx(from, pred) {
-    for (let k = 1; k <= MAX_SEATS; k++) {
-      const j = (((from + k) % MAX_SEATS) + MAX_SEATS) % MAX_SEATS;
+    for (let k = 1; k <= this.max; k++) {
+      const j = (((from + k) % this.max) + this.max) % this.max;
       if (this.seats[j] && pred(this.seats[j])) return j;
     }
     return -1;
@@ -127,26 +68,25 @@ class Table {
   }
   destroy() {
     this.clearTimers();
-    clearTimeout(this.nextHandTimer);
+    clearTimeout(this.nextHandTimer); this.nextHandTimer = null;
+    this.running = false;
+  }
+  dropSeat(i) {
+    const s = this.seats[i];
+    this.seats[i] = null;
+    if (s && this.hooks.seatRemoved) this.hooks.seatRemoved(s);
   }
 
-  // ---------- 입장/퇴장 ----------
-  addPlayer(id, name, socketId) {
-    let i = this.seatOf(id);
-    if (i >= 0) {
-      const s = this.seats[i];
-      Object.assign(s, { socketId, connected: true, leaving: false, name });
-      this.maybeAutoStart();
-      return { seat: i, rejoined: true };
-    }
-    i = this.seats.findIndex(s => !s);
+  // ---------- 좌석 ----------
+  addPlayer(user, socketId, chips, extra = {}) {
+    const i = this.seats.findIndex(s => !s);
     if (i < 0) return { error: '자리가 꽉 찼어요 (최대 8명)' };
-    this.seats[i] = {
-      id, name, socketId, chips: START_CHIPS, hand: [], bet: 0, total: 0,
-      inHand: false, folded: true, allIn: false, acted: false, connected: true, leaving: false,
-      lastAction: '', revealed: false, bestName: '', won: 0, rebuys: 0,
-    };
-    if (!this.hostId || this.seatOf(this.hostId) < 0) this.hostId = id;
+    this.seats[i] = Object.assign({
+      id: user.id, name: user.username, avatar: user.avatar, socketId, chips,
+      hand: [], bet: 0, total: 0, inHand: false, folded: true, allIn: false, acted: false,
+      connected: true, leaving: false, lastAction: '', revealed: false, bestName: '', won: 0,
+      awaySince: 0,
+    }, extra);
     this.maybeAutoStart();
     return { seat: i };
   }
@@ -159,11 +99,7 @@ class Table {
       s.leaving = true;
       if (this.inBetting() && !s.folded && !s.allIn) this.foldOut(i);
     } else {
-      this.seats[i] = null;
-    }
-    if (this.hostId === id) {
-      const next = this.seats.find(x => x && !x.leaving && x.id !== id);
-      this.hostId = next ? next.id : null;
+      this.dropSeat(i);
     }
     this.emit();
   }
@@ -172,33 +108,13 @@ class Table {
     const i = this.seatOf(id);
     if (i < 0) return;
     const s = this.seats[i];
-    if (!connected && s.socketId !== socketId) return; // 이미 다른 탭/재접속으로 바뀜
+    if (!connected && s.socketId !== socketId) return;
     s.connected = connected;
-    if (!connected && i === this.turn && this.turnDeadline - Date.now() > AWAY_TURN_MS) this.startTimer();
+    s.awaySince = connected ? 0 : Date.now();
+    if (connected) s.socketId = socketId;
+    if (!connected && i === this.turn && this.turnDeadline - Date.now() > this.opts.awayMs) this.startTimer();
+    if (connected) this.maybeAutoStart();
     this.emit();
-  }
-
-  rebuy(id) {
-    const i = this.seatOf(id);
-    if (i < 0) return { error: '자리가 없어요' };
-    const s = this.seats[i];
-    if (s.chips > 0) return { error: '칩이 남아있을 땐 리바이할 수 없어요' };
-    if (this.inBetting() && s.inHand && !s.folded) return { error: '핸드가 끝난 뒤에 리바이하세요' };
-    s.chips = START_CHIPS;
-    s.rebuys++;
-    this.log(`${s.name} 리바이 (+${START_CHIPS})`);
-    this.maybeAutoStart();
-    this.emit();
-    return { ok: true };
-  }
-
-  start(id) {
-    if (id !== this.hostId) return { error: '방장만 시작할 수 있어요' };
-    if (this.stage !== 'waiting') return { error: '이미 진행 중이에요' };
-    if (this.readyCount() < 2) return { error: '칩이 있는 플레이어가 2명 이상 필요해요' };
-    this.running = true;
-    this.startHand();
-    return { ok: true };
   }
 
   maybeAutoStart() {
@@ -214,29 +130,28 @@ class Table {
   startHand() {
     this.clearTimers();
     clearTimeout(this.nextHandTimer); this.nextHandTimer = null;
-    this.seats.forEach((s, i) => { if (s && s.leaving) this.seats[i] = null; });
-    if (this.hostId && this.seatOf(this.hostId) < 0) {
-      const h = this.seats.find(Boolean);
-      this.hostId = h ? h.id : null;
-    }
+    this.seats.forEach((s, i) => { if (s && s.leaving) this.dropSeat(i); });
+
+    const goWaiting = () => {
+      this.stage = 'waiting';
+      this.turn = -1;
+      this.community = [];
+      this.seats.forEach(s => { if (s) Object.assign(s, { inHand: false, folded: true, hand: [], bet: 0, total: 0, won: 0, revealed: false, bestName: '', lastAction: '' }); });
+      this.emit();
+    };
+    if (!this.running) return goWaiting();
+    if (this.hooks.beforeHand && this.hooks.beforeHand() === false) return goWaiting();
+    if (this.hooks.blinds) { const b = this.hooks.blinds(); this.sb = b.sb; this.bb = b.bb; }
 
     const ready = [];
     this.seats.forEach((s, i) => {
       if (!s) return;
       Object.assign(s, { hand: [], bet: 0, total: 0, allIn: false, acted: false, lastAction: '', revealed: false, bestName: '', won: 0 });
-      s.inHand = s.chips > 0 && s.connected;
+      s.inHand = this.eligible(s);
       s.folded = !s.inHand;
       if (s.inHand) ready.push(i);
     });
-
-    if (ready.length < 2) {
-      this.stage = 'waiting';
-      this.turn = -1;
-      this.community = [];
-      this.seats.forEach(s => { if (s) { s.inHand = false; s.folded = true; } });
-      this.emit();
-      return;
-    }
+    if (ready.length < 2) return goWaiting();
 
     this.handNo++;
     this.result = null;
@@ -267,7 +182,7 @@ class Table {
       } while (i !== sbIdx);
     }
 
-    this.log(`── 핸드 #${this.handNo} 시작 (딜러: ${this.seats[this.dealer].name}) ──`);
+    this.log(`── 핸드 #${this.handNo} ──`);
     this.turn = this.nextIdx(bbIdx, s => this.needsAct(s));
     if (this.turn < 0) return this.endRound();
     this.startTimer();
@@ -290,15 +205,14 @@ class Table {
   startTimer() {
     clearTimeout(this.timer);
     const s = this.seats[this.turn];
-    const ms = s.connected ? TURN_MS : AWAY_TURN_MS;
+    const ms = s.connected ? this.opts.turnMs : this.opts.awayMs;
     this.turnDeadline = Date.now() + ms;
     const seq = ++this.turnSeq;
     this.timer = setTimeout(() => {
       if (seq !== this.turnSeq || !this.inBetting()) return;
       const cur = this.seats[this.turn];
       if (!cur) return;
-      const toCall = this.currentBet - cur.bet;
-      this.act(cur.id, toCall > 0 ? 'fold' : 'check', 0, true);
+      this.act(cur.id, this.currentBet - cur.bet > 0 ? 'fold' : 'check', 0, true);
     }, ms);
   }
 
@@ -315,7 +229,7 @@ class Table {
       amount = Math.floor(Number(amount));
       if (!Number.isFinite(amount)) return { error: '금액이 올바르지 않아요' };
       if (amount >= s.bet + s.chips) type = 'allin';
-      else if (amount < this.currentBet + this.minRaise) return { error: `최소 ${this.currentBet + this.minRaise}까지 레이즈해야 해요` };
+      else if (amount < this.currentBet + this.minRaise) return { error: '최소 레이즈 금액보다 작아요' };
     }
 
     let msg;
@@ -330,21 +244,21 @@ class Table {
         const x = Math.min(toCall, s.chips);
         this.put(s, x);
         s.lastAction = s.allIn ? '올인' : '콜';
-        msg = s.allIn ? `올인 (${s.bet})` : `콜 ${x}`;
+        msg = s.allIn ? '올인' : '콜';
         break;
       }
       case 'raise': {
         const label = this.currentBet === 0 ? '벳' : '레이즈';
         this.put(s, amount - s.bet);
         this.raiseTo(i, amount);
-        s.lastAction = label; msg = `${label} → ${amount}`;
+        s.lastAction = label; msg = label;
         break;
       }
       case 'allin': {
         const total = s.bet + s.chips;
         this.put(s, s.chips);
         if (total > this.currentBet) this.raiseTo(i, total);
-        s.lastAction = '올인'; msg = `올인 (${total})`;
+        s.lastAction = '올인'; msg = '올인';
         break;
       }
       default:
@@ -366,7 +280,6 @@ class Table {
     const s = this.seats[i];
     s.folded = true;
     s.lastAction = '폴드';
-    this.log(`${s.name} 폴드 (나감)`);
     if (i === this.turn) return this.afterAction();
     const live = this.live();
     if (live.length === 1) { this.clearTimers(); return this.winUncontested(live[0]); }
@@ -398,7 +311,7 @@ class Table {
     this.minRaise = this.bb;
 
     if (this.stage === 'river') return this.showdown();
-    this.deck.pop(); // 번
+    this.deck.pop();
     if (this.stage === 'preflop') {
       this.community.push(this.deck.pop(), this.deck.pop(), this.deck.pop());
       this.stage = 'flop';
@@ -412,12 +325,13 @@ class Table {
 
     const actors = this.seats.filter(s => this.canAct(s));
     if (actors.length < 2) {
-      // 더 베팅할 사람이 없음 → 보드 자동으로 깔기
+      // 올인 상황 — 남은 카드 자동 오픈 (패 공개)
+      this.live().forEach(i => { this.seats[i].revealed = true; });
       this.emit();
       const h = this.handNo;
       this.runoutTimer = setTimeout(() => {
         if (this.handNo === h && this.inBetting()) this.endRound();
-      }, RUNOUT_MS);
+      }, this.opts.runoutMs);
       return;
     }
     this.turn = this.nextIdx(this.dealer, s => this.canAct(s));
@@ -433,8 +347,8 @@ class Table {
     s.won = pot;
     this.stage = 'showdown';
     this.turn = -1;
-    this.result = { lines: [`${s.name} 승리 +${pot}`] };
-    this.log(`🏆 ${s.name} 승리 +${pot} (모두 폴드)`);
+    this.result = { lines: [{ names: s.name, amount: pot, hand: '' }] };
+    this.log(`🏆 ${s.name} 승리 (모두 폴드)`);
     this.scheduleNextHand();
   }
 
@@ -468,10 +382,10 @@ class Table {
       scores[i] = best.score;
       s.revealed = true;
       s.bestName = best.name;
+      s.bestCards = best.cards;
     }
-    // 딜러 왼쪽부터 순서 (나머지 칩은 이 순서로 첫 승자에게)
     const order = [];
-    for (let k = 1; k <= MAX_SEATS; k++) order.push((this.dealer + k) % MAX_SEATS);
+    for (let k = 1; k <= this.max; k++) order.push((this.dealer + k) % this.max);
 
     const pots = this.buildPots();
     const lines = [];
@@ -491,49 +405,47 @@ class Table {
       }
       const label = pots.length > 1 ? (pi === 0 ? '메인팟' : `사이드팟${pi}`) : '';
       const names = winners.map(i => this.seats[i].name).join(', ');
-      const line = `${label ? label + ': ' : ''}${names} ${winners.length > 1 ? '나눠 가짐' : '승리'} +${pot.amount} (${this.seats[winners[0]].bestName})`;
-      lines.push(line);
-      this.log(`🏆 ${line}`);
+      const hand = this.seats[winners[0]].bestName;
+      lines.push({ label, names, amount: pot.amount, hand, split: winners.length > 1 });
+      this.log(`🏆 ${label ? label + ' ' : ''}${names} ${winners.length > 1 ? '나눠 가짐' : '승리'} — ${hand}`);
     });
     this.result = { lines };
     this.scheduleNextHand();
   }
 
   scheduleNextHand() {
+    if (this.hooks.handEnd) this.hooks.handEnd();
     this.emit();
     clearTimeout(this.nextHandTimer);
     this.nextHandTimer = setTimeout(() => {
       this.nextHandTimer = null;
       this.startHand();
-    }, NEXT_HAND_MS);
+    }, this.opts.nextHandMs);
   }
 
-  // ---------- 플레이어별 화면 데이터 (남의 카드는 숨김) ----------
+  // ---------- 화면 데이터 (남의 카드는 숨김) ----------
   viewFor(id) {
     const me = this.seatOf(id);
-    const reveal = this.stage === 'showdown';
     return {
-      code: this.code,
       stage: this.stage,
       stageName: STAGE_NAMES[this.stage] || '',
+      handNo: this.handNo,
       community: this.community,
       pot: this.pot(),
       currentBet: this.currentBet,
       minRaise: this.minRaise,
       sb: this.sb,
       bb: this.bb,
-      startChips: START_CHIPS,
       turn: this.turn,
       turnDeadline: this.turnDeadline,
+      turnMs: this.opts.turnMs,
       now: Date.now(),
       dealer: this.dealer,
       me,
-      isHost: id === this.hostId,
-      running: this.running,
-      readyCount: this.readyCount(),
-      result: this.result,
+      result: this.stage === 'showdown' ? this.result : null,
       seats: this.seats.map((s, i) => s && {
         name: s.name,
+        avatar: s.avatar,
         chips: s.chips,
         bet: s.bet,
         inHand: s.inHand,
@@ -541,14 +453,17 @@ class Table {
         allIn: s.allIn,
         connected: s.connected,
         lastAction: s.lastAction,
-        host: s.id === this.hostId,
         hasCards: s.inHand && s.hand.length > 0,
-        cards: (i === me || (reveal && s.revealed)) ? s.hand : null,
-        bestName: reveal && s.revealed ? s.bestName : '',
-        won: reveal ? s.won : 0,
+        cards: (i === me || s.revealed) ? s.hand : null,
+        bestName: this.stage === 'showdown' && s.revealed ? s.bestName : '',
+        bestCards: this.stage === 'showdown' && s.revealed ? s.bestCards : null,
+        won: this.stage === 'showdown' ? s.won : 0,
+        tStatus: s.tStatus || null,
+        place: s.place || 0,
+        rebuys: s.rebuys || 0,
       }),
     };
   }
 }
 
-module.exports = { Table, bestHand, score5, compareScore, MAX_SEATS };
+module.exports = { Table };
