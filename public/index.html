@@ -74,21 +74,10 @@
     </div>
 
     <div class="tab-body hidden" id="tab-profile">
-      <div class="pixel-editor glass">
-        <div class="pe-head">
-          <b>도트 프로필 그리기</b>
-          <span class="hint">16×16 · 칸을 눌러서 칠해요</span>
-        </div>
-        <canvas id="peCanvas" width="320" height="320"></canvas>
-        <div class="palette" id="palette"></div>
-        <div class="pe-tools">
-          <button class="btn small" data-tool="pen">✏️ 펜</button>
-          <button class="btn small" data-tool="fill">🪣 채우기</button>
-          <button class="btn small" data-tool="mirror">↔️ 대칭 <span id="mirrorState">끔</span></button>
-          <button class="btn small" id="peUndo">↶ 되돌리기</button>
-          <button class="btn small" id="peClear">비우기</button>
-        </div>
-        <button class="btn gold big" id="peSave">프로필 저장</button>
+      <div class="profile-card glass">
+        <div class="av big-av" id="profilePreview"></div>
+        <b id="profileName"></b>
+        <button class="btn gold" id="peOpen">✏️ 프로필 그리기</button>
       </div>
       <div class="stats glass" id="myStats"></div>
     </div>
@@ -152,6 +141,27 @@
         <input id="chatInput" maxlength="200" placeholder="메시지 입력…" autocomplete="off" />
         <button class="btn gold small" type="submit">전송</button>
       </form>
+    </div>
+  </div>
+
+  <!-- 도트 프로필 편집 (전체화면) -->
+  <div class="pe-overlay hidden" id="peOverlay">
+    <header class="pe-bar">
+      <button class="icon-btn" id="peClose" title="닫기">✕</button>
+      <b>도트 프로필 그리기</b>
+      <button class="btn gold small" id="peSave">저장</button>
+    </header>
+    <div class="pixel-editor">
+      <span class="hint">16×16 · 칸을 누르거나 드래그해서 칠해요</span>
+      <canvas id="peCanvas" width="320" height="320"></canvas>
+      <div class="palette" id="palette"></div>
+      <div class="pe-tools">
+        <button class="btn small" data-tool="pen">✏️ 펜</button>
+        <button class="btn small" data-tool="fill">🪣 채우기</button>
+        <button class="btn small" data-tool="mirror">↔️ 대칭 <span id="mirrorState">끔</span></button>
+        <button class="btn small" id="peUndo">↶ 되돌리기</button>
+        <button class="btn small" id="peClear">비우기</button>
+      </div>
     </div>
   </div>
 

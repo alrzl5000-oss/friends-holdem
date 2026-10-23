@@ -156,7 +156,7 @@ $('lobbyTabs').onclick = e => {
   $('lobbyTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   ['rooms', 'rank', 'profile'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.t));
   if (b.dataset.t === 'rank') socket.emit('ranking', renderRank);
-  if (b.dataset.t === 'profile') { editor.load(me.avatar); }
+  if (b.dataset.t === 'profile') renderProfile();
   if (b.dataset.t === 'rooms') loadRooms();
 };
 
@@ -287,8 +287,21 @@ document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => {
 document.querySelector('[data-tool="pen"]').classList.add('on');
 $('peUndo').onclick = () => editor.back();
 $('peClear').onclick = () => editor.clear();
+function renderProfile() {
+  $('profilePreview').innerHTML = `<img src="${avatarURL(me.avatar)}" alt="">`;
+  $('profileName').textContent = me.username;
+}
+$('peOpen').onclick = () => { editor.load(me.avatar); $('peOverlay').classList.remove('hidden'); };
+$('peClose').onclick = () => {
+  const close = () => $('peOverlay').classList.add('hidden');
+  if (editor.value() === me.avatar) return close();
+  confirmBox('그리기 취소', '저장하지 않은 그림은 사라져요. 닫을까요?', '닫기', close, true);
+};
 $('peSave').onclick = () => socket.emit('avatar', editor.value(), res => {
   if (res.error) return toast(res.error);
+  me.avatar = editor.value();
+  renderProfile(); renderWallet();
+  $('peOverlay').classList.add('hidden');
   toast('프로필을 저장했어요', true);
 });
 
@@ -448,10 +461,17 @@ function renderSeats() {
       const bx = 50 + (x - 50) * .55, by = 50 + (y - 50) * .55;
       h += `<div class="bet" style="left:${bx}%;top:${by}%"><i class="chip-ico"></i>${short(p.bet)}</div>`;
     }
-    if (i === s.dealer && s.stage !== 'waiting') {
-      const dx = 50 + (x - 50) * .72 + (x <= 50 ? 7 : -7), dy = 50 + (y - 50) * .72;
-      h += `<div class="dealer" style="left:${dx}%;top:${dy}%">D</div>`;
+    // 딜러(D) / 스몰블라인드(SB) / 빅블라인드(BB) 버튼
+    const marks = [];
+    if (s.stage !== 'waiting') {
+      if (i === s.dealer) marks.push(['D', 'dealer']);
+      if (i === s.sbSeat) marks.push(['SB', 'dealer blind sb']);
+      if (i === s.bbSeat) marks.push(['BB', 'dealer blind bb']);
     }
+    marks.forEach(([t, c], n) => {
+      const dx = 50 + (x - 50) * .72 + (x <= 50 ? 7 : -7) + n * (x <= 50 ? 6 : -6), dy = 50 + (y - 50) * .72;
+      h += `<div class="${c}" style="left:${dx}%;top:${dy}%">${t}</div>`;
+    });
   }
   $('seats').innerHTML = h;
 }
@@ -760,6 +780,13 @@ function effects(prev, s) {
     }
     fxCat = hi.cat;
     fxBoardLen = boardLen;
+  }
+
+  // 올인 쇼다운 (패 오픈)
+  if (s.runout && !(prev && prev.runout && prev.handNo === s.handNo)) {
+    fxFlash('gold');
+    fxBanner('올인!', '쇼다운 — 패 오픈', 'made');
+    vibrate([30, 30, 30]);
   }
 
   // 승리 / 패배

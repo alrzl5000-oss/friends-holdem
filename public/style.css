@@ -564,3 +564,20 @@ input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(233,196,106,
 }
 @keyframes wobble { 0%,100% { transform: translateX(-50%) rotate(-4deg); } 50% { transform: translateX(-50%) rotate(4deg); } }
 #rankSeg { margin-bottom: 6px; }
+
+/* 프로필 */
+.profile-card { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.big-av { width: 120px; height: 120px; border-width: 3px; }
+.profile-card b { font-size: 18px; }
+.pe-overlay { position: absolute; inset: 0; z-index: 45; background: var(--bg); display: flex; flex-direction: column; padding-bottom: var(--safe-b); }
+.pe-bar { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.pe-bar b { flex: 1; text-align: center; }
+.pe-bar .btn { padding: 9px 18px; font-size: 15px; }
+.pe-overlay .pixel-editor { flex: 1; overflow-y: auto; padding: 16px; }
+.pe-overlay #peCanvas { width: min(100%, 340px); }
+.pe-overlay .palette { width: min(100%, 340px); }
+
+/* 블라인드 버튼 */
+.dealer.blind { width: 24px; height: 24px; font-size: 9px; letter-spacing: -.5px; color: #fff; }
+.dealer.sb { background: linear-gradient(180deg, #5b8ff0, #2c5fc4); box-shadow: 0 2px 4px rgba(0,0,0,.6), inset 0 0 0 2px #9dbcf7; }
+.dealer.bb { background: linear-gradient(180deg, #f0c45b, #b98a2c); color: #2a1d05; box-shadow: 0 2px 4px rgba(0,0,0,.6), inset 0 0 0 2px #ffe3a1; }

@@ -154,6 +154,7 @@ class Table {
     if (ready.length < 2) return goWaiting();
 
     this.handNo++;
+    this.runout = false;
     this.result = null;
     this.deck = newDeck();
     this.community = [];
@@ -169,6 +170,8 @@ class Table {
       sbIdx = this.nextIdx(this.dealer, inHand);
       bbIdx = this.nextIdx(sbIdx, inHand);
     }
+    this.sbIdx = sbIdx;
+    this.bbIdx = bbIdx;
     this.postBlind(sbIdx, this.sb, 'SB');
     this.postBlind(bbIdx, this.bb, 'BB');
     this.currentBet = this.bb;
@@ -311,6 +314,22 @@ class Table {
     this.minRaise = this.bb;
 
     if (this.stage === 'river') return this.showdown();
+
+    // 더 베팅할 사람이 없으면(올인): 먼저 패를 모두 오픈하고, 보드를 한 장씩 깐다
+    const h = this.handNo;
+    const next = ms => {
+      this.runoutTimer = setTimeout(() => {
+        if (this.handNo === h && this.inBetting()) this.endRound();
+      }, ms);
+    };
+    if (!this.runout && this.seats.filter(s => this.canAct(s)).length < 2) {
+      this.runout = true;
+      this.live().forEach(i => { this.seats[i].revealed = true; });
+      this.log('🃏 올인 쇼다운 — 패 오픈');
+      this.emit();
+      return next(this.opts.runoutMs * 1.6);
+    }
+
     this.deck.pop();
     if (this.stage === 'preflop') {
       this.community.push(this.deck.pop(), this.deck.pop(), this.deck.pop());
@@ -323,16 +342,9 @@ class Table {
       this.stage = 'river';
     }
 
-    const actors = this.seats.filter(s => this.canAct(s));
-    if (actors.length < 2) {
-      // 올인 상황 — 남은 카드 자동 오픈 (패 공개)
-      this.live().forEach(i => { this.seats[i].revealed = true; });
+    if (this.runout) {
       this.emit();
-      const h = this.handNo;
-      this.runoutTimer = setTimeout(() => {
-        if (this.handNo === h && this.inBetting()) this.endRound();
-      }, this.opts.runoutMs);
-      return;
+      return next(this.opts.runoutMs);
     }
     this.turn = this.nextIdx(this.dealer, s => this.canAct(s));
     this.startTimer();
@@ -428,7 +440,8 @@ class Table {
     const me = this.seatOf(id);
     return {
       stage: this.stage,
-      stageName: STAGE_NAMES[this.stage] || '',
+      stageName: (this.runout && this.inBetting() ? '올인 쇼다운 · ' : '') + (STAGE_NAMES[this.stage] || ''),
+      runout: !!this.runout && this.inBetting(),
       handNo: this.handNo,
       community: this.community,
       pot: this.pot(),
@@ -441,6 +454,8 @@ class Table {
       turnMs: this.opts.turnMs,
       now: Date.now(),
       dealer: this.dealer,
+      sbSeat: this.stage === 'waiting' ? -1 : this.sbIdx,
+      bbSeat: this.stage === 'waiting' ? -1 : this.bbIdx,
       me,
       result: this.stage === 'showdown' ? this.result : null,
       seats: this.seats.map((s, i) => s && {
