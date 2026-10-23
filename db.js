@@ -25,6 +25,7 @@ for (const u of Object.values(data.users)) {
   if (u.tourneyHold) { u.assets += u.tourneyHold < 1e6 ? u.tourneyHold * ENTRY_FEE : u.tourneyHold; u.tourneyHold = 0; }
   u.stats.placeSum = u.stats.placeSum || 0;
   u.shame = u.shame || 0;
+  u.stats.bailouts = u.stats.bailouts || 0;
 }
 
 let timer = null;
@@ -71,6 +72,7 @@ function pub(u) {
     username: u.username,
     assets: u.assets,
     inPlay: u.inPlay,
+    shame: u.shame || 0,
     avatar: u.avatar,
     stats: u.stats,
     total: total(u),
@@ -105,7 +107,7 @@ module.exports = {
       tourneyHold: 0,
       shame: 0,
       avatar: randomAvatar(),
-      stats: { tWins: 0, tPlayed: 0, placeSum: 0 },
+      stats: { tWins: 0, tPlayed: 0, placeSum: 0, bailouts: 0 },
       createdAt: Date.now(),
     };
     data.users[key] = u;

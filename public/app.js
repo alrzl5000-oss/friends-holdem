@@ -139,6 +139,11 @@ function renderWallet() {
   $('wCash').textContent = short(me.assets);
   $('wTable').textContent = short(me.inPlay);
   $('wTickets').textContent = avgText(me.stats);
+  const broke = me.assets < 1e8 && !me.inPlay && !me.room;
+  $('bailout').innerHTML = broke ? `<button class="btn red big">🆘 파산 신청 — 구제금 받기</button><p class="hint">보유 현금이 ${won(1e9)}으로 채워지는 대신, 3판 동안 프로필에 <b>좃밥</b>이 붙고 게임 시작 때 자동으로 "저는 개좃밥 입니다"를 외쳐요</p>` : (me.shame > 0 ? `<p class="hint">🐣 좃밥 남은 판: <b>${me.shame}</b></p>` : '');
+  const bb2 = $('bailout').querySelector('button');
+  if (bb2) bb2.onclick = () => confirmBox('파산 신청', `구제금을 받으면 현금이 <b>${won(1e9)}</b>이 돼요.<br>대신 <b>3판 동안 좃밥</b> 표시가 붙고, 게임에 들어갈 때마다 자동으로 "저는 개좃밥 입니다"가 채팅에 올라가요.`, '받기', () =>
+    socket.emit('bailout', res => res.error ? toast(res.error) : (fxBanner('좃밥 등극', `+${won(res.amount)}`, 'lose'), toast('구제금 지급 완료', true))), true);
   $('backToRoom').innerHTML = me.room && me.room !== leftRoom ? `<button class="btn gold back-room">참여 중인 방으로 돌아가기 (${me.room})</button>` : '';
   const bb = $('backToRoom').querySelector('button');
   if (bb) bb.onclick = () => joinRoom(me.room);
@@ -596,7 +601,6 @@ function renderControls() {
   on('[data-rebuy]', () => socket.emit('rebuy', res => res.error ? toast(res.error) : toast('리바이 완료! 1억 지급', true)));
   on('[data-withdraw]', () => confirmBox('기권', '기권하면 지금 순위로 탈락 처리돼요.', '기권', () => socket.emit('withdraw', res => res.error && toast(res.error)), true));
   on('[data-topup]', () => {
-    toast('⚠️ 충전하면 3판 동안 프로필에 "좃밥"이 붙어요');
     const max = Math.min(r.buyMax - my.chips, Math.floor(r.assets / s.bb) * s.bb);
     if (max < s.bb) return toast('자산이 부족해요');
     amountModal({ title: '충전 금액', min: Math.min(s.bb * 20, max), max, def: Math.min(r.buyDef, max), step: s.bb, note: `보유 현금 ${won(r.assets)}`, okText: '충전' },

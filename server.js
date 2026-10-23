@@ -140,6 +140,19 @@ io.on('connection', socket => {
     cb({ ok: true });
   }));
 
+  // 구제금: 파산한 사람(현금 1억 미만, 테이블/대회에 돈 없음)에게 초기 자산까지 채워줌 → 3판 동안 좃밥
+  socket.on('bailout', guard(cb => {
+    if (userRoom.get(user.id)) return cb({ error: '방에서 나온 뒤에 신청할 수 있어요' });
+    if (user.assets >= 1e8 || user.inPlay > 0 || user.tourneyHold > 0) return cb({ error: '현금이 1억 미만일 때만 신청할 수 있어요' });
+    const amount = db.START_ASSETS - user.assets;
+    user.assets = db.START_ASSETS;
+    user.shame = 3;
+    user.stats.bailouts = (user.stats.bailouts || 0) + 1;
+    db.save();
+    ctx.pushMe(user.id);
+    cb({ ok: true, amount });
+  }));
+
   socket.on('createRoom', guard((cb, opts = {}) => {
     const cur = userRoom.get(user.id);
     if (cur && rooms.has(cur)) return cb({ error: '이미 다른 방에 참여 중이에요', room: cur });

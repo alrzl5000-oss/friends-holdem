@@ -581,3 +581,7 @@ input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(233,196,106,
 .dealer.blind { width: 24px; height: 24px; font-size: 9px; letter-spacing: -.5px; color: #fff; }
 .dealer.sb { background: linear-gradient(180deg, #5b8ff0, #2c5fc4); box-shadow: 0 2px 4px rgba(0,0,0,.6), inset 0 0 0 2px #9dbcf7; }
 .dealer.bb { background: linear-gradient(180deg, #f0c45b, #b98a2c); color: #2a1d05; box-shadow: 0 2px 4px rgba(0,0,0,.6), inset 0 0 0 2px #ffe3a1; }
+
+#bailout { display: flex; flex-direction: column; gap: 6px; }
+#bailout:empty { display: none; }
+.msg.auto b { color: #e5a46a; }
