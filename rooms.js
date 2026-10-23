@@ -2,7 +2,7 @@
 const { Table } = require('./game');
 const db = require('./db');
 
-const TICKET = db.TICKET_PRICE;
+const FEE = db.ENTRY_FEE;   // 참가비/리바이 1억
 const T_STACK = 1e8;        // 토너먼트 시작 금액 1억
 const REBUY_MAX = 2;        // 리바이 최대 2회
 const REBUY_LEVELS = 6;     // 레벨 6까지 리바이 가능
@@ -123,7 +123,7 @@ class CashRoom extends BaseRoom {
     user.assets -= buyIn;
     user.inPlay = buyIn;
     db.save();
-    const r = this.table.addPlayer(user, socketId, buyIn);
+    const r = this.table.addPlayer(user, socketId, buyIn, { shame: user.shame || 0 });
     if (r.error) { user.assets += buyIn; user.inPlay = 0; return r; }
     this.log(`${user.username} 님 입장 (바이인 ${fmt(buyIn)})`);
     return { ok: true };
@@ -131,7 +131,8 @@ class CashRoom extends BaseRoom {
   sync() {
     for (const s of this.seated) {
       const u = db.byId(s.id);
-      if (u) u.inPlay = s.chips;
+      if (s.inHand && s.shame > 0) s.shame--;
+      if (u) { u.inPlay = s.chips; u.shame = s.shame; }
     }
     db.save();
     for (const s of this.seated) this.ctx.pushMe(s.id);
@@ -158,8 +159,10 @@ class CashRoom extends BaseRoom {
     user.assets -= amount;
     s.chips += amount;
     user.inPlay = s.chips;
+    s.shame = 3;
+    user.shame = 3;
     db.save();
-    this.log(`${s.name} 충전 +${fmt(amount)}`);
+    this.log(`${s.name} 충전 +${fmt(amount)} — 3판 동안 좃밥 🐣`);
     this.table.maybeAutoStart();
     this.emit();
     return { ok: true };
@@ -225,7 +228,7 @@ class TourneyRoom extends BaseRoom {
     if (this.reconnect(user, socketId)) return { ok: true };
     if (this.status !== 'registering') return { error: '이미 시작된 토너먼트예요' };
     if (this.seated.length >= this.table.max) return { error: '자리가 꽉 찼어요' };
-    if (user.tickets < 1) return { error: '토너먼트 티켓이 필요해요 (로비에서 1억에 구매)', needTicket: true };
+    if (user.assets < FEE) return { error: '참가비 1억원이 필요해요' };
     const r = this.table.addPlayer(user, socketId, 0, { tStatus: 'alive', rebuys: 0, place: 0 });
     if (r.error) return r;
     this.log(`${user.username} 님 참가 등록`);
@@ -243,13 +246,13 @@ class TourneyRoom extends BaseRoom {
     if (this.seated.length < 2) return { error: '2명 이상 필요해요' };
     for (const s of this.seated) {
       const u = db.byId(s.id);
-      if (!u || u.tickets < 1) {
-        this.log(`${s.name} 님은 티켓이 없어서 제외됐어요`);
+      if (!u || u.assets < FEE) {
+        this.log(`${s.name} 님은 참가비가 부족해서 제외됐어요`);
         this.table.dropSeat(this.table.seatOf(s.id));
         continue;
       }
-      u.tickets--;
-      u.tourneyHold = 1;
+      u.assets -= FEE;
+      u.tourneyHold = FEE;
       s.chips = T_STACK;
       this.entries++;
       this.players++;
@@ -257,14 +260,14 @@ class TourneyRoom extends BaseRoom {
       this.ctx.pushMe(s.id);
     }
     if (this.players < 2) {
-      for (const id of this.entrants) { const u = db.byId(id); u.tickets++; u.tourneyHold = 0; this.ctx.pushMe(id); }
+      for (const id of this.entrants) { const u = db.byId(id); u.assets += u.tourneyHold; u.tourneyHold = 0; this.ctx.pushMe(id); }
       this.entries = 0; this.players = 0; this.entrants.clear();
       this.seated.forEach(s => { s.chips = 0; });
       db.save();
       this.emit();
-      return { error: '티켓을 가진 참가자가 2명 이상 필요해요' };
+      return { error: '참가비를 낼 수 있는 사람이 2명 이상 필요해요' };
     }
-    this.prizePool = this.entries * TICKET;
+    this.prizePool = this.entries * FEE;
     this.startedAt = Date.now();
     this.status = 'running';
     db.save();
@@ -276,7 +279,7 @@ class TourneyRoom extends BaseRoom {
   alive() { return this.seated.filter(s => s.tStatus === 'alive' || s.tStatus === 'busted'); }
   canRebuy(s) {
     const u = db.byId(s.id);
-    return this.rebuyOpen() && s.rebuys < REBUY_MAX && u && (u.tickets >= 1 || u.assets >= TICKET);
+    return this.rebuyOpen() && s.rebuys < REBUY_MAX && u && u.assets >= FEE;
   }
   handEnd() {
     for (const s of this.seated) {
@@ -325,18 +328,14 @@ class TourneyRoom extends BaseRoom {
     if (!s || s.tStatus !== 'busted') return { error: '지금은 리바이할 수 없어요' };
     if (!this.rebuyOpen()) return { error: `리바이는 레벨 ${REBUY_LEVELS}까지만 가능해요` };
     if (s.rebuys >= REBUY_MAX) return { error: `리바이는 ${REBUY_MAX}회까지예요` };
-    if (user.tickets < 1) {
-      if (user.assets < TICKET) return { error: '티켓을 살 자산이 부족해요' };
-      user.assets -= TICKET;
-      user.tickets++;
-    }
-    user.tickets--;
-    user.tourneyHold = (user.tourneyHold || 0) + 1;
+    if (user.assets < FEE) return { error: '리바이 비용 1억원이 부족해요' };
+    user.assets -= FEE;
+    user.tourneyHold = (user.tourneyHold || 0) + FEE;
     s.rebuys++;
     s.chips = T_STACK;
     s.tStatus = 'alive';
     this.entries++;
-    this.prizePool += TICKET;
+    this.prizePool += FEE;
     db.save();
     this.ctx.pushMe(user.id);
     this.log(`🔁 ${s.name} 리바이 (${s.rebuys}/${REBUY_MAX}) · 상금 ${fmt(this.prizePool)}`);
@@ -391,6 +390,7 @@ class TourneyRoom extends BaseRoom {
       const u = db.byId(r.id);
       if (!u) continue;
       u.assets += r.prize;
+      u.stats.placeSum = (u.stats.placeSum || 0) + r.place;
       if (r.place === 1) u.stats.tWins++;
     }
     for (const id of this.entrants) {
@@ -422,8 +422,8 @@ class TourneyRoom extends BaseRoom {
       players: this.players,
       entries: this.entries,
       alive: this.alive().length,
-      prizePool: this.status === 'registering' ? this.seated.length * TICKET : this.prizePool,
-      payouts: pct.map(p => Math.floor((this.status === 'registering' ? this.seated.length * TICKET : this.prizePool) * p)),
+      prizePool: this.status === 'registering' ? this.seated.length * FEE : this.prizePool,
+      payouts: pct.map(p => Math.floor((this.status === 'registering' ? this.seated.length * FEE : this.prizePool) * p)),
       rebuyOpen: this.rebuyOpen(),
       rebuyLevels: REBUY_LEVELS,
       rebuyMax: REBUY_MAX,
@@ -432,7 +432,7 @@ class TourneyRoom extends BaseRoom {
       canRebuy: !!(s && s.tStatus === 'busted' && this.canRebuy(s)),
       pendingUntil: this.pendingUntil,
       results: this.results,
-      tickets: u ? u.tickets : 0,
+      fee: FEE,
       assets: u ? u.assets : 0,
       startStack: T_STACK,
     });
@@ -443,7 +443,7 @@ class TourneyRoom extends BaseRoom {
       players: this.seated.length, max: this.table.max,
       level: this.status === 'running' ? this.level() : 0,
       levelMin: this.levelMs / 60000,
-      prize: this.status === 'registering' ? this.seated.length * TICKET : this.prizePool,
+      prize: this.status === 'registering' ? this.seated.length * FEE : this.prizePool,
     };
   }
   close() {
@@ -453,7 +453,7 @@ class TourneyRoom extends BaseRoom {
       // 끝나지 않은 토너먼트가 닫히면 티켓 환불
       for (const id of this.entrants) {
         const u = db.byId(id);
-        if (u) { u.tickets += u.tourneyHold || 0; u.tourneyHold = 0; }
+        if (u) { u.assets += u.tourneyHold || 0; u.tourneyHold = 0; }
       }
       db.save();
     }
@@ -474,4 +474,4 @@ function fmt(n) {
   return `${n.toLocaleString()}원`;
 }
 
-module.exports = { CashRoom, TourneyRoom, CASH_TIERS, LEVELS, levelBlinds, fmt, TICKET };
+module.exports = { CashRoom, TourneyRoom, CASH_TIERS, LEVELS, levelBlinds, fmt, FEE };

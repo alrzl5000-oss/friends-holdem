@@ -551,3 +551,16 @@ input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(233,196,106,
   .my-hand .card { --cw: 48px; }
   .seat .av, .seat .ava-wrap { width: 42px; height: 42px; }
 }
+
+/* 좃밥 (충전 후 3판) */
+.seat .ava-wrap.shame .av { border: 3px solid #8b5a2b; box-shadow: 0 0 0 2px #e5484d, 0 0 14px rgba(229,72,77,.6); filter: saturate(.7); }
+.shame-tag {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  z-index: 3; white-space: nowrap;
+  font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 6px;
+  background: linear-gradient(180deg, #a0662f, #6b3e17); color: #ffe9c9;
+  border: 1px solid #e5484d; text-shadow: 0 1px 0 rgba(0,0,0,.6);
+  animation: wobble 1.4s ease-in-out infinite;
+}
+@keyframes wobble { 0%,100% { transform: translateX(-50%) rotate(-4deg); } 50% { transform: translateX(-50%) rotate(4deg); } }
+#rankSeg { margin-bottom: 6px; }

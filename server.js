@@ -140,25 +140,13 @@ io.on('connection', socket => {
     cb({ ok: true });
   }));
 
-  socket.on('buyTicket', guard((cb, n) => {
-    n = Math.floor(Number(n)) || 1;
-    if (n < 1 || n > 10) return cb({ error: '1~10장까지 살 수 있어요' });
-    const cost = n * db.TICKET_PRICE;
-    if (user.assets < cost) return cb({ error: '자산이 부족해요' });
-    user.assets -= cost;
-    user.tickets += n;
-    db.save();
-    ctx.pushMe(user.id);
-    cb({ ok: true });
-  }));
-
   socket.on('createRoom', guard((cb, opts = {}) => {
     const cur = userRoom.get(user.id);
     if (cur && rooms.has(cur)) return cb({ error: '이미 다른 방에 참여 중이에요', room: cur });
     const code = newCode();
     let room;
     if (opts.mode === 'tourney') {
-      if (user.tickets < 1) return cb({ error: '토너먼트 티켓이 필요해요 (1억)', needTicket: true });
+      if (user.assets < db.ENTRY_FEE) return cb({ error: '참가비 1억원이 필요해요' });
       room = new TourneyRoom(ctx, code, opts.name, user, opts);
     } else {
       room = new CashRoom(ctx, code, opts.name, user, opts);

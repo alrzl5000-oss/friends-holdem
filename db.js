@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const START_ASSETS = 1e9;   // 초기 자산 10억
-const TICKET_PRICE = 1e8;   // 토너먼트 티켓 1억
+const ENTRY_FEE = 1e8;      // 토너먼트 참가비 1억
 
 const DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 fs.mkdirSync(DIR, { recursive: true });
@@ -20,7 +20,11 @@ for (const u of Object.values(data.users)) byIdMap.set(u.id, u);
 // 서버가 꺼졌다 켜졌을 때: 테이블에 있던 돈과 쓰던 티켓 되돌려주기
 for (const u of Object.values(data.users)) {
   if (u.inPlay) { u.assets += u.inPlay; u.inPlay = 0; }
-  if (u.tourneyHold) { u.tickets += u.tourneyHold; u.tourneyHold = 0; }
+  // 이전 버전 티켓은 돈으로 환불
+  if (u.tickets) { u.assets += u.tickets * ENTRY_FEE; u.tickets = 0; }
+  if (u.tourneyHold) { u.assets += u.tourneyHold < 1e6 ? u.tourneyHold * ENTRY_FEE : u.tourneyHold; u.tourneyHold = 0; }
+  u.stats.placeSum = u.stats.placeSum || 0;
+  u.shame = u.shame || 0;
 }
 
 let timer = null;
@@ -66,7 +70,6 @@ function pub(u) {
     id: u.id,
     username: u.username,
     assets: u.assets,
-    tickets: u.tickets,
     inPlay: u.inPlay,
     avatar: u.avatar,
     stats: u.stats,
@@ -75,12 +78,12 @@ function pub(u) {
 }
 
 function total(u) {
-  return u.assets + u.inPlay + (u.tickets + (u.tourneyHold || 0)) * TICKET_PRICE;
+  return u.assets + u.inPlay + (u.tourneyHold || 0);
 }
 
 module.exports = {
   START_ASSETS,
-  TICKET_PRICE,
+  ENTRY_FEE,
   save,
   flush,
   pub,
@@ -98,11 +101,11 @@ module.exports = {
       salt,
       hash: hashPw(password, salt),
       assets: START_ASSETS,
-      tickets: 0,
       inPlay: 0,
       tourneyHold: 0,
+      shame: 0,
       avatar: randomAvatar(),
-      stats: { tWins: 0, tPlayed: 0 },
+      stats: { tWins: 0, tPlayed: 0, placeSum: 0 },
       createdAt: Date.now(),
     };
     data.users[key] = u;
@@ -137,9 +140,13 @@ module.exports = {
     return byIdMap.get(id);
   },
   ranking() {
-    return [...byIdMap.values()]
-      .map(u => ({ username: u.username, avatar: u.avatar, total: total(u), tWins: u.stats.tWins, tPlayed: u.stats.tPlayed }))
-      .sort((a, b) => b.total - a.total || b.tWins - a.tWins)
-      .slice(0, 100);
+    const all = [...byIdMap.values()].map(u => ({
+      username: u.username, avatar: u.avatar, total: total(u), tWins: u.stats.tWins, tPlayed: u.stats.tPlayed,
+      avgPlace: u.stats.tPlayed ? u.stats.placeSum / u.stats.tPlayed : null,
+    }));
+    return {
+      assets: all.slice().sort((a, b) => b.total - a.total || b.tWins - a.tWins).slice(0, 100),
+      avg: all.filter(u => u.tPlayed > 0).sort((a, b) => a.avgPlace - b.avgPlace || b.tPlayed - a.tPlayed).slice(0, 100),
+    };
   },
 };

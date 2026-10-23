@@ -138,7 +138,7 @@ function renderWallet() {
   $('wTotal').textContent = won(me.total);
   $('wCash').textContent = short(me.assets);
   $('wTable').textContent = short(me.inPlay);
-  $('wTickets').textContent = me.tickets + '장';
+  $('wTickets').textContent = avgText(me.stats);
   $('backToRoom').innerHTML = me.room && me.room !== leftRoom ? `<button class="btn gold back-room">참여 중인 방으로 돌아가기 (${me.room})</button>` : '';
   const bb = $('backToRoom').querySelector('button');
   if (bb) bb.onclick = () => joinRoom(me.room);
@@ -175,38 +175,23 @@ function renderRooms(list) {
   el.querySelectorAll('.room').forEach(b => b.onclick = () => joinRoom(b.dataset.code));
 }
 
-function renderRank(list) {
-  $('rankList').innerHTML = list.map((r, i) => {
+function avgText(st) { return st && st.tPlayed ? (st.placeSum / st.tPlayed).toFixed(2).replace(/\.?0+$/, '') + '위' : '-'; }
+let rankData = null, rankMode = 'assets';
+function renderRank(data) {
+  if (data) rankData = data;
+  if (!rankData) return;
+  const list = rankData[rankMode];
+  const seg = `<div class="seg" id="rankSeg"><button data-m="assets" class="${rankMode === 'assets' ? 'on' : ''}">💰 총 자산</button><button data-m="avg" class="${rankMode === 'avg' ? 'on' : ''}">🏆 토너 평균 순위</button></div>`;
+  $('rankList').innerHTML = seg + (list.map((r, i) => {
     const medal = ['🥇', '🥈', '🥉'][i];
+    const right = rankMode === 'assets' ? short(r.total) : avgText({ tPlayed: r.tPlayed, placeSum: r.avgPlace * r.tPlayed });
     return `<div class="rank-row ${me && r.username === me.username ? 'me' : ''}">
       <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar)}
       <div class="nm"><b>${esc(r.username)}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
-      <div class="amt">${short(r.total)}</div></div>`;
-  }).join('') || '<div class="empty-note">아직 랭킹이 없어요</div>';
+      <div class="amt">${right}</div></div>`;
+  }).join('') || `<div class="empty-note">${rankMode === 'avg' ? '아직 토너먼트를 끝까지 한 사람이 없어요' : '아직 랭킹이 없어요'}</div>`);
+  $('rankSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; rankMode = b.dataset.m; renderRank(); };
 }
-
-// 티켓
-function buyTicket(after) {
-  let n = 1;
-  const p = modal(`<h3>🎟 토너먼트 티켓</h3>
-    <p class="hint">장당 1억원 · 토너먼트 참가/리바이에 1장씩 사용</p>
-    <div class="opt-group" data-n>${[1, 2, 3, 5].map(k => `<button data-k="${k}" class="${k === 1 ? 'on' : ''}">${k}장<small>${short(k * 1e8)}</small></button>`).join('')}</div>
-    <p class="hint">보유 현금 <b>${won(me.assets)}</b></p>
-    <div class="row2"><button class="btn" data-x>취소</button><button class="btn gold" data-ok>구매</button></div>`);
-  p.querySelector('[data-n]').onclick = e => {
-    const b = e.target.closest('button'); if (!b) return;
-    n = Number(b.dataset.k);
-    p.querySelectorAll('[data-n] button').forEach(x => x.classList.toggle('on', x === b));
-  };
-  p.querySelector('[data-x]').onclick = closeModal;
-  p.querySelector('[data-ok]').onclick = () => socket.emit('buyTicket', n, res => {
-    if (res.error) return toast(res.error);
-    closeModal();
-    toast(`티켓 ${n}장 구매 완료`, true);
-    if (after) after();
-  });
-}
-$('buyTicketBtn').onclick = () => buyTicket();
 
 // 방 만들기
 $('newCashBtn').onclick = () => {
@@ -239,11 +224,11 @@ $('newTourBtn').onclick = () => {
     <div class="field-label">블라인드 상승 간격</div>
     <div class="opt-group" data-l>${[3, 5, 7, 10].map(k => `<button data-k="${k}" class="${k === lv ? 'on' : ''}">${k}분</button>`).join('')}</div>
     <p class="hint" style="text-align:left;line-height:1.6">
-    · 참가비: 티켓 1장 (1억) · 시작 금액 <b>1억</b><br>
+    · 참가비 <b>1억</b> (대회 시작 때 차감) · 시작 금액 <b>1억</b><br>
     · 블라인드 50만/100만 → 레벨마다 상승<br>
-    · 리바이 최대 2회 (레벨 6까지, 티켓 1장씩)<br>
-    · 상금: 티켓 합계 · 2~4명 우승 독식 / 5~6명 70·30% / 7~8명 50·30·20%<br>
-    · 내 티켓: <b>${me.tickets}장</b></p>
+    · 리바이 최대 2회 (레벨 6까지, 1회 1억)<br>
+    · 상금: 참가비+리바이 합계 · 2~4명 우승 독식 / 5~6명 70·30% / 7~8명 50·30·20%<br>
+    · 보유 현금: <b>${won(me.assets)}</b></p>
     <div class="row2"><button class="btn" data-x>취소</button><button class="btn gold" data-ok>대회 열기</button></div>`);
   p.querySelector('[data-l]').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -255,7 +240,8 @@ $('newTourBtn').onclick = () => {
     const name = p.querySelector('[data-name]').value;
     const go = () => socket.emit('createRoom', { mode: 'tourney', name, levelMin: lv }, handleEnter);
     closeModal();
-    if (me.tickets < 1) buyTicket(go); else go();
+    if (me.assets < 1e8) return toast('참가비 1억원이 필요해요');
+    go();
   };
 };
 function pickBuyIn(info, cb) {
@@ -276,7 +262,6 @@ function handleEnter(res, code) {
       if (code) socket.emit('joinRoom', { code, buyIn }, r => handleEnter(r, code));
     });
   }
-  if (res.needTicket) return buyTicket(() => code ? joinRoom(code) : null);
   if (res.error) return toast(res.error);
   enterGame();
 }
@@ -454,7 +439,7 @@ function renderSeats() {
     else if (p.tStatus === 'busted') { act = '<span class="act allin">파산</span>'; stack = '리바이?'; }
 
     h += `<div class="${cls.join(' ')}" style="left:${x}%;top:${y}%">
-      <div class="ava-wrap">${avImg(p.avatar)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${mini}</div>
+      <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag">좃밥 ${p.shame}</span>` : ''}${mini}</div>
       ${act}
       <div class="plate"><div class="nm">${esc(p.name)}</div><div class="st">${stack}</div></div>
     </div>`;
@@ -570,7 +555,7 @@ function renderControls() {
     } else if (r.myStatus === 'busted') {
       const left = r.pendingUntil ? Math.max(0, Math.ceil((r.pendingUntil - Date.now() - clockOffset) / 1000)) : 0;
       h = `<div class="wait">💥 파산! 리바이 ${r.myRebuys}/${r.rebuyMax}회 사용${left ? ` · <b data-pend>${left}</b>초 안에 결정` : ''}
-        <div class="row"><button class="btn red" data-withdraw>기권</button><button class="btn gold" data-rebuy ${r.canRebuy ? '' : 'disabled'}>🔁 리바이 (${r.tickets < 1 ? '1억' : '티켓 1장'})</button></div></div>`;
+        <div class="row"><button class="btn red" data-withdraw>기권</button><button class="btn gold" data-rebuy ${r.canRebuy ? '' : 'disabled'}>🔁 리바이 (1억)</button></div></div>`;
     } else if (r.myStatus === 'out') {
       h = `<div class="wait">탈락했어요 · ${my && my.place ? my.place + '위' : ''}<div class="row"><button class="btn gold" data-lobby>로비로</button></div></div>`;
     } else {
@@ -591,6 +576,7 @@ function renderControls() {
   on('[data-rebuy]', () => socket.emit('rebuy', res => res.error ? toast(res.error) : toast('리바이 완료! 1억 지급', true)));
   on('[data-withdraw]', () => confirmBox('기권', '기권하면 지금 순위로 탈락 처리돼요.', '기권', () => socket.emit('withdraw', res => res.error && toast(res.error)), true));
   on('[data-topup]', () => {
+    toast('⚠️ 충전하면 3판 동안 프로필에 "좃밥"이 붙어요');
     const max = Math.min(r.buyMax - my.chips, Math.floor(r.assets / s.bb) * s.bb);
     if (max < s.bb) return toast('자산이 부족해요');
     amountModal({ title: '충전 금액', min: Math.min(s.bb * 20, max), max, def: Math.min(r.buyDef, max), step: s.bb, note: `보유 현금 ${won(r.assets)}`, okText: '충전' },
