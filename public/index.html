@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>친구 홀덤</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- 로비 -->
+  <section id="lobby" class="screen">
+    <div class="lobby-card">
+      <div class="logo">♠ ♥ ♣ ♦</div>
+      <h1>친구 홀덤</h1>
+      <p class="sub">방 만들고 코드나 링크로 친구 초대</p>
+      <label>닉네임
+        <input id="nameInput" maxlength="12" placeholder="닉네임 입력" autocomplete="off" />
+      </label>
+      <button id="createBtn" class="btn primary wide">새 방 만들기</button>
+      <div class="divider"><span>또는</span></div>
+      <div class="join-row">
+        <input id="codeInput" maxlength="4" placeholder="방 코드" autocomplete="off" />
+        <button id="joinBtn" class="btn">입장</button>
+      </div>
+      <p id="lobbyErr" class="err"></p>
+    </div>
+  </section>
+
+  <!-- 게임 -->
+  <section id="game" class="screen hidden">
+    <header class="topbar">
+      <div class="room">방 <b id="roomCode">----</b></div>
+      <button id="copyBtn" class="btn small">초대 링크 복사</button>
+      <div class="spacer"></div>
+      <span class="blinds" id="blindsInfo"></span>
+      <button id="leaveBtn" class="btn small ghost">나가기</button>
+    </header>
+
+    <main class="layout">
+      <div class="table-area">
+        <div class="table-wrap">
+          <div class="felt">
+            <div class="center">
+              <div class="stage" id="stageName"></div>
+              <div class="board" id="board"></div>
+              <div class="pot" id="pot"></div>
+              <div class="result" id="result"></div>
+            </div>
+          </div>
+          <div id="seats"></div>
+        </div>
+
+        <div class="controls">
+          <div id="waitPanel" class="wait-panel"></div>
+          <div id="actions" class="actions hidden">
+            <div class="raise-box">
+              <div class="quick">
+                <button class="chip-btn" data-q="min">최소</button>
+                <button class="chip-btn" data-q="half">½팟</button>
+                <button class="chip-btn" data-q="pot">팟</button>
+              </div>
+              <input type="range" id="raiseRange" />
+              <input type="number" id="raiseNum" inputmode="numeric" />
+            </div>
+            <div class="btn-row">
+              <button class="btn act fold" data-a="fold">폴드</button>
+              <button class="btn act check" data-a="call" id="callBtn">체크</button>
+              <button class="btn act raise" id="raiseBtn">레이즈</button>
+              <button class="btn act allin" data-a="allin" id="allinBtn">올인</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="chat">
+        <div class="chat-head">채팅</div>
+        <div class="chat-log" id="chatLog"></div>
+        <form class="chat-form" id="chatForm">
+          <input id="chatInput" maxlength="200" placeholder="메시지 입력…" autocomplete="off" />
+          <button class="btn primary small" type="submit">전송</button>
+        </form>
+      </aside>
+    </main>
+  </section>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/client.js"></script>
+</body>
+</html>
