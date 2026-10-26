@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07100c" />
+  <title>FRIENDS HOLD'EM</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ========== 로그인 ========== -->
+  <section id="auth" class="screen hidden">
+    <div class="auth-hero">
+      <div class="suits"><span>♠</span><span class="r">♥</span><span>♣</span><span class="r">♦</span></div>
+      <h1>FRIENDS<br><b>HOLD'EM</b></h1>
+      <p>친구들과 즐기는 텍사스 홀덤</p>
+    </div>
+    <div class="auth-card glass">
+      <div class="seg" id="authSeg">
+        <button data-m="login" class="on">로그인</button>
+        <button data-m="register">회원가입</button>
+      </div>
+      <input id="authName" maxlength="10" placeholder="닉네임" autocomplete="username" />
+      <input id="authPw" type="password" maxlength="40" placeholder="비밀번호 (4자 이상)" autocomplete="current-password" />
+      <button id="authBtn" class="btn gold big">로그인</button>
+      <p class="hint" id="authHint">가입하면 초기 자산 <b>10억원</b>이 지급돼요</p>
+      <p class="err" id="authErr"></p>
+    </div>
+  </section>
+
+  <!-- ========== 로비 ========== -->
+  <section id="lobby" class="screen hidden">
+    <header class="lobby-top">
+      <div class="me-chip" id="meChip"></div>
+      <button class="icon-btn" id="logoutBtn" title="로그아웃">⎋</button>
+    </header>
+
+    <div class="wallet glass">
+      <div class="wallet-main">
+        <span>총 자산</span>
+        <b id="wTotal">-</b>
+      </div>
+      <div class="wallet-sub">
+        <div><span>보유 현금</span><b id="wCash">-</b></div>
+        <div><span>테이블</span><b id="wTable">-</b></div>
+        <div><span>토너 평균</span><b id="wTickets">-</b></div>
+      </div>
+    </div>
+
+    <div id="bailout"></div>
+
+    <div class="tabs" id="lobbyTabs">
+      <button data-t="rooms" class="on">게임</button>
+      <button data-t="rank">랭킹</button>
+      <button data-t="profile">프로필</button>
+    </div>
+
+    <div class="tab-body" id="tab-rooms">
+      <div class="create-row">
+        <button class="btn green" id="newCashBtn"><small>일반모드</small>방 만들기</button>
+        <button class="btn gold" id="newTourBtn"><small>토너먼트</small>대회 열기</button>
+      </div>
+      <div class="code-row">
+        <input id="joinCode" maxlength="4" placeholder="방 코드" />
+        <button class="btn" id="joinCodeBtn">입장</button>
+      </div>
+      <div id="backToRoom"></div>
+      <div class="room-list" id="roomList"></div>
+    </div>
+
+    <div class="tab-body hidden" id="tab-rank">
+      <div class="rank-list" id="rankList"></div>
+    </div>
+
+    <div class="tab-body hidden" id="tab-profile">
+      <div class="profile-card glass">
+        <div class="av big-av" id="profilePreview"></div>
+        <b id="profileName"></b>
+        <button class="btn gold" id="peOpen">✏️ 프로필 그리기</button>
+      </div>
+      <div class="stats glass" id="myStats"></div>
+    </div>
+  </section>
+
+  <!-- ========== 게임 ========== -->
+  <section id="game" class="screen hidden">
+    <header class="g-top">
+      <button class="icon-btn" id="exitBtn" title="나가기">‹</button>
+      <div class="g-title">
+        <b id="gName">-</b>
+        <span id="gSub">-</span>
+      </div>
+      <button class="icon-btn" id="rankBtn" title="족보">♠</button>
+      <button class="icon-btn" id="chatBtn" title="채팅">💬<i id="chatBadge" class="badge hidden">0</i></button>
+    </header>
+
+    <div class="t-hud hidden" id="tHud"></div>
+
+    <div class="table-zone">
+      <div class="table">
+        <div class="rim"><div class="felt">
+          <div class="felt-logo">FRIENDS HOLD'EM</div>
+          <div class="center">
+            <div class="stage" id="stageName"></div>
+            <div class="board" id="board"></div>
+            <div class="board-info" id="boardInfo"></div>
+            <div class="pot" id="pot"></div>
+            <div class="result" id="result"></div>
+          </div>
+        </div></div>
+        <div id="seats"></div>
+      </div>
+    </div>
+
+    <div class="my-panel">
+      <div class="my-hand" id="myHand"></div>
+      <div class="my-info" id="myInfo"></div>
+    </div>
+
+    <div class="controls" id="controls"></div>
+
+    <div class="raise-sheet hidden" id="raiseSheet">
+      <div class="rs-amount"><span id="rsLabel">레이즈</span><b id="rsValue">0</b></div>
+      <div class="rs-quick" id="rsQuick"></div>
+      <input type="range" id="rsRange" />
+      <div class="rs-btns">
+        <button class="btn" id="rsCancel">취소</button>
+        <button class="btn gold" id="rsOk">확인</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 채팅 시트 -->
+  <div class="sheet hidden" id="chatSheet">
+    <div class="sheet-panel">
+      <div class="sheet-head"><b>채팅</b><button class="icon-btn" data-close>✕</button></div>
+      <div class="chat-log" id="chatLog"></div>
+      <form class="chat-form" id="chatForm">
+        <input id="chatInput" maxlength="200" placeholder="메시지 입력…" autocomplete="off" />
+        <button class="btn gold small" type="submit">전송</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 도트 프로필 편집 (전체화면) -->
+  <div class="pe-overlay hidden" id="peOverlay">
+    <header class="pe-bar">
+      <button class="icon-btn" id="peClose" title="닫기">✕</button>
+      <b>도트 프로필 그리기</b>
+      <button class="btn gold small" id="peSave">저장</button>
+    </header>
+    <div class="pixel-editor">
+      <span class="hint">16×16 · 칸을 누르거나 드래그해서 칠해요</span>
+      <canvas id="peCanvas" width="320" height="320"></canvas>
+      <div class="palette" id="palette"></div>
+      <div class="pe-tools">
+        <button class="btn small" data-tool="pen">✏️ 펜</button>
+        <button class="btn small" data-tool="fill">🪣 채우기</button>
+        <button class="btn small" data-tool="mirror">↔️ 대칭 <span id="mirrorState">끔</span></button>
+        <button class="btn small" id="peUndo">↶ 되돌리기</button>
+        <button class="btn small" id="peClear">비우기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 공용 모달 -->
+  <div class="modal hidden" id="modal">
+    <div class="modal-bg" data-close></div>
+    <div class="modal-panel glass" id="modalPanel"></div>
+  </div>
+
+  <div id="fx"></div>
+  <div id="toast" class="toast"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/poker.js"></script>
+<script src="/pixel.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
