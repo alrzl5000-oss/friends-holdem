@@ -275,7 +275,7 @@ $('newTourBtn').onclick = () => {
     <div class="field-label">블라인드 상승 간격</div>
     <div class="opt-group" data-l>${[3, 5, 7, 10].map(k => `<button data-k="${k}" class="${k === lv ? 'on' : ''}">${k}분</button>`).join('')}</div>
     <p class="hint" style="text-align:left;line-height:1.6">
-    · 참가비 <b>1억</b> (대회 시작 때 차감) · 시작 금액 <b>1억</b><br>
+    · 참가비 <b>내 돈 1억</b> — 대회 시작 때 보유 현금에서 빠지고, 그 1억으로 게임해요<br>
     · 블라인드 50만/100만 → 레벨마다 상승<br>
     · 리바이 최대 2회 (1회 1억) · <b>레벨 5까지만, 레벨 6부터 불가</b><br>
     · 1대1 남으면 <b>찹</b> 가능 (지금 가진 금액대로 상금 나누기)<br>
@@ -428,7 +428,7 @@ function renderGame() {
       const w = r.results.find(x => x.place === 1);
       hud.innerHTML = `<div><span>상태</span><b>${r.chopped ? '찹 종료' : '종료'}</b></div><div><span>우승</span><b>${w ? esc(w.name) : '-'}</b></div><div><span>참가</span><b>${r.players}명</b></div><div><span>상금</span><b>${short(r.prizePool)}</b></div>`;
     } else if (r.status === 'registering') {
-      hud.innerHTML = `<div><span>참가</span><b>${s.seats.filter(Boolean).length}명</b></div><div><span>시작 금액</span><b>${short(r.startStack)}</b></div><div><span>레벨</span><b>${r.levelMs / 60000}분</b></div><div><span>예상 상금</span><b>${short(r.prizePool)}</b></div><div><span>리바이</span><b>Lv${r.rebuyLevels}까지</b></div>`;
+      hud.innerHTML = `<div><span>참가</span><b>${s.seats.filter(Boolean).length}명</b></div><div><span>참가비</span><b>내 돈 ${short(r.startStack)}</b></div><div><span>레벨</span><b>${r.levelMs / 60000}분</b></div><div><span>예상 상금</span><b>${short(r.prizePool)}</b></div><div><span>리바이</span><b>Lv${r.rebuyLevels}까지</b></div>`;
     } else {
       const rb = r.rebuyOpen ? (r.level === r.rebuyLevels ? '이번 Lv까지' : `Lv${r.rebuyLevels}까지`) : `Lv${r.rebuyLevels + 1}~ 불가`;
       hud.innerHTML = `<div><span>레벨 ${r.level}</span><b>${short(r.blinds[0])}/${short(r.blinds[1])}</b></div><div><span>다음 ${short(r.nextBlinds[1])}</span><b data-lvl>-</b></div><div><span>남은 인원</span><b>${r.alive}/${r.players}</b></div><div><span>상금</span><b>${short(r.prizePool)}</b></div><div class="${r.rebuyOpen ? '' : 'closed'}"><span>리바이</span><b>${rb}</b></div>`;
@@ -558,7 +558,7 @@ function renderMine() {
     return;
   }
   if (!cards && s.room.mode === 'tourney' && s.room.status === 'registering') {
-    info.innerHTML = `<span class="mi-label">대회 시작 시 지급</span><span class="mi-hand">${won(s.room.startStack)}</span>`;
+    info.innerHTML = `<span class="mi-label">대회 시작 때 내 돈에서 차감 → 이 금액으로 플레이</span><span class="mi-hand">참가비 ${won(s.room.startStack)}</span>`;
     return;
   }
   if (!cards) {
@@ -662,7 +662,7 @@ function renderControls() {
   on('[data-invite]', copyInvite);
   on('[data-lobby]', () => { leftRoom = r.code; socket.emit('leaveRoom', () => { state = null; goLobby(); }); });
   on('[data-results]', showResults);
-  on('[data-rebuy]', () => socket.emit('rebuy', res => res.error ? toast(res.error) : toast('리바이 완료! 1억 지급', true)));
+  on('[data-rebuy]', () => socket.emit('rebuy', res => res.error ? toast(res.error) : toast('리바이 완료! 내 돈 1억으로 다시 시작', true)));
   on('[data-withdraw]', () => confirmBox('기권', '기권하면 지금 순위로 탈락 처리돼요.', '기권', () => socket.emit('withdraw', res => res.error && toast(res.error)), true));
   on('[data-topup]', () => {
     const max = Math.min(r.buyMax - my.chips, Math.floor(r.assets / s.bb) * s.bb);
