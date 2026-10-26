@@ -95,6 +95,19 @@ for (const item of (process.env.GIVE || '').split(';').map(x => x.trim()).filter
   console.log(`지급: ${u.username} ${n >= 0 ? '+' : ''}${n / 1e8}억 (키 ${key})`);
 }
 
+// 관리자 트로피 지급: Railway 변수 TROPHY="키|닉네임|개수;..." — 같은 키는 한 번만
+for (const item of (process.env.TROPHY || '').split(';').map(x => x.trim()).filter(Boolean)) {
+  const [key, name, cnt] = item.split('|').map(x => (x || '').trim());
+  const k = 'trophy:' + key;
+  if (!key || data.gives.includes(k)) continue;
+  const u = data.users[String(name).toLowerCase()];
+  const n = Math.round(Number(cnt));
+  if (!u || !Number.isFinite(n)) { console.log(`트로피 지급 실패(계정/개수 확인): ${item}`); continue; }
+  u.trophies = Math.max(0, (u.trophies || 0) + n);
+  data.gives.push(k);
+  console.log(`트로피 지급: ${u.username} ${n >= 0 ? '+' : ''}${n}개 (키 ${key})`);
+}
+
 const kstDay = t => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
 // 최근 24시간 충전 횟수 → 1 좃밥 / 2 좃좃밥 / 3 걍접으셈
 function shameLevel(u) {
