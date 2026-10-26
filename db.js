@@ -50,8 +50,21 @@ for (const item of (process.env.CHOP_FIX || '').split(';').map(x => x.trim()).fi
   u1.stats.placeSum += 0.5;   // 1위 → 1.5위
   u2.stats.placeSum -= 0.5;   // 2위 → 1.5위
   u2.stats.tWins += 1;        // 2위도 우승 1회
+  u2.trophies = (u2.trophies || 0) + 1;
   data.appliedFixes.push(item);
   console.log(`찹 소급 적용: ${item}`);
+}
+
+// 스킨: 🏆 = 우승할 때마다 1개. 처음 한 번은 지금까지 우승 횟수만큼 지급
+const Shop = require('./public/shop.js');
+for (const u of Object.values(data.users)) {
+  if (u.trophies == null) u.trophies = u.stats.tWins || 0;
+  u.owned = u.owned || [];
+  u.equip = u.equip || {};
+}
+function skinOf(u) {
+  const e = u.equip || {};
+  return { frame: e.frame || null, back: e.back || null, title: e.title ? (Shop.byId(e.title) || {}).name || null : null, fx: e.fx || null };
 }
 
 const kstDay = t => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -122,6 +135,10 @@ function pub(u) {
     avatar: u.avatar,
     stats: u.stats,
     total: total(u),
+    trophies: u.trophies || 0,
+    owned: u.owned || [],
+    equip: u.equip || {},
+    skin: skinOf(u),
   };
 }
 
@@ -133,6 +150,25 @@ module.exports = {
   START_ASSETS,
   ENTRY_FEE,
   DAILY_BAILOUTS,
+  skinOf,
+  buy(u, id) {
+    const item = Shop.byId(id);
+    if (!item) return { error: '없는 상품이에요' };
+    if (u.owned.includes(id)) return { error: '이미 가지고 있어요' };
+    if ((u.trophies || 0) < item.price) return { error: `🏆가 ${item.price - (u.trophies || 0)}개 부족해요` };
+    u.trophies -= item.price;
+    u.owned.push(id);
+    u.equip[item.cat] = id; // 사면 바로 장착
+    save();
+    return { ok: true };
+  },
+  equip(u, cat, id) {
+    if (!Shop.CATS[cat]) return { error: '잘못된 종류예요' };
+    if (id && (!u.owned.includes(id) || Shop.byId(id).cat !== cat)) return { error: '가지고 있지 않아요' };
+    if (id) u.equip[cat] = id; else delete u.equip[cat];
+    save();
+    return { ok: true };
+  },
   shameLevel,
   bailoutsToday,
   bailout(u) {
@@ -165,6 +201,9 @@ module.exports = {
       inPlay: 0,
       tourneyHold: 0,
       bailoutLog: [],
+      trophies: 0,
+      owned: [],
+      equip: {},
       avatar: randomAvatar(),
       stats: { tWins: 0, tPlayed: 0, placeSum: 0, bailouts: 0 },
       createdAt: Date.now(),
@@ -202,7 +241,7 @@ module.exports = {
   },
   ranking() {
     const all = [...byIdMap.values()].map(u => ({
-      username: u.username, avatar: u.avatar, total: total(u), tWins: u.stats.tWins, tPlayed: u.stats.tPlayed,
+      username: u.username, avatar: u.avatar, total: total(u), tWins: u.stats.tWins, tPlayed: u.stats.tPlayed, skin: skinOf(u),
       bailouts: u.stats.bailouts || 0, shame: shameLevel(u),
       avgPlace: u.stats.tPlayed ? u.stats.placeSum / u.stats.tPlayed : null,
     }));

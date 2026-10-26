@@ -76,6 +76,7 @@ class BaseRoom {
     s.name = user.username;
     s.avatar = user.avatar;
     s.shame = db.shameLevel(user);
+    s.skin = db.skinOf(user);
     s.leaving = false;
     this.table.setConnected(user.id, socketId, true);
     return true;
@@ -140,7 +141,7 @@ class CashRoom extends BaseRoom {
     user.assets -= buyIn;
     user.inPlay = buyIn;
     db.save();
-    const r = this.table.addPlayer(user, socketId, buyIn, { shame: db.shameLevel(user) });
+    const r = this.table.addPlayer(user, socketId, buyIn, { shame: db.shameLevel(user), skin: db.skinOf(user) });
     if (r.error) { user.assets += buyIn; user.inPlay = 0; return r; }
     this.log(`${user.username} 님 입장 (바이인 ${fmt(buyIn)})`);
     this.shameChat(user);
@@ -245,7 +246,7 @@ class TourneyRoom extends BaseRoom {
     if (this.status !== 'registering') return { error: '이미 시작된 토너먼트예요' };
     if (this.seated.length >= this.table.max) return { error: '자리가 꽉 찼어요' };
     if (user.assets < FEE) return { error: '참가비 1억원이 필요해요' };
-    const r = this.table.addPlayer(user, socketId, 0, { tStatus: 'alive', rebuys: 0, place: 0, shame: db.shameLevel(user) });
+    const r = this.table.addPlayer(user, socketId, 0, { tStatus: 'alive', rebuys: 0, place: 0, shame: db.shameLevel(user), skin: db.skinOf(user) });
     if (r.error) return r;
     this.log(`${user.username} 님 참가 등록`);
     return { ok: true };
@@ -482,7 +483,7 @@ class TourneyRoom extends BaseRoom {
       if (!u) continue;
       u.assets += r.prize;
       u.stats.placeSum = (u.stats.placeSum || 0) + r.place;
-      if (r.place === 1 || r.co) u.stats.tWins++;
+      if (r.place === 1 || r.co) { u.stats.tWins++; u.trophies = (u.trophies || 0) + 1; }
     }
     for (const id of this.entrants) {
       const u = db.byId(id);

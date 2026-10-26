@@ -75,7 +75,8 @@ function modal(html) {
 }
 function closeModal() { $('modal').classList.add('hidden'); }
 document.querySelectorAll('#modal [data-close]').forEach(e => e.onclick = closeModal);
-function avImg(str) { return `<div class="av"><img src="${avatarURL(str)}" alt=""></div>`; }
+function avImg(str, frame) { return `<div class="av ${frame ? 'fr-' + frame : ''}"><img src="${avatarURL(str)}" alt=""></div>`; }
+const titleTag = sk => sk && sk.title ? `<i class="ttl">${esc(sk.title)}</i>` : '';
 function confirmBox(title, text, okText, cb, danger) {
   const p = modal(`<h3>${title}</h3><p class="hint" style="text-align:left">${text}</p>
     <div class="row2"><button class="btn" data-x>취소</button><button class="btn ${danger ? 'red' : 'gold'}" data-ok>${okText}</button></div>`);
@@ -158,7 +159,8 @@ function goLobby() {
 function renderWallet() {
   if (!me) return;
   setTimeout(renderExcelBars, 0);
-  $('meChip').innerHTML = `${avImg(me.avatar)}<div><b>${esc(me.username)}</b><span>토너먼트 우승 ${me.stats.tWins}회</span></div>`;
+  $('meChip').innerHTML = `${avImg(me.avatar, me.skin && me.skin.frame)}<div><b>${esc(me.username)} ${titleTag(me.skin)}</b><span>토너먼트 우승 ${me.stats.tWins}회 · 🏆 ${me.trophies}</span></div>`;
+  if (current === 'lobby' && !$('tab-shop').classList.contains('hidden')) renderShop();
   $('wTotal').textContent = won(me.total);
   $('wCash').textContent = short(me.assets);
   $('wTable').textContent = short(me.inPlay);
@@ -194,9 +196,10 @@ $('logoutBtn').onclick = () => confirmBox('로그아웃', '로그아웃할까요
 $('lobbyTabs').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   $('lobbyTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-  ['rooms', 'rank', 'profile'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.t));
+  ['rooms', 'rank', 'shop', 'profile'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.t));
   if (b.dataset.t === 'rank') socket.emit('ranking', renderRank);
   if (b.dataset.t === 'profile') renderProfile();
+  if (b.dataset.t === 'shop') renderShop();
   if (b.dataset.t === 'rooms') loadRooms();
 };
 
@@ -237,8 +240,8 @@ function renderRank(data) {
     const medal = ['🥇', '🥈', '🥉'][i];
     const right = rankMode === 'bailouts' ? `충전 ${r.bailouts}회<small>${short(r.total)}</small>` : avgText({ tPlayed: r.tPlayed, placeSum: r.avgPlace * r.tPlayed });
     return `<div class="rank-row ${me && r.username === me.username ? 'me' : ''}">
-      <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar)}
-      <div class="nm"><b>${esc(r.username)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
+      <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar, r.skin && r.skin.frame)}
+      <div class="nm"><b>${esc(r.username)} ${titleTag(r.skin)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
       <div class="amt">${right}</div></div>`;
   }).join('') || `<div class="empty-note">${rankMode === 'avg' ? '아직 토너먼트를 끝까지 한 사람이 없어요' : '아직 랭킹이 없어요'}</div>`);
   $('rankSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; rankMode = b.dataset.m; renderRank(); };
@@ -502,7 +505,7 @@ function renderSeats() {
 
     let mini = '';
     if (i !== s.me && p.hasCards && !p.folded) {
-      mini = `<div class="mini ${p.cards ? 'face' : ''}">${p.cards ? cardHTML(p.cards[0]) + cardHTML(p.cards[1]) : cardHTML(null) + cardHTML(null)}</div>`;
+      mini = `<div class="mini ${p.cards ? 'face' : ''}">${p.cards ? cardHTML(p.cards[0]) + cardHTML(p.cards[1]) : cardHTML(null, p.skin && p.skin.back ? 'bk-' + p.skin.back : '') + cardHTML(null, p.skin && p.skin.back ? 'bk-' + p.skin.back : '')}</div>`;
     }
 
     let act = p.lastAction ? `<span class="act ${ACT_CLS[p.lastAction] || ''}">${p.lastAction}</span>` : '';
@@ -513,9 +516,9 @@ function renderSeats() {
     else if (p.tStatus === 'busted') { act = '<span class="act allin">파산</span>'; stack = '리바이?'; }
 
     h += `<div class="${cls.join(' ')}" style="left:${x}%;top:${y}%">
-      <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
+      <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar, p.skin && p.skin.frame)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
       ${act}
-      <div class="plate"><div class="nm">${esc(p.name)}</div><div class="st">${stack}</div></div>
+      <div class="plate"><div class="nm">${esc(p.name)}</div>${p.skin && p.skin.title ? `<div class="ttl-s">${esc(p.skin.title)}</div>` : ''}<div class="st">${stack}</div></div>
       ${s.stage !== 'waiting' ? [i === s.dealer ? '<i class="pos-chip d">D</i>' : '', i === s.sbSeat ? '<i class="pos-chip sb">SB</i>' : '', i === s.bbSeat ? '<i class="pos-chip bb">BB</i>' : ''].join('') : ''}
     </div>`;
 
@@ -867,6 +870,7 @@ function effects(prev, s) {
     if (my.won > 0) {
       fxRays(); fxFlash('gold'); confetti(60);
       fxBanner('승리!', `+${won(my.won)}${my.bestName ? ' · ' + my.bestName : ''}`, 'win');
+      winSkinFx(my.skin && my.skin.fx);
       vibrate([60, 40, 120]);
     } else if (my.inHand && !my.folded) {
       fxFlash('red');
@@ -888,6 +892,7 @@ function effects(prev, s) {
       fxFinished = true;
       const mine = r.results.find(x => x.name === my.name);
       setTimeout(() => {
+        if (mine && (mine.co || mine.place === 1)) winSkinFx(my.skin && my.skin.fx, true);
         if (mine && mine.co) { fxFlash('gold'); confetti(80); fxBanner('🤝 공동 우승!', `상금 +${won(mine.prize)}`, 'win'); vibrate([80, 60, 200]); }
         else if (mine && mine.place === 1) { fxRays(); fxFlash('gold'); confetti(120); fxBanner('🏆 우승!', `상금 +${won(mine.prize)}`, 'win'); vibrate([80, 60, 80, 60, 200]); }
         else if (mine) fxBanner(`${mine.place}위`, mine.prize ? `상금 +${won(mine.prize)}` : '수고했어요!', mine.prize ? '' : 'small');
@@ -1040,4 +1045,74 @@ function renderChop() {
   const y = bar.querySelector('[data-chop-yes]'), n = bar.querySelector('[data-chop-no]');
   if (y) y.onclick = () => socket.emit('chop', true, res => res.error && toast(res.error));
   if (n) n.onclick = () => socket.emit('chop', false, () => {});
+}
+
+// ================= 스킨 상점 =================
+function renderShop() {
+  if (!me) return;
+  const el = $('tab-shop');
+  const preview = it => {
+    if (it.cat === 'frame') return avImg(me.avatar, it.id);
+    if (it.cat === 'back') return `<div class="pv-cards">${cardHTML(null, 'bk-' + it.id)}${cardHTML(null, 'bk-' + it.id)}</div>`;
+    if (it.cat === 'title') return `<i class="ttl big">${esc(it.name)}</i>`;
+    return `<div class="pv-fx">${{ e_gold: '🪙', e_fire: '🎆', e_money: '💸' }[it.id] || '✨'}</div>`;
+  };
+  let h = `<div class="shop-head glass"><div><span>보유 트로피</span><b>🏆 ${me.trophies}</b></div><p class="hint">토너먼트 우승(찹 포함)할 때마다 🏆 1개 · 써도 랭킹 우승 횟수는 안 줄어요</p></div>`;
+  for (const [cat, label] of Object.entries(Shop.CATS)) {
+    h += `<div class="shop-cat">${label}${cat === 'back' ? ' <small>다른 사람이 내 카드를 볼 때</small>' : cat === 'fx' ? ' <small>내가 이겼을 때</small>' : ''}</div><div class="shop-grid">`;
+    for (const it of Shop.SHOP.filter(x => x.cat === cat)) {
+      const own = me.owned.includes(it.id);
+      const on = me.equip[cat] === it.id;
+      let btn;
+      if (on) btn = `<button class="btn small line" data-unequip="${cat}">장착 중 ✓</button>`;
+      else if (own) btn = `<button class="btn small" data-equip="${it.id}" data-cat="${cat}">장착</button>`;
+      else btn = `<button class="btn small gold" data-buy="${it.id}" ${me.trophies < it.price ? 'disabled' : ''}>🏆 ${it.price}</button>`;
+      h += `<div class="shop-item ${on ? 'on' : ''}"><div class="pv">${preview(it)}</div><b>${esc(it.name)}</b>${it.desc ? `<span>${esc(it.desc)}</span>` : ''}
+        ${cat === 'fx' ? `<button class="pv-play" data-play="${it.id}">▶ 미리보기</button>` : ''}${btn}</div>`;
+    }
+    h += '</div>';
+  }
+  el.innerHTML = h;
+  el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => {
+    const it = Shop.byId(b.dataset.buy);
+    confirmBox('스킨 구매', `<b>${esc(it.name)}</b> (${Shop.CATS[it.cat]})을 🏆 ${it.price}개로 살까요?<br>사면 바로 장착돼요.`, '구매', () =>
+      socket.emit('buy', it.id, res => res.error ? toast(res.error) : toast(`${it.name} 구매 완료!`, true)));
+  });
+  el.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.cat, id: b.dataset.equip }, res => res.error && toast(res.error)));
+  el.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.unequip, id: null }, res => res.error && toast(res.error)));
+  el.querySelectorAll('[data-play]').forEach(b => b.onclick = () => { if (!fxOn()) return toast('설정에서 이펙트를 켜면 볼 수 있어요'); fxBanner('승리!', '미리보기', 'win'); winSkinFx(b.dataset.play, true); });
+}
+
+// 우승 이펙트 스킨: 화면 위에서 쏟아지는 효과
+function winSkinFx(id, big) {
+  if (!id || !fxOn()) return;
+  const n = big ? 70 : 40;
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('i');
+    d.className = 'rain ' + id;
+    if (id === 'e_gold') d.textContent = '🪙';
+    if (id === 'e_money') d.textContent = '💵';
+    if (id === 'e_fire') d.style.background = ['#ff4d4d', '#ffd23f', '#3fbfff', '#ff7ae0', '#7dff7a'][i % 5];
+    d.style.left = Math.random() * 100 + '%';
+    d.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
+    d.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+    d.style.animationDuration = (1.4 + Math.random() * 1.6) + 's';
+    d.style.animationDelay = Math.random() * .6 + 's';
+    fxEl.appendChild(d);
+    setTimeout(() => d.remove(), 4000);
+  }
+  if (id === 'e_fire') for (let k = 0; k < 5; k++) setTimeout(() => burst(10 + Math.random() * 80, 15 + Math.random() * 40), k * 280);
+}
+function burst(x, y) {
+  for (let i = 0; i < 18; i++) {
+    const d = document.createElement('i');
+    d.className = 'spark';
+    const a = (i / 18) * Math.PI * 2;
+    d.style.left = x + '%'; d.style.top = y + '%';
+    d.style.background = ['#ffd23f', '#ff4d4d', '#3fbfff', '#ff7ae0'][i % 4];
+    d.style.setProperty('--tx', Math.cos(a) * 70 + 'px');
+    d.style.setProperty('--ty', Math.sin(a) * 70 + 'px');
+    fxEl.appendChild(d);
+    setTimeout(() => d.remove(), 1000);
+  }
 }

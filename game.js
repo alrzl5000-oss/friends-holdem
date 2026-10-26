@@ -478,6 +478,7 @@ class Table {
         place: s.place || 0,
         rebuys: s.rebuys || 0,
         shame: s.shame || 0,
+        skin: s.skin || null,
       }),
     };
   }

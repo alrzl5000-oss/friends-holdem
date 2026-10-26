@@ -145,7 +145,7 @@ input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(233,196,106,
 .wallet-sub span { display: block; font-size: 11px; color: var(--muted); }
 .wallet-sub b { font-size: 14px; }
 
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
 .tabs button { background: none; border: 0; padding: 10px; font-weight: 700; color: var(--muted); border-bottom: 2px solid transparent; }
 .tabs button.on { color: var(--gold2); border-color: var(--gold); }
 .tab-body { flex: 1; overflow-y: auto; padding: 4px 0 calc(20px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px; }
@@ -820,3 +820,58 @@ body.excel .pe-overlay { background: #fff; }
 body.excel #fx { display: none; }
 
 .res-row .co { display: block; font-size: 11px; color: var(--gold2); font-weight: 600; }
+
+/* ===== 스킨: 프로필 테두리 ===== */
+.av.fr-f_gold { border-color: #ffd86b; box-shadow: 0 0 0 2px #a8770f, 0 0 14px rgba(255,216,107,.8); }
+.av.fr-f_fire { border-color: #ff8a1f; animation: fireGlow .9s ease-in-out infinite alternate; }
+@keyframes fireGlow { from { box-shadow: 0 0 0 2px #c2280b, 0 -2px 10px #ff5a00; } to { box-shadow: 0 0 0 2px #ff3b0b, 0 -6px 22px #ffb300; } }
+.av.fr-f_ice { border-color: #b9f1ff; box-shadow: 0 0 0 2px #3fa9d6, 0 0 16px rgba(160,230,255,.9); }
+.av.fr-f_rainbow { border: 3px solid transparent; background: linear-gradient(#15231d, #15231d) padding-box, conic-gradient(#ff004c, #ffb800, #3dff6e, #00c2ff, #a24bff, #ff004c) border-box; box-shadow: 0 0 14px rgba(162,75,255,.6); }
+.av.fr-f_diamond { border-color: #fff; animation: sparkle 1.6s linear infinite; }
+@keyframes sparkle { 0%, 100% { box-shadow: 0 0 0 2px #9fd8ff, 0 0 10px #fff; } 50% { box-shadow: 0 0 0 2px #e4c6ff, 0 0 26px #fff, 0 0 4px #9fd8ff inset; } }
+
+/* ===== 스킨: 카드 뒷면 ===== */
+.card.back.bk-b_navy { background: repeating-linear-gradient(45deg, rgba(233,196,106,.35) 0 2px, transparent 2px 7px), linear-gradient(160deg, #1d3a7a, #0d1f45); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #e9c46a, inset 0 0 0 4px #0d1f45; }
+.card.back.bk-b_black { background: radial-gradient(circle at 50% 50%, #e9c46a 0 18%, transparent 19%), repeating-linear-gradient(-45deg, #1a1a1a 0 4px, #0b0b0b 4px 8px); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #e9c46a, inset 0 0 0 4px #000; }
+.card.back.bk-b_neon { background: linear-gradient(135deg, #0a0020, #1b0040); box-shadow: 0 0 10px #ff2bd6, inset 0 0 0 2px #00f0ff, inset 0 0 12px #ff2bd6; }
+.card.back.bk-b_money { background: repeating-linear-gradient(90deg, #d9b45a 0 3px, #e8cf8a 3px 6px), #e1c070; box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #7a5a14; }
+.card.back.bk-b_money::after { content: "₩"; position: absolute; inset: 0; display: grid; place-items: center; color: #6b4b0c; font-weight: 900; font-size: 70%; }
+
+/* ===== 스킨: 칭호 ===== */
+.ttl { font-style: normal; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 6px; background: linear-gradient(180deg, #f6dd9a, #c99a2e); color: #2a1d05; vertical-align: 2px; white-space: nowrap; }
+.ttl.big { font-size: 13px; padding: 3px 10px; }
+.seat .ttl-s { font-size: 9px; font-weight: 800; color: var(--gold2); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ===== 스킨: 우승 이펙트 ===== */
+.rain { position: absolute; top: -30px; font-style: normal; font-size: 22px; animation: fall linear forwards; }
+.rain.e_fire { width: 6px; height: 6px; border-radius: 50%; }
+.spark { position: absolute; width: 5px; height: 5px; border-radius: 50%; animation: spark .9s ease-out forwards; }
+@keyframes spark { to { transform: translate(var(--tx), var(--ty)); opacity: 0; } }
+
+/* ===== 상점 ===== */
+.shop-head { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.shop-head div { display: flex; justify-content: space-between; align-items: baseline; }
+.shop-head span { color: var(--muted); font-size: 13px; }
+.shop-head b { font-size: 24px; color: var(--gold2); }
+.shop-head .hint { text-align: left; }
+.shop-cat { font-weight: 800; font-size: 15px; margin-top: 4px; }
+.shop-cat small { font-weight: 500; color: var(--muted); font-size: 11px; }
+.shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.shop-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); text-align: center; }
+.shop-item.on { border-color: var(--gold); background: rgba(233,196,106,.08); }
+.shop-item b { font-size: 13px; }
+.shop-item span { font-size: 10px; color: var(--muted); line-height: 1.3; }
+.shop-item .btn { width: 100%; margin-top: auto; padding: 7px 4px; }
+.shop-item .pv { height: 50px; display: grid; place-items: center; }
+.shop-item .pv .av { width: 42px; height: 42px; }
+.pv-cards { display: flex; gap: 3px; }
+.pv-cards .card { --cw: 28px; animation: none; }
+.pv-fx { font-size: 30px; }
+.pv-play { background: none; border: 0; color: var(--gold2); font-size: 11px; font-weight: 700; padding: 0; }
+
+/* 엑셀 테마에선 스킨 숨김 */
+body.excel .ttl, body.excel .ttl-s { display: none; }
+body.excel .card.back[class*="bk-"] { background: #f3f2f1; box-shadow: none; }
+body.excel .card.back.bk-b_money::after { content: "#"; color: #b3b0ad; }
+body.excel .shop-item { background: #fff; border-radius: 0; }
+body.excel .shop-head b { color: #217346; }

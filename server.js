@@ -155,6 +155,15 @@ io.on('connection', socket => {
     cb({ ok: true });
   }));
 
+  // 스킨 상점
+  const refreshSkin = () => {
+    const r = roomOfUser();
+    if (r) { const s = r.table.seat(user.id); if (s) { s.skin = db.skinOf(user); r.emit(); } }
+    ctx.pushMe(user.id);
+  };
+  socket.on('buy', guard((cb, id) => { const r = db.buy(user, String(id)); if (r.ok) refreshSkin(); cb(r); }));
+  socket.on('equip', guard((cb, { cat, id } = {}) => { const r = db.equip(user, String(cat), id ? String(id) : null); if (r.ok) refreshSkin(); cb(r); }));
+
   // 구제금(충전): 현금 1억 미만이면 10억까지 채워줌 · 하루 3회 · 24시간 좃밥
   socket.on('bailout', guard(cb => {
     if (userRoom.get(user.id)) return cb({ error: '방에서 나온 뒤에 신청할 수 있어요' });
