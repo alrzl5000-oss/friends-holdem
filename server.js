@@ -164,10 +164,10 @@ io.on('connection', socket => {
   socket.on('buy', guard((cb, id) => { const r = db.buy(user, String(id)); if (r.ok) refreshSkin(); cb(r); }));
   socket.on('equip', guard((cb, { cat, id } = {}) => { const r = db.equip(user, String(cat), id ? String(id) : null); if (r.ok) refreshSkin(); cb(r); }));
 
-  // 구제금(충전): 현금 1억 미만이면 10억까지 채워줌 · 하루 3회 · 24시간 좃밥
+  // 구제금(충전): 현금 1억 미만이면 3억 지급 · 하루 3회 · 24시간 좃밥
   socket.on('bailout', guard(cb => {
-    if (userRoom.get(user.id)) return cb({ error: '방에서 나온 뒤에 신청할 수 있어요' });
-    if (user.assets >= 1e8 || user.inPlay > 0 || user.tourneyHold > 0) return cb({ error: '현금이 1억 미만일 때만 신청할 수 있어요' });
+    // 보유 현금 + 테이블 금액이 1억 미만이면 충전 가능 (이미 낸 대회 참가비는 상관없음)
+    if (user.assets + (user.inPlay || 0) >= 1e8) return cb({ error: '현금이 1억 미만일 때만 충전할 수 있어요' });
     const r = db.bailout(user);
     if (r.error) return cb(r);
     ctx.pushMe(user.id);

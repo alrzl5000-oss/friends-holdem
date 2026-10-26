@@ -15,7 +15,9 @@ const FILE = path.join(DIR, 'db.json');
 const DATA_VERSION = 4;
 const RESET_ID = process.env.RESET_ID || '';
 const SHAME_MS = 24 * 60 * 60 * 1000; // 충전 후 좃밥 유지 시간
-const DAILY_BAILOUTS = 3;              // 하루 충전 한도 (한국 날짜 기준)
+const DAILY_BAILOUTS = 3;
+const BAILOUT_AMOUNT = 3e8;              // 충전 1회 금액 3억
+const RANK_MIN_TOURNEYS = 5;            // 평균 순위 랭킹에 오르려면 토너먼트 5회 이상              // 하루 충전 한도 (한국 날짜 기준)
 
 let data = { users: {}, sessions: {} };
 try { data = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch { /* 첫 실행 */ }
@@ -65,6 +67,19 @@ for (const u of Object.values(data.users)) {
 function skinOf(u) {
   const e = u.equip || {};
   return { frame: e.frame || null, back: e.back || null, title: e.title ? (Shop.byId(e.title) || {}).name || null : null, fx: e.fx || null };
+}
+
+// 한 번만: 예전 규칙(10억까지 채워줌)으로 충전했던 사람은 충전 1회당 5억 회수 (0원 밑으로는 안 내려감)
+data.migrations = data.migrations || [];
+if (!data.migrations.includes('bailout-5억')) {
+  for (const u of Object.values(data.users)) {
+    const n = u.stats.bailouts || 0;
+    if (!n) continue;
+    const before = u.assets;
+    u.assets = Math.max(0, u.assets - n * 5e8);
+    console.log(`충전 회수: ${u.username} 충전 ${n}회 → ${(before - u.assets) / 1e8}억 차감`);
+  }
+  data.migrations.push('bailout-5억');
 }
 
 const kstDay = t => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -132,6 +147,7 @@ function pub(u) {
     shameUntil: shameUntil(u),
     bailoutsToday: bailoutsToday(u),
     bailoutLimit: DAILY_BAILOUTS,
+    bailoutAmount: BAILOUT_AMOUNT,
     avatar: u.avatar,
     stats: u.stats,
     total: total(u),
@@ -173,8 +189,8 @@ module.exports = {
   bailoutsToday,
   bailout(u) {
     if (bailoutsToday(u) >= DAILY_BAILOUTS) return { error: `충전은 하루 ${DAILY_BAILOUTS}회까지예요. 내일 다시 오세요` };
-    const amount = START_ASSETS - u.assets;
-    u.assets = START_ASSETS;
+    const amount = BAILOUT_AMOUNT;
+    u.assets += amount;
     u.bailoutLog.push(Date.now());
     u.bailoutLog = u.bailoutLog.slice(-20);
     u.stats.bailouts++;
@@ -248,7 +264,8 @@ module.exports = {
     return {
       // 충전 적은 순 → 같으면 총 자산 많은 순
       bailouts: all.slice().sort((a, b) => a.bailouts - b.bailouts || b.total - a.total).slice(0, 100),
-      avg: all.filter(u => u.tPlayed > 0).sort((a, b) => a.avgPlace - b.avgPlace || b.tPlayed - a.tPlayed).slice(0, 100),
+      minTourneys: RANK_MIN_TOURNEYS,
+      avg: all.filter(u => u.tPlayed >= RANK_MIN_TOURNEYS).sort((a, b) => a.avgPlace - b.avgPlace || b.tPlayed - a.tPlayed).slice(0, 100),
     };
   },
 

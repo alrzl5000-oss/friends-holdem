@@ -165,21 +165,21 @@ function renderWallet() {
   $('wCash').textContent = short(me.assets);
   $('wTable').textContent = short(me.inPlay);
   $('wTickets').textContent = avgText(me.stats);
-  const broke = me.assets < 1e8 && !me.inPlay && !me.room;
+  const broke = me.assets + (me.inPlay || 0) < 1e8;
   const left = me.bailoutLimit - me.bailoutsToday;
   const remain = me.shame > 0 ? hoursLeft(me.shameUntil) : '';
   let bh = '';
   if (broke && left > 0) {
     const next = SHAME[Math.min(3, me.shame + 1)];
     bh = `<button class="btn red big">🆘 자산 충전 (오늘 ${left}회 남음)</button>
-      <p class="hint">현금이 ${won(1e9)}으로 채워지는 대신 24시간 동안 <b>${next}</b> 딱지가 붙고, 게임 들어갈 때 자동으로 "저는 개좃밥 입니다"를 외쳐요</p>`;
+      <p class="hint">현금 ${won(me.bailoutAmount)}을 받는 대신 24시간 동안 <b>${next}</b> 딱지가 붙고, 게임 들어갈 때 자동으로 "저는 개좃밥 입니다"를 외쳐요</p>`;
   } else if (broke) {
     bh = `<p class="hint">🚫 오늘 충전 3회를 다 썼어요. <b>걍 접으셈</b> — 내일 다시 오세요</p>`;
   }
   if (me.shame > 0) bh += `<p class="hint">${SHAME_EMOJI[me.shame]} 현재 <b>${SHAME[me.shame]}</b> · ${remain} 뒤 해제 · 오늘 충전 ${me.bailoutsToday}/${me.bailoutLimit}회</p>`;
   $('bailout').innerHTML = bh;
   const bb2 = $('bailout').querySelector('button');
-  if (bb2) bb2.onclick = () => confirmBox('자산 충전', `현금이 <b>${won(1e9)}</b>이 돼요.<br>대신 <b>24시간 동안 ${SHAME[Math.min(3, me.shame + 1)]}</b> 딱지가 붙고, 랭킹(충전 적은 순)에서 내려가요.<br>오늘 남은 충전: ${left}회`, '충전', () =>
+  if (bb2) bb2.onclick = () => confirmBox('자산 충전', `현금 <b>${won(me.bailoutAmount)}</b>을 받아요.<br>대신 <b>24시간 동안 ${SHAME[Math.min(3, me.shame + 1)]}</b> 딱지가 붙고, 랭킹(충전 적은 순)에서 내려가요.<br>오늘 남은 충전: ${left}회`, '충전', () =>
     socket.emit('bailout', res => res.error ? toast(res.error) : (fxBanner(SHAME[res.level] + ' 등극', `+${won(res.amount)}`, 'lose'), toast('충전 완료', true))), true);
   $('backToRoom').innerHTML = me.room && me.room !== leftRoom ? `<button class="btn gold back-room">참여 중인 방으로 돌아가기 (${me.room})</button>` : '';
   const bb = $('backToRoom').querySelector('button');
@@ -243,7 +243,11 @@ function renderRank(data) {
       <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar, r.skin && r.skin.frame)}
       <div class="nm"><b>${esc(r.username)} ${titleTag(r.skin)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
       <div class="amt">${right}</div></div>`;
-  }).join('') || `<div class="empty-note">${rankMode === 'avg' ? '아직 토너먼트를 끝까지 한 사람이 없어요' : '아직 랭킹이 없어요'}</div>`);
+  }).join('') || `<div class="empty-note">${rankMode === 'avg' ? `아직 토너먼트 ${rankData.minTourneys}회 이상 참가한 사람이 없어요` : '아직 랭킹이 없어요'}</div>`);
+  if (rankMode === 'avg' && me) {
+    const need = rankData.minTourneys - me.stats.tPlayed;
+    $('rankSeg').insertAdjacentHTML('afterend', `<p class="hint rank-rule">토너먼트 ${rankData.minTourneys}회 이상 참가해야 등록돼요${need > 0 ? ` · 나는 <b>${need}회</b> 더 참가하면 등록` : ''}</p>`);
+  }
   $('rankSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; rankMode = b.dataset.m; renderRank(); };
 }
 
