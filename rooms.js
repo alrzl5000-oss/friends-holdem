@@ -5,7 +5,8 @@ const db = require('./db');
 const FEE = db.ENTRY_FEE;   // 참가비/리바이 1억
 const T_STACK = 1e8;        // 토너먼트 시작 금액 1억
 const REBUY_MAX = 2;        // 리바이 최대 2회
-const REBUY_LEVELS = 6;     // 레벨 6까지 리바이 가능
+const REBUY_LEVELS = 5;     // 레벨 5까지 리바이 가능 (레벨 6부터 불가)
+const CHOP_MS = 30000;      // 찹 제안 유효 시간
 const REBUY_WAIT_MS = 20000;
 
 // 1억 스택 기준 블라인드 (SB, BB) — 100BB로 시작해서 점점 오름
@@ -74,7 +75,7 @@ class BaseRoom {
     if (!s) return false;
     s.name = user.username;
     s.avatar = user.avatar;
-    s.shame = user.shame || 0;
+    s.shame = db.shameLevel(user);
     s.leaving = false;
     this.table.setConnected(user.id, socketId, true);
     return true;
@@ -102,14 +103,13 @@ class BaseRoom {
   }
   isEmpty() { return this.seated.length === 0; }
   shameChat(user) {
-    if ((user.shame || 0) > 0) this.pushChat({ name: user.username, uid: user.id, text: '저는 개좃밥 입니다', ts: Date.now(), auto: true });
+    if (db.shameLevel(user) > 0) this.pushChat({ name: user.username, uid: user.id, text: '저는 개좃밥 입니다', ts: Date.now(), auto: true });
   }
   shameTick() {
+    // 24시간 지나면 좃밥 해제
     for (const s of this.seated) {
-      if (!s.inHand || !(s.shame > 0)) continue;
-      s.shame--;
       const u = db.byId(s.id);
-      if (u) u.shame = s.shame;
+      if (u) s.shame = db.shameLevel(u);
     }
   }
 }
@@ -140,7 +140,7 @@ class CashRoom extends BaseRoom {
     user.assets -= buyIn;
     user.inPlay = buyIn;
     db.save();
-    const r = this.table.addPlayer(user, socketId, buyIn, { shame: user.shame || 0 });
+    const r = this.table.addPlayer(user, socketId, buyIn, { shame: db.shameLevel(user) });
     if (r.error) { user.assets += buyIn; user.inPlay = 0; return r; }
     this.log(`${user.username} 님 입장 (바이인 ${fmt(buyIn)})`);
     this.shameChat(user);
@@ -245,7 +245,7 @@ class TourneyRoom extends BaseRoom {
     if (this.status !== 'registering') return { error: '이미 시작된 토너먼트예요' };
     if (this.seated.length >= this.table.max) return { error: '자리가 꽉 찼어요' };
     if (user.assets < FEE) return { error: '참가비 1억원이 필요해요' };
-    const r = this.table.addPlayer(user, socketId, 0, { tStatus: 'alive', rebuys: 0, place: 0, shame: user.shame || 0 });
+    const r = this.table.addPlayer(user, socketId, 0, { tStatus: 'alive', rebuys: 0, place: 0, shame: db.shameLevel(user) });
     if (r.error) return r;
     this.log(`${user.username} 님 참가 등록`);
     return { ok: true };
@@ -320,6 +320,10 @@ class TourneyRoom extends BaseRoom {
   }
   beforeHand() {
     if (this.status !== 'running') return false;
+    if (!this.rebuyOpen() && !this.rebuyClosedLogged) {
+      this.rebuyClosedLogged = true;
+      this.log(`🔒 레벨 ${REBUY_LEVELS + 1} — 이제 리바이가 안 돼요`);
+    }
     if (!this.rebuyOpen()) for (const s of this.seated) if (s.tStatus === 'busted') this.eliminate(s);
     const withChips = this.seated.filter(s => s.tStatus === 'alive' && s.chips > 0);
     const busted = this.seated.filter(s => s.tStatus === 'busted');
@@ -345,7 +349,7 @@ class TourneyRoom extends BaseRoom {
   rebuy(user) {
     const s = this.table.seat(user.id);
     if (!s || s.tStatus !== 'busted') return { error: '지금은 리바이할 수 없어요' };
-    if (!this.rebuyOpen()) return { error: `리바이는 레벨 ${REBUY_LEVELS}까지만 가능해요` };
+    if (!this.rebuyOpen()) return { error: `레벨 ${REBUY_LEVELS + 1}부터는 리바이가 안 돼요` };
     if (s.rebuys >= REBUY_MAX) return { error: `리바이는 ${REBUY_MAX}회까지예요` };
     if (user.assets < FEE) return { error: '리바이 비용 1억원이 부족해요' };
     user.assets -= FEE;
@@ -383,25 +387,93 @@ class TourneyRoom extends BaseRoom {
     this.emit();
     return { ok: true };
   }
-  finish() {
+  // ---------- 찹: 1대1 남았을 때 지금 가진 금액대로 상금을 나누고 끝내기 ----------
+  canChop() {
+    if (this.status !== 'running') return false;
+    const alive = this.alive();
+    return alive.length === 2 && alive.every(s => s.tStatus === 'alive') && !this.pendingTimer;
+  }
+  chopShares() {
+    // 3위 이하 상금은 원래대로 주고, 남은 상금을 두 사람이 가진 금액 비율대로 나눔
+    const two = this.alive();
+    const pct = payoutPct(this.players);
+    let lower = 0;
+    pct.forEach((p, k) => { if (k >= 2 && this.results.some(x => x.place === k + 1)) lower += Math.floor(this.prizePool * p); });
+    const rest = this.prizePool - lower;
+    const stacks = two.map(s => s.chips + (this.table.inBetting() ? s.total : 0));
+    const sum = stacks.reduce((a, b) => a + b, 0) || 1;
+    const shares = stacks.map(x => Math.floor(rest * x / sum));
+    shares[stacks[0] >= stacks[1] ? 0 : 1] += rest - shares[0] - shares[1];
+    return two.map((s, i) => ({ seat: s, stack: stacks[i], prize: shares[i] }));
+  }
+  proposeChop(uid) {
+    if (!this.canChop()) return { error: '1대1이 남았을 때만 찹할 수 있어요' };
+    const s = this.table.seat(uid);
+    if (!s || s.tStatus !== 'alive') return { error: '참가 중이 아니에요' };
+    if (this.chop && this.chop.from !== uid && this.chop.until > Date.now()) return this.doChop();
+    this.chop = { from: uid, until: Date.now() + CHOP_MS };
+    this.log(`🤝 ${s.name} 님이 찹을 제안했어요 (지금 가진 금액대로 상금 나누기)`);
+    clearTimeout(this.chopTimer);
+    this.chopTimer = setTimeout(() => { if (this.chop) { this.chop = null; this.log('🤝 찹 제안 시간이 지났어요'); this.emit(); } }, CHOP_MS);
+    this.emit();
+    return { ok: true };
+  }
+  declineChop(uid) {
+    if (!this.chop) return { ok: true };
+    const s = this.table.seat(uid);
+    const mine = this.chop.from === uid;
+    this.chop = null;
+    clearTimeout(this.chopTimer);
+    this.log(`🙅 ${s ? s.name : ''} 님이 찹을 ${mine ? '취소' : '거절'}했어요`);
+    this.emit();
+    return { ok: true };
+  }
+  doChop() {
+    const shares = this.chopShares();
+    clearTimeout(this.chopTimer);
+    this.chop = null;
+    // 진행 중인 판은 없던 걸로 (낸 돈 돌려받음)
+    const t = this.table;
+    t.clearTimers();
+    clearTimeout(t.nextHandTimer); t.nextHandTimer = null;
+    for (const s of t.seats) if (s) { s.chips += t.inBetting() ? s.total : 0; s.total = 0; s.bet = 0; s.inHand = false; s.folded = true; s.hand = []; }
+    t.stage = 'waiting'; t.turn = -1; t.community = [];
+    this.log(`🤝 찹 성사! ${shares.map(x => `${x.seat.name} ${fmt(x.prize)}`).join(' / ')}`);
+    this.finish(shares);
+    return { ok: true, chopped: true };
+  }
+
+  finish(chop) {
     if (this.status === 'finished') return;
     this.status = 'finished';
     this.table.running = false;
-    const winner = this.seated.find(s => s.tStatus === 'alive');
-    if (winner) {
-      winner.tStatus = 'out';
-      winner.place = 1;
-      this.results.push({ id: winner.id, name: winner.name, avatar: winner.avatar, place: 1, prize: 0 });
+    clearTimeout(this.chopTimer);
+    if (chop) {
+      // 많이 가진 사람이 1위
+      chop.slice().sort((a, b) => b.stack - a.stack).forEach((x, k) => {
+        x.seat.tStatus = 'out';
+        x.seat.place = k + 1;
+        this.results.push({ id: x.seat.id, name: x.seat.name, avatar: x.seat.avatar, place: k + 1, prize: 0, chop: x.prize });
+      });
+      this.chopped = true;
+    } else {
+      const winner = this.seated.find(s => s.tStatus === 'alive');
+      if (winner) {
+        winner.tStatus = 'out';
+        winner.place = 1;
+        this.results.push({ id: winner.id, name: winner.name, avatar: winner.avatar, place: 1, prize: 0 });
+      }
     }
     this.results.sort((a, b) => a.place - b.place);
     const pct = payoutPct(this.players);
     let paid = 0;
     pct.forEach((p, k) => {
       const r = this.results.find(x => x.place === k + 1);
-      if (!r) return;
+      if (!r || r.chop != null) return;
       r.prize = Math.floor(this.prizePool * p);
       paid += r.prize;
     });
+    for (const r of this.results) if (r.chop != null) { r.prize = r.chop; paid += r.chop; delete r.chop; }
     // 나머지(반올림 등)는 우승자에게
     const first = this.results.find(x => x.place === 1);
     if (first && paid < this.prizePool) first.prize += this.prizePool - paid;
@@ -421,7 +493,7 @@ class TourneyRoom extends BaseRoom {
     }
     db.save();
     this.finishedAt = Date.now();
-    this.log(`🏆 우승: ${first ? first.name : '-'} (+${fmt(first ? first.prize : 0)})`);
+    if (!chop) this.log(`🏆 우승: ${first ? first.name : '-'} (+${fmt(first ? first.prize : 0)})`);
     this.emit();
   }
   info(uid) {
@@ -445,6 +517,10 @@ class TourneyRoom extends BaseRoom {
       payouts: pct.map(p => Math.floor((this.status === 'registering' ? this.seated.length * FEE : this.prizePool) * p)),
       rebuyOpen: this.rebuyOpen(),
       rebuyLevels: REBUY_LEVELS,
+      canChop: this.canChop() && !!(s && s.tStatus === 'alive'),
+      chop: this.chop ? { mine: this.chop.from === uid, from: (this.table.seat(this.chop.from) || {}).name, until: this.chop.until } : null,
+      chopPreview: this.canChop() && s ? (this.chopShares().find(x => x.seat.id === uid) || {}).prize || 0 : 0,
+      chopped: !!this.chopped,
       rebuyMax: REBUY_MAX,
       myStatus: s ? s.tStatus : null,
       myRebuys: s ? s.rebuys : 0,

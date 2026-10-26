@@ -191,7 +191,7 @@ input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(233,196,106,
 .sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--gold); transform: scale(1.08); }
 .pe-tools { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .pe-tools .on { border-color: var(--gold); color: var(--gold2); }
-.stats { padding: 14px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; }
+.stats { padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center; }
 .stats span { display: block; font-size: 11px; color: var(--muted); }
 .stats b { font-size: 17px; }
 
@@ -631,3 +631,190 @@ input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(233,196,106,
 .bubble.down.r { transform: translate(-100%, 0); }
 .bubble.l::after, .bubble.l::before { left: 22px; }
 .bubble.r::after, .bubble.r::before { left: auto; right: 16px; }
+
+.shame-tag.lv2 { background: linear-gradient(180deg, #c0392b, #7a1d20); color: #fff; }
+.shame-tag.lv3 { background: #111; color: #ff6b6b; border-color: #ff6b6b; font-size: 9px; }
+.seat .ava-wrap.shame .av { filter: saturate(.6); }
+.shame-mini { font-style: normal; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 6px; background: #8b5a2b; color: #ffe9c9; vertical-align: 2px; }
+.shame-mini.lv2 { background: #a52a2a; color: #fff; }
+.shame-mini.lv3 { background: #111; color: #ff6b6b; border: 1px solid #ff6b6b; }
+.rank-row .amt small { display: block; font-size: 11px; color: var(--muted); font-weight: 600; text-align: right; }
+
+/* ===== 토너먼트 HUD 5칸 / 찹 ===== */
+.t-hud { display: flex; }
+.t-hud > div { flex: 1; min-width: 0; }
+.t-hud b { white-space: nowrap; font-size: 12px; }
+.t-hud .closed b { color: #ff8f8f; }
+.chop-bar {
+  margin: 0 12px; padding: 8px 10px; border-radius: 12px;
+  background: rgba(233,196,106,.1); border: 1px solid rgba(233,196,106,.35);
+  display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 1.4;
+}
+.chop-bar .chop-text { flex: 1; min-width: 0; color: #e8efe9; }
+.chop-bar .chop-text b { color: var(--gold2); }
+.chop-bar .row { display: flex; gap: 6px; flex: none; }
+
+/* 이펙트 끔 */
+body.nofx #fx { display: none; }
+body.nofx .seat.winner .av { animation: none; }
+body.nofx .shame-tag { animation: none; }
+
+/* ======================================================================
+   엑셀 테마 (회사에서 몰래)
+   ====================================================================== */
+.xl-chrome, .xl-bottom { display: none; }
+body.excel {
+  --bg: #ffffff; --glass: #ffffff; --line: #e1dfdd; --line2: #c8c6c4;
+  --text: #252423; --muted: #605e5c; --gold: #217346; --gold2: #217346; --green: #217346; --red: #a4262c;
+  background: #e6e6e6;
+  font-family: "맑은 고딕", "Malgun Gothic", "Segoe UI", Calibri, Arial, sans-serif;
+}
+body.excel .app { background: #fff; box-shadow: 0 0 0 1px #c8c6c4; }
+body.excel .xl-chrome { display: block; position: absolute; top: 0; left: 0; right: 0; z-index: 30; font-size: 12px; }
+body.excel .xl-bottom { display: block; position: absolute; bottom: 0; left: 0; right: 0; z-index: 30; font-size: 11px; }
+body.excel .screen { top: 98px; bottom: 42px; }
+
+.xl-titlebar { height: 30px; background: #217346; color: #fff; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
+.xl-logo { width: 18px; height: 18px; border-radius: 3px; background: #fff; color: #217346; font-weight: 900; font-size: 12px; display: grid; place-items: center; font-family: Arial; }
+.xl-auto { font-size: 11px; opacity: .9; display: flex; align-items: center; gap: 4px; }
+.xl-auto i { width: 22px; height: 11px; border-radius: 6px; background: rgba(255,255,255,.35); position: relative; }
+.xl-auto i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+.xl-file { flex: 1; text-align: center; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.xl-ribbon { height: 24px; background: #f3f2f1; border-bottom: 1px solid #e1dfdd; display: flex; align-items: flex-end; gap: 12px; padding: 0 10px; overflow: hidden; white-space: nowrap; color: #444; }
+.xl-ribbon span { padding-bottom: 3px; }
+.xl-ribbon .on { color: #217346; font-weight: 700; border-bottom: 2px solid #217346; }
+.xl-formula { height: 24px; display: flex; align-items: center; border-bottom: 1px solid #e1dfdd; background: #fff; }
+.xl-cell { width: 56px; text-align: center; border-right: 1px solid #e1dfdd; color: #252423; }
+.xl-fx { width: 28px; text-align: center; color: #888; font-style: italic; font-family: Georgia, serif; border-right: 1px solid #e1dfdd; }
+.xl-val { flex: 1; padding: 0 8px; color: #252423; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: Consolas, monospace; font-size: 11px; }
+.xl-cols { height: 20px; display: grid; grid-template-columns: 26px repeat(8, 1fr); background: #f3f2f1; border-bottom: 1px solid #c8c6c4; color: #605e5c; font-size: 11px; }
+.xl-cols span { border-right: 1px solid #e1dfdd; text-align: center; line-height: 19px; }
+.xl-sheets { height: 22px; background: #f3f2f1; border-top: 1px solid #c8c6c4; display: flex; align-items: stretch; white-space: nowrap; overflow: hidden; color: #444; }
+.xl-sheets span { padding: 0 12px; display: flex; align-items: center; border-right: 1px solid #e1dfdd; }
+.xl-sheets .on { background: #fff; color: #217346; font-weight: 700; border-bottom: 2px solid #217346; }
+.xl-sheets .xl-nav { color: #999; letter-spacing: 4px; }
+.xl-status { height: 20px; background: #217346; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; white-space: nowrap; overflow: hidden; }
+
+/* 공통 요소 */
+body.excel .glass { backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 0; border-color: #d4d4d4; box-shadow: none; }
+body.excel .btn { background: #fff; color: #252423; border: 1px solid #c8c6c4; border-radius: 2px; box-shadow: none; font-weight: 600; }
+body.excel .btn.gold, body.excel .btn.green { background: #217346; color: #fff; border-color: #185c37; }
+body.excel .btn.red { background: #fff; color: #a4262c; border-color: #a4262c; }
+body.excel .btn.line { background: #fff; color: #217346; border-color: #217346; }
+body.excel .btn.fold, body.excel .btn.call { background: #fff; color: #252423; border-color: #c8c6c4; }
+body.excel .btn small { opacity: .7; }
+body.excel .icon-btn { border-radius: 2px; border-color: #e1dfdd; background: #fff; color: #444; width: 32px; height: 32px; font-size: 15px; }
+body.excel input { background: #fff; border: 1px solid #c8c6c4; border-radius: 2px; color: #252423; }
+body.excel input:focus { border-color: #217346; box-shadow: none; }
+body.excel .av, body.excel .me-chip .av { display: none; }
+body.excel .big-av { display: grid !important; border-radius: 0; border-color: #c8c6c4; }
+body.excel .toast { background: #fff; color: #252423; border-color: #c8c6c4; box-shadow: 0 4px 12px rgba(0,0,0,.15); border-radius: 2px; }
+body.excel .modal-bg { background: rgba(255,255,255,.6); }
+body.excel .modal-panel { background: #fff; border-radius: 2px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
+body.excel .opt-group button { border-radius: 2px; background: #fff; color: #252423; }
+body.excel .opt-group button.on { background: #e2efda; color: #217346; border-color: #217346; }
+body.excel .seg { background: #f3f2f1; border-radius: 2px; }
+body.excel .seg button.on { background: #fff; color: #217346; box-shadow: inset 0 -2px 0 #217346; border-radius: 0; }
+body.excel .badge { background: #217346; }
+
+/* 로그인/로비 */
+body.excel .auth-hero h1 b { background: none; -webkit-text-fill-color: #217346; color: #217346; }
+body.excel .suits { display: none; }
+body.excel .wallet { background: #fff; }
+body.excel .wallet-main b { background: none; -webkit-text-fill-color: #217346; color: #217346; }
+body.excel .wallet-sub div { background: #f3f2f1; border-radius: 0; }
+body.excel .tabs button.on { color: #217346; border-color: #217346; }
+body.excel .room, body.excel .rank-row { background: #fff; border-radius: 0; border-color: #e1dfdd; }
+body.excel .rank-row.me { background: #e2efda; border-color: #217346; }
+body.excel .room .tag.cash, body.excel .room .tag.tourney { background: #f3f2f1; color: #252423; border-radius: 0; }
+body.excel .watch-btn { border-radius: 2px; background: #fff; }
+body.excel .shame-mini { border-radius: 0; }
+
+/* 게임 화면: 시트처럼 */
+body.excel .g-top { padding: 4px 8px; border-bottom: 1px solid #e1dfdd; }
+body.excel .g-title b { font-size: 13px; }
+body.excel .t-hud { background: #fff; border-color: #d4d4d4; border-radius: 0; margin: 4px 8px; }
+body.excel .t-hud b { color: #252423; }
+body.excel .t-hud .closed b { color: #a4262c; }
+body.excel .table-zone {
+  background-color: #fff;
+  background-image: linear-gradient(#e1dfdd 1px, transparent 1px), linear-gradient(90deg, #e1dfdd 1px, transparent 1px);
+  background-size: 100% 22px, 12.5% 100%;
+}
+body.excel .rim { background: none; box-shadow: none; padding: 0; }
+body.excel .felt { background: none; box-shadow: none; }
+body.excel .felt::after, body.excel .felt-logo { display: none; }
+body.excel .stage { color: #605e5c; letter-spacing: 0; font-weight: 400; }
+body.excel .board-info { background: #fff; color: #605e5c; border-radius: 0; }
+body.excel .pot { background: #fff2cc; border: 1px solid #c8c6c4; border-radius: 0; color: #252423; padding: 2px 12px; font-weight: 700; }
+body.excel .chip-ico { display: none; }
+body.excel .result div { background: #e2efda; border-color: #a9d08e; color: #252423; border-radius: 0; }
+body.excel .result em { color: #217346; }
+
+body.excel .card {
+  width: auto; min-width: 30px; height: 22px; padding: 0 4px; border-radius: 0;
+  background: #fff; color: #252423; box-shadow: none; border: 1px solid #c8c6c4;
+  display: inline-flex; align-items: center; justify-content: center; animation: none; overflow: visible;
+}
+body.excel .card .ci { position: static; display: flex; gap: 1px; line-height: 1; }
+body.excel .card .ci .r, body.excel .card .ci .s { font-size: 12px; letter-spacing: 0; font-weight: 700; }
+body.excel .card .big { display: none; }
+body.excel .card.red { color: #c00000; }
+body.excel .card.back { background: #f3f2f1; box-shadow: none; }
+body.excel .card.back::after { content: "#"; color: #b3b0ad; font-size: 11px; }
+body.excel .card.slot { background: #fff; border: 1px dashed #d4d4d4; }
+body.excel .card.hl { transform: none; box-shadow: none; background: #e2efda; border-color: #217346; }
+body.excel .card.dim { filter: none; color: #b3b0ad; }
+body.excel .board { gap: 2px; min-height: 24px; }
+body.excel .board .card { min-width: 34px; }
+
+body.excel .seat { width: 80px; }
+body.excel .seat .ava-wrap { width: 100%; height: 24px; display: flex; justify-content: center; align-items: flex-end; }
+body.excel .seat .ring { display: none; }
+body.excel .seat .mini, body.excel .seat.left .mini { position: static; display: flex; gap: 1px; }
+body.excel .seat .mini .card, body.excel .seat .mini.face .card { margin: 0; transform: none; min-width: 24px; height: 20px; }
+body.excel .seat .plate { margin-top: 2px; background: #fff; border: 1px solid #c8c6c4; border-radius: 0; }
+body.excel .seat .nm { color: #252423; font-weight: 600; }
+body.excel .seat .st { color: #252423; font-weight: 400; }
+body.excel .seat.turn .plate { outline: 2px solid #217346; outline-offset: -1px; }
+body.excel .seat.winner .plate { background: #e2efda; }
+body.excel .seat.me .plate { border-color: #217346; }
+body.excel .seat.empty .plate { border: 1px dashed #e1dfdd; background: transparent; color: #b3b0ad; }
+body.excel .seat .act { top: -18px; border-radius: 0; background: #f3f2f1; color: #605e5c; border: 1px solid #e1dfdd; animation: none; font-weight: 600; }
+body.excel .seat .act.allin { color: #c00000; }
+body.excel .seat .act.hn.win { background: #e2efda; color: #217346; }
+body.excel .seat .won { color: #217346; text-shadow: none; animation: none; }
+body.excel .pos-chip { border-radius: 0; box-shadow: none; background: #fff !important; color: #217346 !important; border: 1px solid #217346; top: 6px; }
+body.excel .pos-chip + .pos-chip { top: 24px; }
+body.excel .shame-tag { position: static; transform: none; animation: none; border-radius: 0; background: #fff !important; color: #c00000 !important; border: 1px solid #c00000; margin-left: 2px; }
+body.excel .seat .ava-wrap.shame .av { box-shadow: none; }
+body.excel .bet { background: #fff; color: #252423; border: 1px solid #c8c6c4; border-radius: 0; padding: 1px 6px; animation: none; }
+body.excel .bubble { background: #ffffe1; color: #000; border: 1px solid #a0a0a0; border-radius: 0; box-shadow: 2px 2px 4px rgba(0,0,0,.15); font-weight: 400; }
+body.excel .bubble.up::after { border-top-color: #a0a0a0; }
+body.excel .bubble.down::before { border-bottom-color: #a0a0a0; }
+body.excel .bubble.watcher { background: #ffffe1; color: #000; }
+
+body.excel .my-panel { min-height: 60px; border-top: 1px solid #e1dfdd; padding-top: 6px; }
+body.excel .my-hand .card, body.excel .my-hand .card:first-child, body.excel .my-hand .card:last-child { transform: none; min-width: 42px; height: 28px; }
+body.excel .my-hand .card .ci .r, body.excel .my-hand .card .ci .s { font-size: 15px; }
+body.excel .mi-hand { color: #252423; font-size: 15px; }
+body.excel .mi-hand.made { background: none; -webkit-text-fill-color: #217346; color: #217346; }
+body.excel .mi-odds span { background: #f3f2f1; color: #252423; border-radius: 0; }
+body.excel .mi-odds span b { color: #217346; }
+body.excel .act-grid .btn { padding: 10px 6px; font-size: 14px; }
+body.excel .turn-bar { border-radius: 0; background: #e1dfdd; }
+body.excel .turn-bar i { background: #217346; }
+body.excel .turn-bar i.low { background: #c00000; }
+body.excel .wait { color: #605e5c; }
+body.excel .raise-sheet { background: #fff; border-top: 1px solid #c8c6c4; border-radius: 0; box-shadow: 0 -6px 20px rgba(0,0,0,.12); bottom: 0; }
+body.excel .rs-amount b { color: #217346; }
+body.excel .rs-quick button { border-radius: 2px; background: #fff; }
+body.excel #rsRange { background: linear-gradient(90deg, #217346 var(--p, 0%), #e1dfdd var(--p, 0%)); }
+body.excel #rsRange::-webkit-slider-thumb { border-color: #217346; }
+body.excel .chop-bar { background: #fff2cc; border-color: #c8c6c4; border-radius: 0; }
+body.excel .chop-bar .chop-text { color: #252423; }
+body.excel .sheet-panel { background: #fff; border-radius: 0; border-top: 1px solid #c8c6c4; box-shadow: 0 -6px 20px rgba(0,0,0,.12); }
+body.excel .msg b { color: #217346; }
+body.excel .msg.mine b { color: #2f5597; }
+body.excel .pe-overlay { background: #fff; }
+body.excel #fx { display: none; }

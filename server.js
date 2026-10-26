@@ -155,17 +155,14 @@ io.on('connection', socket => {
     cb({ ok: true });
   }));
 
-  // 구제금: 파산한 사람(현금 1억 미만, 테이블/대회에 돈 없음)에게 초기 자산까지 채워줌 → 3판 동안 좃밥
+  // 구제금(충전): 현금 1억 미만이면 10억까지 채워줌 · 하루 3회 · 24시간 좃밥
   socket.on('bailout', guard(cb => {
     if (userRoom.get(user.id)) return cb({ error: '방에서 나온 뒤에 신청할 수 있어요' });
     if (user.assets >= 1e8 || user.inPlay > 0 || user.tourneyHold > 0) return cb({ error: '현금이 1억 미만일 때만 신청할 수 있어요' });
-    const amount = db.START_ASSETS - user.assets;
-    user.assets = db.START_ASSETS;
-    user.shame = 3;
-    user.stats.bailouts = (user.stats.bailouts || 0) + 1;
-    db.save();
+    const r = db.bailout(user);
+    if (r.error) return cb(r);
     ctx.pushMe(user.id);
-    cb({ ok: true, amount });
+    cb(r);
   }));
 
   socket.on('createRoom', guard((cb, opts = {}) => {
@@ -243,6 +240,12 @@ io.on('connection', socket => {
     const r = roomOfUser();
     if (!r || r.mode !== 'tourney') return cb({ error: '토너먼트가 아니에요' });
     cb(r.withdraw(user.id));
+  }));
+
+  socket.on('chop', guard((cb, yes) => {
+    const r = roomOfUser();
+    if (!r || r.mode !== 'tourney') return cb({ error: '토너먼트가 아니에요' });
+    cb(yes === false ? r.declineChop(user.id) : r.proposeChop(user.id));
   }));
 
   socket.on('topUp', guard((cb, amount) => {

@@ -1,4 +1,27 @@
 const socket = io();
+
+// ================= 설정 (테마 / 이펙트 / 진동) =================
+const settings = (() => {
+  let v = {};
+  try { v = JSON.parse(localStorage.getItem('fh_settings') || '{}'); } catch {}
+  return Object.assign({ theme: 'default', fx: true, vib: true }, v);
+})();
+function saveSettings() { try { localStorage.setItem('fh_settings', JSON.stringify(settings)); } catch {} applyTheme(); }
+const isExcel = () => settings.theme === 'excel';
+const fxOn = () => settings.fx && !isExcel();
+function applyTheme() {
+  document.body.classList.toggle('excel', isExcel());
+  document.body.classList.toggle('nofx', !fxOn());
+  document.title = isExcel() ? '2026_4분기_매출분석.xlsx - Excel' : "FRIENDS HOLD'EM";
+  let icon = document.querySelector('link[rel=icon]');
+  if (!icon) { icon = document.createElement('link'); icon.rel = 'icon'; document.head.appendChild(icon); }
+  icon.href = isExcel()
+    ? 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#217346"/><text x="16" y="23" font-size="20" font-family="Arial" font-weight="bold" fill="#fff" text-anchor="middle">X</text></svg>')
+    : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0d3f29"/><text x="16" y="24" font-size="22" text-anchor="middle" fill="#e9c46a">♠</text></svg>');
+  const tc = document.querySelector('meta[name=theme-color]');
+  if (tc) tc.content = isExcel() ? '#217346' : '#07100c';
+}
+applyTheme();
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -134,20 +157,32 @@ function goLobby() {
 }
 function renderWallet() {
   if (!me) return;
+  setTimeout(renderExcelBars, 0);
   $('meChip').innerHTML = `${avImg(me.avatar)}<div><b>${esc(me.username)}</b><span>토너먼트 우승 ${me.stats.tWins}회</span></div>`;
   $('wTotal').textContent = won(me.total);
   $('wCash').textContent = short(me.assets);
   $('wTable').textContent = short(me.inPlay);
   $('wTickets').textContent = avgText(me.stats);
   const broke = me.assets < 1e8 && !me.inPlay && !me.room;
-  $('bailout').innerHTML = broke ? `<button class="btn red big">🆘 파산 신청 — 구제금 받기</button><p class="hint">보유 현금이 ${won(1e9)}으로 채워지는 대신, 3판 동안 프로필에 <b>좃밥</b>이 붙고 게임 시작 때 자동으로 "저는 개좃밥 입니다"를 외쳐요</p>` : (me.shame > 0 ? `<p class="hint">🐣 좃밥 남은 판: <b>${me.shame}</b></p>` : '');
+  const left = me.bailoutLimit - me.bailoutsToday;
+  const remain = me.shame > 0 ? hoursLeft(me.shameUntil) : '';
+  let bh = '';
+  if (broke && left > 0) {
+    const next = SHAME[Math.min(3, me.shame + 1)];
+    bh = `<button class="btn red big">🆘 자산 충전 (오늘 ${left}회 남음)</button>
+      <p class="hint">현금이 ${won(1e9)}으로 채워지는 대신 24시간 동안 <b>${next}</b> 딱지가 붙고, 게임 들어갈 때 자동으로 "저는 개좃밥 입니다"를 외쳐요</p>`;
+  } else if (broke) {
+    bh = `<p class="hint">🚫 오늘 충전 3회를 다 썼어요. <b>걍 접으셈</b> — 내일 다시 오세요</p>`;
+  }
+  if (me.shame > 0) bh += `<p class="hint">${SHAME_EMOJI[me.shame]} 현재 <b>${SHAME[me.shame]}</b> · ${remain} 뒤 해제 · 오늘 충전 ${me.bailoutsToday}/${me.bailoutLimit}회</p>`;
+  $('bailout').innerHTML = bh;
   const bb2 = $('bailout').querySelector('button');
-  if (bb2) bb2.onclick = () => confirmBox('파산 신청', `구제금을 받으면 현금이 <b>${won(1e9)}</b>이 돼요.<br>대신 <b>3판 동안 좃밥</b> 표시가 붙고, 게임에 들어갈 때마다 자동으로 "저는 개좃밥 입니다"가 채팅에 올라가요.`, '받기', () =>
-    socket.emit('bailout', res => res.error ? toast(res.error) : (fxBanner('좃밥 등극', `+${won(res.amount)}`, 'lose'), toast('구제금 지급 완료', true))), true);
+  if (bb2) bb2.onclick = () => confirmBox('자산 충전', `현금이 <b>${won(1e9)}</b>이 돼요.<br>대신 <b>24시간 동안 ${SHAME[Math.min(3, me.shame + 1)]}</b> 딱지가 붙고, 랭킹(충전 적은 순)에서 내려가요.<br>오늘 남은 충전: ${left}회`, '충전', () =>
+    socket.emit('bailout', res => res.error ? toast(res.error) : (fxBanner(SHAME[res.level] + ' 등극', `+${won(res.amount)}`, 'lose'), toast('충전 완료', true))), true);
   $('backToRoom').innerHTML = me.room && me.room !== leftRoom ? `<button class="btn gold back-room">참여 중인 방으로 돌아가기 (${me.room})</button>` : '';
   const bb = $('backToRoom').querySelector('button');
   if (bb) bb.onclick = () => joinRoom(me.room);
-  $('myStats').innerHTML = `<div><span>총 자산</span><b>${short(me.total)}</b></div><div><span>토너 우승</span><b>${me.stats.tWins}회</b></div><div><span>토너 참가</span><b>${me.stats.tPlayed}회</b></div>`;
+  $('myStats').innerHTML = `<div><span>총 자산</span><b>${short(me.total)}</b></div><div><span>총 충전</span><b>${me.stats.bailouts || 0}회</b></div><div><span>토너 우승</span><b>${me.stats.tWins}회</b></div><div><span>토너 참가</span><b>${me.stats.tPlayed}회</b></div>`;
 }
 $('logoutBtn').onclick = () => confirmBox('로그아웃', '로그아웃할까요?', '로그아웃', () => {
   socket.emit('logout', () => {});
@@ -184,19 +219,26 @@ function renderRooms(list) {
   el.querySelectorAll('[data-watch]').forEach(b => b.onclick = () => watchRoom(b.dataset.watch));
 }
 
+const SHAME = ['', '좃밥', '좃좃밥', '걍접으셈'];
+const SHAME_EMOJI = ['', '🐣', '🐥🐥', '🪦'];
+function hoursLeft(until) {
+  const ms = Math.max(0, until - Date.now());
+  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+  return h ? `${h}시간 ${m}분` : `${m}분`;
+}
 function avgText(st) { return st && st.tPlayed ? (st.placeSum / st.tPlayed).toFixed(2).replace(/\.?0+$/, '') + '위' : '-'; }
-let rankData = null, rankMode = 'assets';
+let rankData = null, rankMode = 'bailouts';
 function renderRank(data) {
   if (data) rankData = data;
   if (!rankData) return;
   const list = rankData[rankMode];
-  const seg = `<div class="seg" id="rankSeg"><button data-m="assets" class="${rankMode === 'assets' ? 'on' : ''}">💰 총 자산</button><button data-m="avg" class="${rankMode === 'avg' ? 'on' : ''}">🏆 토너 평균 순위</button></div>`;
+  const seg = `<div class="seg" id="rankSeg"><button data-m="bailouts" class="${rankMode === 'bailouts' ? 'on' : ''}">🧼 충전 적은 순</button><button data-m="avg" class="${rankMode === 'avg' ? 'on' : ''}">🏆 토너 평균 순위</button></div>`;
   $('rankList').innerHTML = seg + (list.map((r, i) => {
     const medal = ['🥇', '🥈', '🥉'][i];
-    const right = rankMode === 'assets' ? short(r.total) : avgText({ tPlayed: r.tPlayed, placeSum: r.avgPlace * r.tPlayed });
+    const right = rankMode === 'bailouts' ? `충전 ${r.bailouts}회<small>${short(r.total)}</small>` : avgText({ tPlayed: r.tPlayed, placeSum: r.avgPlace * r.tPlayed });
     return `<div class="rank-row ${me && r.username === me.username ? 'me' : ''}">
       <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar)}
-      <div class="nm"><b>${esc(r.username)}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
+      <div class="nm"><b>${esc(r.username)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
       <div class="amt">${right}</div></div>`;
   }).join('') || `<div class="empty-note">${rankMode === 'avg' ? '아직 토너먼트를 끝까지 한 사람이 없어요' : '아직 랭킹이 없어요'}</div>`);
   $('rankSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; rankMode = b.dataset.m; renderRank(); };
@@ -235,7 +277,8 @@ $('newTourBtn').onclick = () => {
     <p class="hint" style="text-align:left;line-height:1.6">
     · 참가비 <b>1억</b> (대회 시작 때 차감) · 시작 금액 <b>1억</b><br>
     · 블라인드 50만/100만 → 레벨마다 상승<br>
-    · 리바이 최대 2회 (레벨 6까지, 1회 1억)<br>
+    · 리바이 최대 2회 (1회 1억) · <b>레벨 5까지만, 레벨 6부터 불가</b><br>
+    · 1대1 남으면 <b>찹</b> 가능 (지금 가진 금액대로 상금 나누기)<br>
     · 상금: 참가비+리바이 합계 · 2~4명 우승 독식 / 5~6명 70·30% / 7~8명 50·30·20%<br>
     · 보유 현금: <b>${won(me.assets)}</b></p>
     <div class="row2"><button class="btn" data-x>취소</button><button class="btn gold" data-ok>대회 열기</button></div>`);
@@ -383,11 +426,12 @@ function renderGame() {
   if (r.mode === 'tourney') {
     if (r.status === 'finished') {
       const w = r.results.find(x => x.place === 1);
-      hud.innerHTML = `<div><span>상태</span><b>종료</b></div><div><span>우승</span><b>${w ? esc(w.name) : '-'}</b></div><div><span>참가</span><b>${r.players}명</b></div><div><span>상금</span><b>${short(r.prizePool)}</b></div>`;
+      hud.innerHTML = `<div><span>상태</span><b>${r.chopped ? '찹 종료' : '종료'}</b></div><div><span>우승</span><b>${w ? esc(w.name) : '-'}</b></div><div><span>참가</span><b>${r.players}명</b></div><div><span>상금</span><b>${short(r.prizePool)}</b></div>`;
     } else if (r.status === 'registering') {
-      hud.innerHTML = `<div><span>참가</span><b>${s.seats.filter(Boolean).length}명</b></div><div><span>시작 금액</span><b>${short(r.startStack)}</b></div><div><span>레벨</span><b>${r.levelMs / 60000}분</b></div><div><span>예상 상금</span><b>${short(r.prizePool)}</b></div>`;
+      hud.innerHTML = `<div><span>참가</span><b>${s.seats.filter(Boolean).length}명</b></div><div><span>시작 금액</span><b>${short(r.startStack)}</b></div><div><span>레벨</span><b>${r.levelMs / 60000}분</b></div><div><span>예상 상금</span><b>${short(r.prizePool)}</b></div><div><span>리바이</span><b>Lv${r.rebuyLevels}까지</b></div>`;
     } else {
-      hud.innerHTML = `<div><span>레벨 ${r.level}</span><b>${short(r.blinds[0])}/${short(r.blinds[1])}</b></div><div><span>다음 ${short(r.nextBlinds[1])}</span><b data-lvl>-</b></div><div><span>남은 인원</span><b>${r.alive}/${r.players}</b></div><div><span>상금</span><b>${short(r.prizePool)}</b></div>`;
+      const rb = r.rebuyOpen ? (r.level === r.rebuyLevels ? '이번 Lv까지' : `Lv${r.rebuyLevels}까지`) : `Lv${r.rebuyLevels + 1}~ 불가`;
+      hud.innerHTML = `<div><span>레벨 ${r.level}</span><b>${short(r.blinds[0])}/${short(r.blinds[1])}</b></div><div><span>다음 ${short(r.nextBlinds[1])}</span><b data-lvl>-</b></div><div><span>남은 인원</span><b>${r.alive}/${r.players}</b></div><div><span>상금</span><b>${short(r.prizePool)}</b></div><div class="${r.rebuyOpen ? '' : 'closed'}"><span>리바이</span><b>${rb}</b></div>`;
     }
   }
 
@@ -431,6 +475,8 @@ function renderGame() {
   renderSeats();
   renderMine();
   renderControls();
+  renderChop();
+  renderExcelBars();
 }
 
 function renderSeats() {
@@ -467,7 +513,7 @@ function renderSeats() {
     else if (p.tStatus === 'busted') { act = '<span class="act allin">파산</span>'; stack = '리바이?'; }
 
     h += `<div class="${cls.join(' ')}" style="left:${x}%;top:${y}%">
-      <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag">좃밥 ${p.shame}</span>` : ''}${mini}</div>
+      <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
       ${act}
       <div class="plate"><div class="nm">${esc(p.name)}</div><div class="st">${stack}</div></div>
       ${s.stage !== 'waiting' ? [i === s.dealer ? '<i class="pos-chip d">D</i>' : '', i === s.sbSeat ? '<i class="pos-chip sb">SB</i>' : '', i === s.bbSeat ? '<i class="pos-chip bb">BB</i>' : ''].join('') : ''}
@@ -597,7 +643,7 @@ function renderControls() {
       h = `<div class="wait">대회 종료${mine ? ` · 내 순위 ${mine.place}위${mine.prize ? ` (+${short(mine.prize)})` : ''}` : ''}<div class="row"><button class="btn" data-results>결과 보기</button><button class="btn gold" data-lobby>로비로</button></div></div>`;
     } else if (r.myStatus === 'busted') {
       const left = r.pendingUntil ? Math.max(0, Math.ceil((r.pendingUntil - Date.now() - clockOffset) / 1000)) : 0;
-      h = `<div class="wait">💥 파산! 리바이 ${r.myRebuys}/${r.rebuyMax}회 사용${left ? ` · <b data-pend>${left}</b>초 안에 결정` : ''}
+      h = `<div class="wait">💥 파산! 리바이 ${r.myRebuys}/${r.rebuyMax}회 사용${left ? ` · <b data-pend>${left}</b>초 안에 결정` : ''}${r.rebuyOpen ? '' : `<br>🔒 레벨 ${r.rebuyLevels + 1}부터는 리바이가 안 돼요`}
         <div class="row"><button class="btn red" data-withdraw>기권</button><button class="btn gold" data-rebuy ${r.canRebuy ? '' : 'disabled'}>🔁 리바이 (1억)</button></div></div>`;
     } else if (r.myStatus === 'out') {
       h = `<div class="wait">탈락했어요 · ${my && my.place ? my.place + '위' : ''}<div class="row"><button class="btn gold" data-lobby>로비로</button></div></div>`;
@@ -737,7 +783,7 @@ function openRankings() {
 
 function showResults() {
   const r = state.room;
-  const p = modal(`<h3>🏆 대회 결과</h3><p class="hint">총 상금 ${won(r.prizePool)} · 참가 ${r.players}명 · 엔트리 ${r.entries}</p>
+  const p = modal(`<h3>🏆 대회 결과${r.chopped ? ' · 🤝 찹' : ''}</h3><p class="hint">총 상금 ${won(r.prizePool)} · 참가 ${r.players}명 · 엔트리 ${r.entries}</p>
     <div class="res-list">${r.results.map(x => `<div class="res-row"><div class="pl">${['🥇', '🥈', '🥉'][x.place - 1] || x.place}</div>${avImg(x.avatar)}<div class="nm">${esc(x.name)}</div><div class="pz">${x.prize ? '+' + short(x.prize) : ''}</div></div>`).join('')}</div>
     <button class="btn" data-x>닫기</button>`);
   p.querySelector('[data-x]').onclick = closeModal;
@@ -746,6 +792,7 @@ function showResults() {
 // ================= 이펙트 =================
 const fxEl = $('fx');
 function fxBanner(title, sub, cls) {
+  if (!fxOn()) return;
   const d = document.createElement('div');
   d.className = 'fx-banner ' + (cls || '');
   d.innerHTML = `<div class="t">${title}</div>${sub ? `<div class="s">${sub}</div>` : ''}`;
@@ -753,18 +800,21 @@ function fxBanner(title, sub, cls) {
   setTimeout(() => d.remove(), 2300);
 }
 function fxFlash(cls) {
+  if (!fxOn()) return;
   const d = document.createElement('div');
   d.className = 'fx-flash ' + cls;
   fxEl.appendChild(d);
   setTimeout(() => d.remove(), 800);
 }
 function fxRays() {
+  if (!fxOn()) return;
   const d = document.createElement('div');
   d.className = 'fx-rays';
   fxEl.appendChild(d);
   setTimeout(() => d.remove(), 2500);
 }
 function confetti(n) {
+  if (!fxOn()) return;
   const cols = ['#e9c46a', '#f6dd9a', '#2fb874', '#ffffff', '#e5484d', '#3b82f6'];
   for (let i = 0; i < n; i++) {
     const d = document.createElement('i');
@@ -779,7 +829,7 @@ function confetti(n) {
     setTimeout(() => d.remove(), 4000);
   }
 }
-function vibrate(p) { if (navigator.vibrate) try { navigator.vibrate(p); } catch {} }
+function vibrate(p) { if (settings.vib && !isExcel() && navigator.vibrate) try { navigator.vibrate(p); } catch {} }
 
 let fxHand = 0, fxCat = -1, fxBoardLen = 0, fxShown = 0, fxStatus = null, fxFinished = false;
 function effects(prev, s) {
@@ -928,3 +978,65 @@ goLobby = function () {
 socket.on('roomClosed', () => {
   if (state && state.room && state.room.spectating) { toast('방이 닫혔어요'); state = null; goLobby(); }
 });
+
+// ================= 설정 화면 =================
+function openSettings() {
+  const opt = (key, val, label, sub) => `<button data-k="${key}" data-v="${val}" class="${String(settings[key]) === String(val) ? 'on' : ''}">${label}${sub ? `<small>${sub}</small>` : ''}</button>`;
+  const p = modal(`<h3>⚙ 설정</h3>
+    <div class="field-label">화면 테마</div>
+    <div class="opt-group">${opt('theme', 'default', '🃏 기본', '카지노')}${opt('theme', 'excel', '📊 엑셀', '회사에서 몰래')}</div>
+    <div class="field-label">이펙트 (승리·메이드 연출, 폭죽)</div>
+    <div class="opt-group">${opt('fx', true, '켬')}${opt('fx', false, '끔')}</div>
+    <div class="field-label">진동</div>
+    <div class="opt-group">${opt('vib', true, '켬')}${opt('vib', false, '끔')}</div>
+    <p class="hint">엑셀 테마에서는 이펙트·진동이 자동으로 꺼지고, 브라우저 탭 이름도 엑셀 파일처럼 바뀌어요.</p>
+    <button class="btn gold" data-x>완료</button>`);
+  p.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+    const k = b.dataset.k, raw = b.dataset.v;
+    settings[k] = raw === 'true' ? true : raw === 'false' ? false : raw;
+    saveSettings();
+    p.querySelectorAll(`[data-k="${k}"]`).forEach(x => x.classList.toggle('on', x === b));
+    if (state && current === 'game') renderGame();
+  });
+  p.querySelector('[data-x]').onclick = closeModal;
+}
+document.querySelectorAll('[data-settings]').forEach(b => b.onclick = openSettings);
+
+function renderExcelBars() {
+  if (!isExcel()) return;
+  const s = state;
+  if (current !== 'game' || !s) {
+    $('xlCell').textContent = 'B3';
+    $('xlFormula').textContent = me ? `=SUM(B5:D5)` : '';
+    $('xlStatus').textContent = me ? `합계: ${Math.round(me.total).toLocaleString()}` : '';
+    return;
+  }
+  const players = s.seats.filter(Boolean);
+  const turn = s.turn >= 0 && s.seats[s.turn] ? s.seats[s.turn].name : '';
+  $('xlCell').textContent = s.turn >= 0 ? 'C' + (s.turn + 2) : 'D10';
+  $('xlFormula').textContent = s.stage === 'waiting' ? '=SUM(C2:C9)' : `=SUMIF(B2:B9,"${turn || s.stageName}",D2:D9)`;
+  const avg = players.length ? players.reduce((a, p) => a + p.chips, 0) / players.length : 0;
+  $('xlStatus').textContent = `평균: ${Math.round(avg).toLocaleString()}   개수: ${players.length}   합계: ${s.pot.toLocaleString()}`;
+}
+
+// ================= 찹 (토너먼트 1대1) =================
+function renderChop() {
+  const s = state, r = s.room, bar = $('chopBar');
+  if (r.mode !== 'tourney' || r.status !== 'running' || r.spectating) { bar.classList.add('hidden'); return; }
+  let h = '';
+  if (r.chop && !r.chop.mine) {
+    h = `<div class="chop-text">🤝 <b>${esc(r.chop.from)}</b>님이 찹 제안 · 지금 가진 금액대로 상금 나누고 끝내기<br>내 몫 <b>${won(r.chopPreview)}</b></div>
+      <div class="row"><button class="btn small" data-chop-no>거절</button><button class="btn gold small" data-chop-yes>수락</button></div>`;
+  } else if (r.chop && r.chop.mine) {
+    h = `<div class="chop-text">🤝 찹 제안함 · 상대 응답 기다리는 중 (내 몫 ${short(r.chopPreview)})</div><div class="row"><button class="btn small" data-chop-no>취소</button></div>`;
+  } else if (r.canChop) {
+    h = `<div class="chop-text">1대1이에요 · 찹하면 지금 가진 금액대로 상금을 나눠요 (내 몫 ${short(r.chopPreview)})</div><div class="row"><button class="btn line small" data-chop-yes>🤝 찹 제안</button></div>`;
+  }
+  bar.classList.toggle('hidden', !h);
+  if (bar.dataset.h === h) return;
+  bar.dataset.h = h;
+  bar.innerHTML = h;
+  const y = bar.querySelector('[data-chop-yes]'), n = bar.querySelector('[data-chop-no]');
+  if (y) y.onclick = () => socket.emit('chop', true, res => res.error && toast(res.error));
+  if (n) n.onclick = () => socket.emit('chop', false, () => {});
+}
