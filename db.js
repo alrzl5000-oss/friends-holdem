@@ -80,7 +80,7 @@ function pub(u) {
 }
 
 function total(u) {
-  return u.assets + u.inPlay + (u.tourneyHold || 0);
+  return u.assets + u.inPlay; // 보유 현금 + 테이블 금액 (대회 참가비는 이미 상금풀로 들어간 돈)
 }
 
 module.exports = {

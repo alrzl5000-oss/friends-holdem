@@ -459,6 +459,7 @@ class Table {
       me,
       result: this.stage === 'showdown' ? this.result : null,
       seats: this.seats.map((s, i) => s && {
+        uid: s.id,
         name: s.name,
         avatar: s.avatar,
         chips: s.chips,

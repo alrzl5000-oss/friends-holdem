@@ -41,6 +41,7 @@ class BaseRoom {
     this.name = String(name || '').trim().slice(0, 16) || `${host.username}의 방`;
     this.hostId = host.id;
     this.chat = [];
+    this.spectators = new Map(); // userId -> socketId
     this.lastActive = Date.now();
   }
   get seated() { return this.table.seats.filter(Boolean); }
@@ -56,6 +57,7 @@ class BaseRoom {
     for (const s of this.table.seats) {
       if (s && s.connected) this.ctx.io.to(s.socketId).emit('state', this.viewFor(s.id));
     }
+    for (const [uid, sid] of this.spectators) this.ctx.io.to(sid).emit('state', this.viewFor(uid));
     this.ctx.lobbyChanged();
   }
   log(text) {
@@ -90,7 +92,10 @@ class BaseRoom {
   }
   baseInfo(uid) {
     const host = this.table.seat(this.hostId);
-    return { code: this.code, name: this.name, mode: this.mode, isHost: uid === this.hostId, hostName: host ? host.name : '' };
+    return {
+      code: this.code, name: this.name, mode: this.mode, isHost: uid === this.hostId, hostName: host ? host.name : '',
+      spectating: this.spectators.has(uid), watchers: this.spectators.size,
+    };
   }
   viewFor(uid) {
     return Object.assign(this.table.viewFor(uid), { room: this.info(uid) });
@@ -188,7 +193,7 @@ class CashRoom extends BaseRoom {
   summary() {
     return {
       code: this.code, name: this.name, mode: this.mode, status: 'open',
-      players: this.seated.length, max: this.table.max,
+      players: this.seated.length, max: this.table.max, watchers: this.spectators.size,
       blinds: `${fmt(this.table.opts.sb)}/${fmt(this.table.opts.bb)}`,
       buyIn: `${fmt(this.buyMin)}~${fmt(this.buyMax)}`,
     };
@@ -454,7 +459,7 @@ class TourneyRoom extends BaseRoom {
   summary() {
     return {
       code: this.code, name: this.name, mode: this.mode, status: this.status,
-      players: this.seated.length, max: this.table.max,
+      players: this.seated.length, max: this.table.max, watchers: this.spectators.size,
       level: this.status === 'running' ? this.level() : 0,
       levelMin: this.levelMs / 60000,
       prize: this.status === 'registering' ? this.seated.length * FEE : this.prizePool,

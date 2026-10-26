@@ -434,11 +434,13 @@ input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(233,196,106,
 .rs-btns .btn { padding: 14px; font-size: 16px; }
 
 /* ===== 시트/모달 ===== */
-.sheet, .modal { position: absolute; inset: 0; z-index: 40; }
+.modal { position: absolute; inset: 0; z-index: 40; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 40; }
 .sheet-bg, .modal-bg { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
 .sheet-panel {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 62%;
-  background: #0d1813; border-top: 1px solid var(--line2);
+  position: absolute; left: 0; right: 0; bottom: 0; height: min(46vh, 380px);
+  background: rgba(10, 20, 15, .97);
+  box-shadow: 0 -16px 40px rgba(0,0,0,.6); border-top: 1px solid var(--line2);
   border-radius: 20px 20px 0 0;
   display: flex; flex-direction: column;
   padding-bottom: var(--safe-b);
@@ -585,3 +587,47 @@ input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(233,196,106,
 #bailout { display: flex; flex-direction: column; gap: 6px; }
 #bailout:empty { display: none; }
 .msg.auto b { color: #e5a46a; }
+
+/* 위치 표시 (D/SB/BB): 아바타 옆에 붙임 — 베팅 금액을 가리지 않음 */
+.pos-chip {
+  position: absolute; top: -4px; left: -12px; z-index: 5;
+  min-width: 22px; height: 18px; padding: 0 5px; border-radius: 9px;
+  font-style: normal; font-size: 10px; font-weight: 900; line-height: 18px; text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,.6);
+}
+.pos-chip.d { background: #fff; color: #111; }
+.pos-chip.sb { background: linear-gradient(180deg, #5b8ff0, #2c5fc4); color: #fff; }
+.pos-chip.bb { background: linear-gradient(180deg, #f0c45b, #b98a2c); color: #2a1d05; }
+.pos-chip + .pos-chip { top: 16px; }
+.seat.left .pos-chip { left: auto; right: -12px; }
+
+/* 말풍선 채팅 */
+.bubble {
+  position: absolute; z-index: 8; transform: translate(-50%, -100%);
+  max-width: 150px; padding: 6px 10px; border-radius: 12px;
+  background: #fff; color: #142019; font-size: 12px; font-weight: 600; line-height: 1.35;
+  box-shadow: 0 4px 12px rgba(0,0,0,.45); word-break: break-word; pointer-events: none;
+  animation: bub .2s ease-out;
+}
+.bubble.down { transform: translate(-50%, 0); }
+.bubble.up::after, .bubble.down::before {
+  content: ""; position: absolute; left: 50%; margin-left: -6px; border: 6px solid transparent;
+}
+.bubble.up::after { top: 100%; border-top-color: #fff; }
+.bubble.down::before { bottom: 100%; border-bottom-color: #fff; }
+.bubble.watcher { transform: translate(-50%, 0); background: rgba(0,0,0,.7); color: #e8efe9; max-width: 80%; font-weight: 500; }
+.bubble.watcher b { color: var(--gold2); }
+@keyframes bub { from { opacity: 0; transform: translate(-50%, -80%) scale(.8); } }
+
+/* 방 목록 관전 버튼 */
+.room .info { background: none; border: 0; padding: 0; text-align: left; }
+.room .cnt small { display: block; font-size: 10px; text-align: center; }
+.watch-btn { flex: none; border: 1px solid var(--line2); background: rgba(255,255,255,.05); border-radius: 9px; padding: 7px 10px; font-size: 12px; font-weight: 700; }
+
+.bubble { max-width: 128px; }
+.bubble.l { transform: translate(0, -100%); }
+.bubble.r { transform: translate(-100%, -100%); }
+.bubble.down.l { transform: translate(0, 0); }
+.bubble.down.r { transform: translate(-100%, 0); }
+.bubble.l::after, .bubble.l::before { left: 22px; }
+.bubble.r::after, .bubble.r::before { left: auto; right: 16px; }

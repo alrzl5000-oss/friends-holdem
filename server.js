@@ -15,6 +15,7 @@ app.get('/health', (req, res) => res.send('ok'));
 const rooms = new Map();
 const userRoom = new Map();   // userId -> room code
 const userSocket = new Map(); // userId -> socket id
+const userWatch = new Map();  // userId -> 관전 중인 room code
 
 function me(u) {
   return Object.assign(db.pub(u), { room: userRoom.get(u.id) || null });
@@ -54,6 +55,8 @@ function newCode() {
 function closeRoom(code) {
   const r = rooms.get(code);
   if (!r) return;
+  for (const uid of r.spectators.keys()) userWatch.delete(uid);
+  io.to('room:' + code).emit('roomClosed');
   r.close();
   rooms.delete(code);
   ctx.lobbyChanged();
@@ -83,11 +86,22 @@ io.on('connection', socket => {
     return code ? rooms.get(code) : null;
   }
 
+  function stopWatching() {
+    const code = userWatch.get(user.id);
+    if (!code) return;
+    userWatch.delete(user.id);
+    socket.leave('room:' + code);
+    const r = rooms.get(code);
+    if (r) { r.spectators.delete(user.id); ctx.lobbyChanged(); }
+  }
+
   function enterRoom(room, buyIn, cb) {
     const cur = userRoom.get(user.id);
     if (cur && cur !== room.code && rooms.has(cur)) return cb({ error: '이미 다른 방에 참여 중이에요', room: cur });
     const r = room.join(user, socket.id, buyIn);
     if (r.error || r.needBuyIn) return cb(r);
+    if (userWatch.get(user.id) === room.code) { room.spectators.delete(user.id); userWatch.delete(user.id); }
+    else stopWatching();
     userRoom.set(user.id, room.code);
     socket.join('room:' + room.code);
     socket.emit('chatHistory', room.chat);
@@ -118,6 +132,7 @@ io.on('connection', socket => {
   });
 
   socket.on('logout', guard(cb => {
+    stopWatching();
     const r = roomOfUser();
     if (r) { r.leave(user.id); socket.leave('room:' + r.code); }
     db.logout(token);
@@ -179,7 +194,23 @@ io.on('connection', socket => {
     enterRoom(room, buyIn, cb);
   }));
 
+  socket.on('watch', guard((cb, code) => {
+    const room = rooms.get(String(code || '').trim().toUpperCase());
+    if (!room) return cb({ error: '방을 찾을 수 없어요' });
+    const cur = userRoom.get(user.id);
+    if (cur && rooms.has(cur)) return cb({ error: '참여 중인 방이 있어요. 나온 뒤에 관전할 수 있어요', room: cur });
+    stopWatching();
+    room.spectators.set(user.id, socket.id);
+    userWatch.set(user.id, room.code);
+    socket.join('room:' + room.code);
+    socket.emit('chatHistory', room.chat);
+    socket.emit('state', room.viewFor(user.id));
+    ctx.lobbyChanged();
+    cb({ ok: true, code: room.code });
+  }));
+
   socket.on('leaveRoom', guard(cb => {
+    stopWatching();
     const r = roomOfUser();
     if (r) {
       r.leave(user.id);
@@ -221,17 +252,19 @@ io.on('connection', socket => {
   }));
 
   socket.on('chat', guard((cb, text) => {
-    const r = roomOfUser();
+    const watching = rooms.get(userWatch.get(user.id));
+    const r = roomOfUser() || watching;
     if (!r) return cb({ error: '방에 없어요' });
     text = String(text || '').trim().slice(0, 200);
     if (!text) return cb({ ok: true });
-    r.pushChat({ name: user.username, uid: user.id, text, ts: Date.now() });
+    r.pushChat({ name: user.username, uid: user.id, text, ts: Date.now(), watcher: !roomOfUser() });
     cb({ ok: true });
   }));
 
   socket.on('disconnect', () => {
     if (!user || userSocket.get(user.id) !== socket.id) return;
     userSocket.delete(user.id);
+    stopWatching();
     const r = roomOfUser();
     if (r) r.setConnected(user.id, socket.id, false);
   });

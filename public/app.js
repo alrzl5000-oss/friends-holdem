@@ -175,9 +175,13 @@ function renderRooms(list) {
     const sub = r.mode === 'cash'
       ? `블라인드 ${r.blinds} · 바이인 ${r.buyIn}`
       : (r.status === 'registering' ? `참가 접수 중 · 레벨 ${r.levelMin}분 · 상금 ${short(r.prize)}` : `진행 중 · 레벨 ${r.level} · 상금 ${short(r.prize)}`);
-    return `<button class="room" data-code="${r.code}">${tag}<div class="info"><b>${esc(r.name)}</b><span>${sub}</span></div><span class="cnt">${r.players}/${r.max}</span></button>`;
+    const canJoin = !(r.mode === 'tourney' && r.status !== 'registering') && r.players < r.max;
+    return `<div class="room">${tag}<button class="info" data-join="${r.code}" data-can="${canJoin ? 1 : 0}"><b>${esc(r.name)}</b><span>${sub}</span></button>
+      <span class="cnt">${r.players}/${r.max}${r.watchers ? `<small>👀${r.watchers}</small>` : ''}</span>
+      <button class="watch-btn" data-watch="${r.code}">관전</button></div>`;
   }).join('');
-  el.querySelectorAll('.room').forEach(b => b.onclick = () => joinRoom(b.dataset.code));
+  el.querySelectorAll('[data-join]').forEach(b => b.onclick = () => b.dataset.can === '1' ? joinRoom(b.dataset.join) : watchRoom(b.dataset.join));
+  el.querySelectorAll('[data-watch]').forEach(b => b.onclick = () => watchRoom(b.dataset.watch));
 }
 
 function avgText(st) { return st && st.tPlayed ? (st.placeSum / st.tPlayed).toFixed(2).replace(/\.?0+$/, '') + '위' : '-'; }
@@ -257,6 +261,12 @@ function pickBuyIn(info, cb) {
     note: `보유 현금 ${won(me.assets)} · 나갈 때 남은 금액은 자산으로 정산돼요`, okText: '앉기',
   }, cb);
 }
+function watchRoom(code) {
+  socket.emit('watch', code, res => {
+    if (res.error) return toast(res.error);
+    enterGame();
+  });
+}
 function joinRoom(code) {
   leftRoom = null;
   socket.emit('joinRoom', { code }, res => handleEnter(res, code));
@@ -329,7 +339,7 @@ socket.on('state', s => {
 $('exitBtn').onclick = () => {
   const r = state && state.room;
   const leave = () => { leftRoom = r ? r.code : null; socket.emit('leaveRoom', () => { state = null; goLobby(); }); };
-  if (!r) return leave();
+  if (!r || r.spectating) return leave();
   if (r.mode === 'cash') {
     const my = state.seats[state.me];
     confirmBox('방 나가기', `테이블 금액 <b>${won(my ? my.chips : 0)}</b>이 자산으로 정산돼요.${my && my.inHand && !my.folded ? '<br>진행 중인 판은 폴드 처리돼요.' : ''}`, '나가기', leave);
@@ -460,25 +470,16 @@ function renderSeats() {
       <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag">좃밥 ${p.shame}</span>` : ''}${mini}</div>
       ${act}
       <div class="plate"><div class="nm">${esc(p.name)}</div><div class="st">${stack}</div></div>
+      ${s.stage !== 'waiting' ? [i === s.dealer ? '<i class="pos-chip d">D</i>' : '', i === s.sbSeat ? '<i class="pos-chip sb">SB</i>' : '', i === s.bbSeat ? '<i class="pos-chip bb">BB</i>' : ''].join('') : ''}
     </div>`;
 
     if (p.bet > 0) {
       const bx = 50 + (x - 50) * .55, by = 50 + (y - 50) * .55;
       h += `<div class="bet" style="left:${bx}%;top:${by}%"><i class="chip-ico"></i>${short(p.bet)}</div>`;
     }
-    // 딜러(D) / 스몰블라인드(SB) / 빅블라인드(BB) 버튼
-    const marks = [];
-    if (s.stage !== 'waiting') {
-      if (i === s.dealer) marks.push(['D', 'dealer']);
-      if (i === s.sbSeat) marks.push(['SB', 'dealer blind sb']);
-      if (i === s.bbSeat) marks.push(['BB', 'dealer blind bb']);
-    }
-    marks.forEach(([t, c], n) => {
-      const dx = 50 + (x - 50) * .72 + (x <= 50 ? 7 : -7) + n * (x <= 50 ? 6 : -6), dy = 50 + (y - 50) * .72;
-      h += `<div class="${c}" style="left:${dx}%;top:${dy}%">${t}</div>`;
-    });
   }
   $('seats').innerHTML = h;
+  renderBubbles();
 }
 
 function myCards() {
@@ -500,6 +501,11 @@ function renderMine() {
   }
 
   const info = $('myInfo');
+  if (s.room.spectating) {
+    hand.innerHTML = ''; hand.dataset.k = '';
+    info.innerHTML = `<span class="mi-label">관전 모드</span><span class="mi-hand">👀 ${s.room.watchers}명 관전 중</span><span class="mi-label">패는 쇼다운 때만 보여요</span>`;
+    return;
+  }
   if (!cards && s.room.mode === 'tourney' && s.room.status === 'finished') {
     const mine = s.room.results.find(x => my && x.name === my.name);
     info.innerHTML = mine ? `<span class="mi-label">내 순위 ${mine.place}위</span><span class="mi-hand made">상금 ${mine.prize ? '+' + won(mine.prize) : '없음'}</span>` : '';
@@ -535,6 +541,7 @@ function renderControls() {
   if (!myTurn) $('raiseSheet').classList.add('hidden');
 
   if (myTurn) {
+    if (!$('chatSheet').classList.contains('hidden') && document.activeElement !== $('chatInput')) $('chatSheet').classList.add('hidden');
     const toCall = Math.max(0, s.currentBet - my.bet);
     const maxTotal = my.bet + my.chips;
     const canRaise = my.chips > toCall && maxTotal > s.currentBet;
@@ -558,6 +565,17 @@ function renderControls() {
   el.dataset.k = '';
   let h = '';
   const turnName = s.turn >= 0 && s.seats[s.turn] ? s.seats[s.turn].name : '';
+  if (r.spectating) {
+    const free = s.seats.some(x => !x);
+    const canSit = free && (r.mode === 'cash' || r.status === 'registering');
+    const status = s.stage === 'waiting' ? '대기 중' : s.stage === 'showdown' ? '쇼다운' : turnName ? `${esc(turnName)}님 차례` : '카드 오픈 중…';
+    el.innerHTML = `<div class="wait">👀 관전 중 · ${status}
+      <div class="row"><button class="btn" data-lobby>나가기</button>${canSit ? `<button class="btn gold" data-sit>${r.mode === 'cash' ? '🪑 자리에 앉기' : '🏁 대회 참가'}</button>` : ''}</div></div>`;
+    el.querySelector('[data-lobby]').onclick = () => socket.emit('leaveRoom', () => { state = null; goLobby(); });
+    const sit = el.querySelector('[data-sit]');
+    if (sit) sit.onclick = () => joinRoom(r.code);
+    return;
+  }
   if (r.mode === 'cash') {
     if (!my) h = '';
     else if (my.chips === 0 && !(my.inHand && !my.folded && s.stage !== 'showdown')) {
@@ -840,24 +858,52 @@ function addMsg(m, live) {
   if (m.system) { d.className = 'msg sys'; d.textContent = m.text; }
   else {
     d.className = 'msg' + (me && m.uid === me.id ? ' mine' : '');
-    d.innerHTML = `<b>${esc(m.name)}</b>${esc(m.text)}`;
+    d.innerHTML = `<b>${m.watcher ? '👀 ' : ''}${esc(m.name)}</b>${esc(m.text)}`;
   }
   log.appendChild(d);
   while (log.children.length > 200) log.firstChild.remove();
   log.scrollTop = log.scrollHeight;
   const open = !$('chatSheet').classList.contains('hidden');
-  if (live && !m.system && !open) {
-    if (!(me && m.uid === me.id)) { unread++; updateBadge(); }
+  if (live && !m.system) {
+    if (!open && !(me && m.uid === me.id)) { unread++; updateBadge(); }
     peek(m);
   }
 }
-let peekTimer;
+const bubbles = new Map(); // uid -> { text, name, until }
 function peek(m) {
-  let el = document.querySelector('.chat-peek');
-  if (!el) { el = document.createElement('div'); el.className = 'chat-peek'; $('game').appendChild(el); }
-  el.innerHTML = `<b>${esc(m.name)}</b>${esc(m.text)}`;
-  clearTimeout(peekTimer);
-  peekTimer = setTimeout(() => el.remove(), 3500);
+  bubbles.set(m.uid, { text: m.text, name: m.name, until: Date.now() + 4000 });
+  renderBubbles();
+  setTimeout(renderBubbles, 4100);
+}
+function renderBubbles() {
+  const layer = $('seats');
+  if (!layer || !state) return;
+  layer.querySelectorAll('.bubble').forEach(b => b.remove());
+  const now = Date.now();
+  const base = state.me >= 0 ? state.me : 0;
+  let watcherY = 0;
+  for (const [uid, b] of bubbles) {
+    if (b.until < now) { bubbles.delete(uid); continue; }
+    const i = state.seats.findIndex(p => p && p.uid === uid);
+    const el = document.createElement('div');
+    if (i >= 0) {
+      const k = (i - base + 8) % 8;
+      const [x, y] = POS[k];
+      const side = x < 40 ? ' l' : x > 60 ? ' r' : '';
+      el.className = 'bubble' + (y > 60 ? ' up' : ' down') + side;
+      el.style.left = (side === ' l' ? x - 12 : side === ' r' ? x + 12 : x) + '%';
+      el.style.top = (y > 60 ? y - 9 : y + 10) + '%';
+      el.textContent = b.text;
+    } else {
+      // 관전자 채팅: 테이블 위쪽 가장자리에 작게
+      el.className = 'bubble watcher';
+      el.style.left = '50%';
+      el.style.top = (2 + watcherY) + '%';
+      watcherY += 6;
+      el.innerHTML = `<b>👀 ${esc(b.name)}</b> ${esc(b.text)}`;
+    }
+    layer.appendChild(el);
+  }
 }
 socket.on('chat', m => addMsg(m, true));
 socket.on('chatHistory', list => { $('chatLog').innerHTML = ''; list.forEach(m => addMsg(m, false)); });
@@ -878,3 +924,7 @@ goLobby = function () {
   const inv = sessionStorage.getItem('fh_invite');
   if (inv && me && !me.room) { sessionStorage.removeItem('fh_invite'); joinRoom(inv); }
 };
+
+socket.on('roomClosed', () => {
+  if (state && state.room && state.room.spectating) { toast('방이 닫혔어요'); state = null; goLobby(); }
+});
