@@ -818,3 +818,5 @@ body.excel .msg b { color: #217346; }
 body.excel .msg.mine b { color: #2f5597; }
 body.excel .pe-overlay { background: #fff; }
 body.excel #fx { display: none; }
+
+.res-row .co { display: block; font-size: 11px; color: var(--gold2); font-weight: 600; }

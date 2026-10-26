@@ -425,8 +425,8 @@ function renderGame() {
   hud.classList.toggle('hidden', r.mode !== 'tourney');
   if (r.mode === 'tourney') {
     if (r.status === 'finished') {
-      const w = r.results.find(x => x.place === 1);
-      hud.innerHTML = `<div><span>상태</span><b>${r.chopped ? '찹 종료' : '종료'}</b></div><div><span>우승</span><b>${w ? esc(w.name) : '-'}</b></div><div><span>참가</span><b>${r.players}명</b></div><div><span>상금</span><b>${short(r.prizePool)}</b></div>`;
+      const w = r.results.filter(x => x.place === 1 || x.co).map(x => esc(x.name)).join(', ');
+      hud.innerHTML = `<div><span>상태</span><b>${r.chopped ? '찹 종료' : '종료'}</b></div><div><span>${r.chopped ? '공동 우승' : '우승'}</span><b>${w || '-'}</b></div><div><span>참가</span><b>${r.players}명</b></div><div><span>상금</span><b>${short(r.prizePool)}</b></div>`;
     } else if (r.status === 'registering') {
       hud.innerHTML = `<div><span>참가</span><b>${s.seats.filter(Boolean).length}명</b></div><div><span>참가비</span><b>내 돈 ${short(r.startStack)}</b></div><div><span>레벨</span><b>${r.levelMs / 60000}분</b></div><div><span>예상 상금</span><b>${short(r.prizePool)}</b></div><div><span>리바이</span><b>Lv${r.rebuyLevels}까지</b></div>`;
     } else {
@@ -784,7 +784,7 @@ function openRankings() {
 function showResults() {
   const r = state.room;
   const p = modal(`<h3>🏆 대회 결과${r.chopped ? ' · 🤝 찹' : ''}</h3><p class="hint">총 상금 ${won(r.prizePool)} · 참가 ${r.players}명 · 엔트리 ${r.entries}</p>
-    <div class="res-list">${r.results.map(x => `<div class="res-row"><div class="pl">${['🥇', '🥈', '🥉'][x.place - 1] || x.place}</div>${avImg(x.avatar)}<div class="nm">${esc(x.name)}</div><div class="pz">${x.prize ? '+' + short(x.prize) : ''}</div></div>`).join('')}</div>
+    <div class="res-list">${r.results.map(x => `<div class="res-row"><div class="pl">${x.co ? '🤝' : ['🥇', '🥈', '🥉'][x.place - 1] || x.place}</div>${avImg(x.avatar)}<div class="nm">${esc(x.name)}${x.co ? ' <small class="co">공동 우승 · 1.5위</small>' : ''}</div><div class="pz">${x.prize ? '+' + short(x.prize) : ''}</div></div>`).join('')}</div>
     <button class="btn" data-x>닫기</button>`);
   p.querySelector('[data-x]').onclick = closeModal;
 }
@@ -888,7 +888,8 @@ function effects(prev, s) {
       fxFinished = true;
       const mine = r.results.find(x => x.name === my.name);
       setTimeout(() => {
-        if (mine && mine.place === 1) { fxRays(); fxFlash('gold'); confetti(120); fxBanner('🏆 우승!', `상금 +${won(mine.prize)}`, 'win'); vibrate([80, 60, 80, 60, 200]); }
+        if (mine && mine.co) { fxFlash('gold'); confetti(80); fxBanner('🤝 공동 우승!', `상금 +${won(mine.prize)}`, 'win'); vibrate([80, 60, 200]); }
+        else if (mine && mine.place === 1) { fxRays(); fxFlash('gold'); confetti(120); fxBanner('🏆 우승!', `상금 +${won(mine.prize)}`, 'win'); vibrate([80, 60, 80, 60, 200]); }
         else if (mine) fxBanner(`${mine.place}위`, mine.prize ? `상금 +${won(mine.prize)}` : '수고했어요!', mine.prize ? '' : 'small');
         setTimeout(showResults, 2400);
       }, 1500);
