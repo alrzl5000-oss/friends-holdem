@@ -39,6 +39,21 @@ for (const u of Object.values(data.users)) {
   u.bailoutLog = u.bailoutLog || [];
 }
 
+// 지난 찹 대회 소급 반영 — 예전엔 1위/2위로 기록됐던 걸 둘 다 1.5위·우승으로 고침
+// Railway 변수 CHOP_FIX="1위이름>2위이름;1위이름>2위이름" (각 항목은 한 번만 적용)
+data.appliedFixes = data.appliedFixes || [];
+for (const item of (process.env.CHOP_FIX || '').split(';').map(x => x.trim()).filter(Boolean)) {
+  if (data.appliedFixes.includes(item)) continue;
+  const [n1, n2] = item.split('>').map(x => x.trim().toLowerCase());
+  const u1 = data.users[n1], u2 = data.users[n2];
+  if (!u1 || !u2) { console.log(`찹 소급: 계정 없음 → ${item}`); continue; }
+  u1.stats.placeSum += 0.5;   // 1위 → 1.5위
+  u2.stats.placeSum -= 0.5;   // 2위 → 1.5위
+  u2.stats.tWins += 1;        // 2위도 우승 1회
+  data.appliedFixes.push(item);
+  console.log(`찹 소급 적용: ${item}`);
+}
+
 const kstDay = t => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
 // 최근 24시간 충전 횟수 → 1 좃밥 / 2 좃좃밥 / 3 걍접으셈
 function shameLevel(u) {

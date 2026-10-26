@@ -449,11 +449,11 @@ class TourneyRoom extends BaseRoom {
     this.table.running = false;
     clearTimeout(this.chopTimer);
     if (chop) {
-      // 많이 가진 사람이 1위
-      chop.slice().sort((a, b) => b.stack - a.stack).forEach((x, k) => {
+      // 찹 = 공동 우승 (둘 다 우승 1회, 평균 순위에는 1.5위로 기록)
+      chop.slice().sort((a, b) => b.stack - a.stack).forEach(x => {
         x.seat.tStatus = 'out';
-        x.seat.place = k + 1;
-        this.results.push({ id: x.seat.id, name: x.seat.name, avatar: x.seat.avatar, place: k + 1, prize: 0, chop: x.prize });
+        x.seat.place = 1.5;
+        this.results.push({ id: x.seat.id, name: x.seat.name, avatar: x.seat.avatar, place: 1.5, co: true, prize: 0, chop: x.prize });
       });
       this.chopped = true;
     } else {
@@ -475,14 +475,14 @@ class TourneyRoom extends BaseRoom {
     });
     for (const r of this.results) if (r.chop != null) { r.prize = r.chop; paid += r.chop; delete r.chop; }
     // 나머지(반올림 등)는 우승자에게
-    const first = this.results.find(x => x.place === 1);
+    const first = this.results.find(x => x.place === 1 || x.co);
     if (first && paid < this.prizePool) first.prize += this.prizePool - paid;
     for (const r of this.results) {
       const u = db.byId(r.id);
       if (!u) continue;
       u.assets += r.prize;
       u.stats.placeSum = (u.stats.placeSum || 0) + r.place;
-      if (r.place === 1) u.stats.tWins++;
+      if (r.place === 1 || r.co) u.stats.tWins++;
     }
     for (const id of this.entrants) {
       const u = db.byId(id);
