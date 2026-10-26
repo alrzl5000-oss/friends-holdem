@@ -82,6 +82,19 @@ if (!data.migrations.includes('bailout-5억')) {
   data.migrations.push('bailout-5억');
 }
 
+// 관리자 지급: Railway 변수 GIVE="키|닉네임|금액;키|닉네임|금액" — 같은 키는 한 번만 지급 (금액은 원 단위, 음수면 차감)
+data.gives = data.gives || [];
+for (const item of (process.env.GIVE || '').split(';').map(x => x.trim()).filter(Boolean)) {
+  const [key, name, amt] = item.split('|').map(x => (x || '').trim());
+  if (!key || data.gives.includes(key)) continue;
+  const u = data.users[String(name).toLowerCase()];
+  const n = Math.round(Number(amt));
+  if (!u || !Number.isFinite(n)) { console.log(`지급 실패(계정/금액 확인): ${item}`); continue; }
+  u.assets = Math.max(0, u.assets + n);
+  data.gives.push(key);
+  console.log(`지급: ${u.username} ${n >= 0 ? '+' : ''}${n / 1e8}억 (키 ${key})`);
+}
+
 const kstDay = t => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
 // 최근 24시간 충전 횟수 → 1 좃밥 / 2 좃좃밥 / 3 걍접으셈
 function shameLevel(u) {
