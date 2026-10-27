@@ -267,9 +267,16 @@ io.on('connection', socket => {
     const watching = rooms.get(userWatch.get(user.id));
     const r = roomOfUser() || watching;
     if (!r) return cb({ error: '방에 없어요' });
-    text = String(text || '').trim().slice(0, 200);
+    const isWatcher = !roomOfUser();
+    // 관전자: 한 줄(30자)만, 3초에 1번
+    text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, isWatcher ? 30 : 200);
     if (!text) return cb({ ok: true });
-    r.pushChat({ name: user.username, uid: user.id, text, ts: Date.now(), watcher: !roomOfUser() });
+    if (isWatcher) {
+      const now = Date.now();
+      if (now - (socket.lastWatchChat || 0) < 3000) return cb({ error: '관전자는 3초에 한 번만 채팅할 수 있어요' });
+      socket.lastWatchChat = now;
+    }
+    r.pushChat({ name: user.username, uid: user.id, text, ts: Date.now(), watcher: isWatcher });
     cb({ ok: true });
   }));
 

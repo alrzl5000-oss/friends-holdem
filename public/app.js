@@ -398,7 +398,10 @@ $('exitBtn').onclick = () => {
   } else leave();
 };
 $('rankBtn').onclick = openRankings;
-$('chatBtn').onclick = () => { $('chatSheet').classList.remove('hidden'); unread = 0; updateBadge(); setTimeout(() => { const l = $('chatLog'); l.scrollTop = l.scrollHeight; }, 0); };
+$('chatBtn').onclick = () => {
+  const watcher = !!(state && state.room && state.room.spectating);
+  $('chatInput').maxLength = watcher ? 30 : 200;
+  $('chatInput').placeholder = watcher ? '관전자는 30자까지 (3초에 1번)' : '메시지 입력…'; $('chatSheet').classList.remove('hidden'); unread = 0; updateBadge(); setTimeout(() => { const l = $('chatLog'); l.scrollTop = l.scrollHeight; }, 0); };
 document.querySelectorAll('#chatSheet [data-close]').forEach(e => e.onclick = () => $('chatSheet').classList.add('hidden'));
 
 const RN = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
@@ -513,7 +516,8 @@ function renderSeats() {
     }
 
     let act = p.lastAction ? `<span class="act ${ACT_CLS[p.lastAction] || ''}">${p.lastAction}</span>` : '';
-    if (p.bestName) act = `<span class="act hn ${p.won > 0 ? 'win' : ''}">${p.bestName}</span>`;
+    const handTag = p.bestName ? `<div class="hn-b ${p.won > 0 ? 'win' : ''}">${p.bestName}</div>` : '';
+    if (p.bestName) act = '';
     let stack = short(p.chips);
     if (p.won > 0) stack = `<span class="won">+${short(p.won)}</span>`;
     if (p.tStatus === 'out') { act = ''; stack = p.place ? `${p.place}위` : '탈락'; }
@@ -523,6 +527,7 @@ function renderSeats() {
       <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar, p.skin && p.skin.frame)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
       ${act}
       <div class="plate"><div class="nm">${esc(p.name)}</div>${p.skin && p.skin.title ? `<div class="ttl-s">${esc(p.skin.title)}</div>` : ''}<div class="st">${stack}</div></div>
+      ${handTag}
       ${s.stage !== 'waiting' ? [i === s.dealer ? '<i class="pos-chip d">D</i>' : '', i === s.sbSeat ? '<i class="pos-chip sb">SB</i>' : '', i === s.bbSeat ? '<i class="pos-chip bb">BB</i>' : ''].join('') : ''}
     </div>`;
 
@@ -592,9 +597,9 @@ function renderControls() {
   const el = $('controls');
   const myTurn = s.turn === s.me && s.me >= 0;
   if (!myTurn) $('raiseSheet').classList.add('hidden');
+  $('chatTurn').classList.toggle('hidden', !myTurn);
 
   if (myTurn) {
-    if (!$('chatSheet').classList.contains('hidden') && document.activeElement !== $('chatInput')) $('chatSheet').classList.add('hidden');
     const toCall = Math.max(0, s.currentBet - my.bet);
     const maxTotal = my.bet + my.chips;
     const canRaise = my.chips > toCall && maxTotal > s.currentBet;
@@ -941,10 +946,11 @@ function renderBubbles() {
   layer.querySelectorAll('.bubble').forEach(b => b.remove());
   const now = Date.now();
   const base = state.me >= 0 ? state.me : 0;
-  let watcherY = 0;
+  let lastWatcher = null;
   for (const [uid, b] of bubbles) {
     if (b.until < now) { bubbles.delete(uid); continue; }
     const i = state.seats.findIndex(p => p && p.uid === uid);
+    if (i < 0) { if (!lastWatcher || b.until > lastWatcher.until) lastWatcher = b; continue; }
     const el = document.createElement('div');
     if (i >= 0) {
       const k = (i - base + 8) % 8;
@@ -954,14 +960,16 @@ function renderBubbles() {
       el.style.left = (side === ' l' ? x - 12 : side === ' r' ? x + 12 : x) + '%';
       el.style.top = (y > 60 ? y - 9 : y + 10) + '%';
       el.textContent = b.text;
-    } else {
-      // 관전자 채팅: 테이블 위쪽 가장자리에 작게
-      el.className = 'bubble watcher';
-      el.style.left = '50%';
-      el.style.top = (2 + watcherY) + '%';
-      watcherY += 6;
-      el.innerHTML = `<b>👀 ${esc(b.name)}</b> ${esc(b.text)}`;
     }
+    layer.appendChild(el);
+  }
+  // 관전자 채팅은 가장 최근 1개만, 한 줄로
+  if (lastWatcher) {
+    const el = document.createElement('div');
+    el.className = 'bubble watcher';
+    el.style.left = '50%';
+    el.style.top = '2%';
+    el.innerHTML = `<b>👀 ${esc(lastWatcher.name)}</b> ${esc(lastWatcher.text)}`;
     layer.appendChild(el);
   }
 }

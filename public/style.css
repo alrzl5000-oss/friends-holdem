@@ -875,3 +875,14 @@ body.excel .card.back[class*="bk-"] { background: #f3f2f1; box-shadow: none; }
 body.excel .card.back.bk-b_money::after { content: "#"; color: #b3b0ad; }
 body.excel .shop-item { background: #fff; border-radius: 0; }
 body.excel .shop-head b { color: #217346; }
+
+/* 쇼다운 족보: 카드 가리지 않게 이름판 아래 */
+.seat .hn-b { margin-top: 2px; font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 6px; background: rgba(0,0,0,.8); color: #fff; white-space: nowrap; border: 1px solid rgba(255,255,255,.2); z-index: 4; position: relative; }
+.seat .hn-b.win { background: linear-gradient(180deg, var(--gold2), var(--gold)); color: #2a1d05; border: 0; }
+body.excel .seat .hn-b { border-radius: 0; background: #f3f2f1; color: #252423; border-color: #e1dfdd; }
+body.excel .seat .hn-b.win { background: #e2efda; color: #217346; }
+/* 채팅창 열려 있을 때 내 차례 알림 */
+.chat-turn { flex: 1; margin: 0 8px; font-size: 12px; font-weight: 800; color: #2a1d05; background: linear-gradient(180deg, var(--gold2), var(--gold)); padding: 4px 8px; border-radius: 8px; text-align: center; animation: wobble2 1s ease-in-out infinite; }
+@keyframes wobble2 { 50% { transform: scale(1.04); } }
+/* 관전자 말풍선 한 줄 */
+.bubble.watcher { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 86%; }
