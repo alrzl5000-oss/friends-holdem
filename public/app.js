@@ -522,6 +522,7 @@ function renderSeats() {
     if (p.won > 0) stack = `<span class="won">+${short(p.won)}</span>`;
     if (p.tStatus === 'out') { act = ''; stack = p.place ? `${p.place}위` : '탈락'; }
     else if (p.tStatus === 'busted') { act = '<span class="act allin">파산</span>'; stack = '리바이?'; }
+    if (p.sitOut && p.tStatus !== 'out') act = '<span class="act fold">💤 자리비움</span>';
 
     h += `<div class="${cls.join(' ')}" style="left:${x}%;top:${y}%">
       <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar, p.skin && p.skin.frame)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
@@ -597,6 +598,15 @@ function renderControls() {
   const el = $('controls');
   const myTurn = s.turn === s.me && s.me >= 0;
   if (!myTurn) $('raiseSheet').classList.add('hidden');
+  // 자리비움: 돌아왔어요 누를 때까지 자동 폴드
+  if (my && my.sitOut && !r.spectating) {
+    $('raiseSheet').classList.add('hidden');
+    $('chatTurn').classList.add('hidden');
+    el.dataset.k = 'away';
+    el.innerHTML = `<div class="away-bar"><div>💤 <b>자리비움 중</b><br><small>시간초과 3번 — 내 차례마다 자동 폴드돼요</small></div><button class="btn gold" data-back>🙋 돌아왔어요</button></div>`;
+    el.querySelector('[data-back]').onclick = () => socket.emit('back', res => res.error ? toast(res.error) : toast('다시 참여해요', true));
+    return;
+  }
   $('chatTurn').classList.toggle('hidden', !myTurn);
 
   if (myTurn) {
@@ -655,7 +665,7 @@ function renderControls() {
       h = `<div class="wait">대회 종료${mine ? ` · 내 순위 ${mine.place}위${mine.prize ? ` (+${short(mine.prize)})` : ''}` : ''}<div class="row"><button class="btn" data-results>결과 보기</button><button class="btn gold" data-lobby>로비로</button></div></div>`;
     } else if (r.myStatus === 'busted') {
       const left = r.pendingUntil ? Math.max(0, Math.ceil((r.pendingUntil - Date.now() - clockOffset) / 1000)) : 0;
-      h = `<div class="wait">💥 파산! 리바이 ${r.myRebuys}/${r.rebuyMax}회 사용${left ? ` · <b data-pend>${left}</b>초 안에 결정` : ''}${r.rebuyOpen ? '' : `<br>🔒 레벨 ${r.rebuyLevels + 1}부터는 리바이가 안 돼요`}
+      h = `<div class="wait">💥 파산! 리바이 ${r.myRebuys}/${r.rebuyMax}회 사용${left ? ` · <b data-pend>${left}</b>초 안에 결정` : ''}${r.canRebuy ? (r.rebuyOpen ? '' : `<br>⏰ 레벨 ${r.rebuyLevels} 판에서 파산 — 지금이 마지막 리바이 기회예요`) : (r.rebuyOpen ? '' : `<br>🔒 레벨 ${r.rebuyLevels + 1}부터는 리바이가 안 돼요`)}
         <div class="row"><button class="btn red" data-withdraw>기권</button><button class="btn gold" data-rebuy ${r.canRebuy ? '' : 'disabled'}>🔁 리바이 (1억)</button></div></div>`;
     } else if (r.myStatus === 'out') {
       h = `<div class="wait">탈락했어요 · ${my && my.place ? my.place + '위' : ''}<div class="row"><button class="btn gold" data-lobby>로비로</button></div></div>`;

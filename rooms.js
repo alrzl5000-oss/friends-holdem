@@ -297,13 +297,16 @@ class TourneyRoom extends BaseRoom {
   alive() { return this.seated.filter(s => s.tStatus === 'alive' || s.tStatus === 'busted'); }
   canRebuy(s) {
     const u = db.byId(s.id);
-    return this.rebuyOpen() && s.rebuys < REBUY_MAX && u && u.assets >= FEE;
+    // 파산한 판이 레벨 5 이하였으면 리바이 가능 (판이 끝날 때 레벨 6이 돼도 OK)
+    const lv = s.bustLevel || this.level();
+    return this.status === 'running' && lv <= REBUY_LEVELS && s.rebuys < REBUY_MAX && u && u.assets >= FEE;
   }
   handEnd() {
     this.shameTick();
     db.save();
     for (const s of this.seated) {
       if (s.tStatus === 'alive' && s.chips === 0) {
+        s.bustLevel = this.handLevel || this.level();
         if (this.canRebuy(s)) {
           s.tStatus = 'busted';
           this.log(`💥 ${s.name} 파산 — 리바이 가능 (${s.rebuys}/${REBUY_MAX})`);
@@ -325,14 +328,17 @@ class TourneyRoom extends BaseRoom {
       this.rebuyClosedLogged = true;
       this.log(`🔒 레벨 ${REBUY_LEVELS + 1} — 이제 리바이가 안 돼요`);
     }
-    if (!this.rebuyOpen()) for (const s of this.seated) if (s.tStatus === 'busted') this.eliminate(s);
     const withChips = this.seated.filter(s => s.tStatus === 'alive' && s.chips > 0);
     const busted = this.seated.filter(s => s.tStatus === 'busted');
-    if (withChips.length <= 1) {
+    // 레벨 6 첫 판 전: 파산해서 리바이를 고민 중인 사람에게 마지막 기회(20초)를 줌
+    const lastChance = !this.rebuyOpen() && busted.length > 0;
+    if (withChips.length <= 1 || lastChance) {
       if (busted.length) {
         if (!this.pendingTimer) {
           this.pendingUntil = Date.now() + REBUY_WAIT_MS;
-          this.log(`⏳ 리바이 대기 ${REBUY_WAIT_MS / 1000}초`);
+          this.log(lastChance
+            ? `⏳ 레벨 ${REBUY_LEVELS + 1} 시작 전 마지막 리바이 기회 ${REBUY_WAIT_MS / 1000}초`
+            : `⏳ 리바이 대기 ${REBUY_WAIT_MS / 1000}초`);
           this.pendingTimer = setTimeout(() => {
             this.pendingTimer = null;
             this.pendingUntil = 0;
@@ -345,17 +351,19 @@ class TourneyRoom extends BaseRoom {
       }
       return false;
     }
+    this.handLevel = this.level();
     return true;
   }
   rebuy(user) {
     const s = this.table.seat(user.id);
     if (!s || s.tStatus !== 'busted') return { error: '지금은 리바이할 수 없어요' };
-    if (!this.rebuyOpen()) return { error: `레벨 ${REBUY_LEVELS + 1}부터는 리바이가 안 돼요` };
+    if ((s.bustLevel || this.level()) > REBUY_LEVELS) return { error: `레벨 ${REBUY_LEVELS + 1}부터는 리바이가 안 돼요` };
     if (s.rebuys >= REBUY_MAX) return { error: `리바이는 ${REBUY_MAX}회까지예요` };
     if (user.assets < FEE) return { error: '리바이 비용 1억원이 부족해요' };
     user.assets -= FEE;
     user.tourneyHold = (user.tourneyHold || 0) + FEE;
     s.rebuys++;
+    s.bustLevel = 0;
     s.chips = T_STACK;
     s.tStatus = 'alive';
     this.entries++;

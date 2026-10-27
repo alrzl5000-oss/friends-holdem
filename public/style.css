@@ -900,3 +900,10 @@ body.excel .shame-tag { font-size: 9px; padding: 0 2px; margin: 0; }
 
 .ex-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .ex-grid .btn { padding: 10px 4px; font-size: 14px; }
+
+/* 자리비움 */
+.away-bar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(229,72,77,.12); border: 1px solid rgba(229,72,77,.45); }
+.away-bar > div { flex: 1; font-size: 14px; line-height: 1.35; }
+.away-bar small { color: var(--muted); font-size: 12px; }
+.away-bar .btn { flex: none; padding: 12px 14px; }
+body.excel .away-bar { background: #fff2cc; border-color: #c8c6c4; border-radius: 0; }

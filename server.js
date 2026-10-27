@@ -252,6 +252,12 @@ io.on('connection', socket => {
     cb(r.withdraw(user.id));
   }));
 
+  socket.on('back', guard(cb => {
+    const r = roomOfUser();
+    if (!r) return cb({ error: '방에 없어요' });
+    cb(r.table.comeBack(user.id));
+  }));
+
   socket.on('chop', guard((cb, yes) => {
     const r = roomOfUser();
     if (!r || r.mode !== 'tourney') return cb({ error: '토너먼트가 아니에요' });

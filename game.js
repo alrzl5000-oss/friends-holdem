@@ -91,6 +91,17 @@ class Table {
     return { seat: i };
   }
 
+  comeBack(id) {
+    const s = this.seat(id);
+    if (!s) return { error: '자리가 없어요' };
+    s.sitOut = false;
+    s.timeouts = 0;
+    this.log(`🙋 ${s.name} 님 돌아왔어요`);
+    if (this.seats[this.turn] === s && this.inBetting()) this.startTimer(); // 내 차례면 시간 다시 줌
+    this.emit();
+    return { ok: true };
+  }
+
   removePlayer(id) {
     const i = this.seatOf(id);
     if (i < 0) return;
@@ -208,13 +219,21 @@ class Table {
   startTimer() {
     clearTimeout(this.timer);
     const s = this.seats[this.turn];
-    const ms = s.connected ? this.opts.turnMs : this.opts.awayMs;
+    // 자리비움(시간초과 3번 연속): '돌아왔어요' 누를 때까지 바로 자동 폴드
+    const ms = s.sitOut ? 900 : s.connected ? this.opts.turnMs : this.opts.awayMs;
     this.turnDeadline = Date.now() + ms;
     const seq = ++this.turnSeq;
     this.timer = setTimeout(() => {
       if (seq !== this.turnSeq || !this.inBetting()) return;
       const cur = this.seats[this.turn];
       if (!cur) return;
+      if (cur.sitOut) return this.act(cur.id, 'fold', 0, 'away');
+      cur.timeouts = (cur.timeouts || 0) + 1;
+      if (cur.timeouts >= 3) {
+        cur.sitOut = true;
+        this.log(`💤 ${cur.name} 님 3번 연속 시간초과 — 자리비움 (돌아올 때까지 자동 폴드)`);
+        return this.act(cur.id, 'fold', 0, 'away');
+      }
       this.act(cur.id, this.currentBet - cur.bet > 0 ? 'fold' : 'check', 0, true);
     }, ms);
   }
@@ -268,7 +287,8 @@ class Table {
         return { error: '알 수 없는 행동이에요' };
     }
     s.acted = true;
-    this.log(`${s.name} ${msg}${auto ? ' (시간초과)' : ''}`);
+    if (!auto) { s.timeouts = 0; s.sitOut = false; } // 직접 고르면 연속 시간초과 리셋
+    this.log(`${s.name} ${msg}${auto === 'away' ? ' (자리비움)' : auto ? ' (시간초과)' : ''}`);
     this.afterAction();
     return { ok: true };
   }
@@ -478,6 +498,7 @@ class Table {
         place: s.place || 0,
         rebuys: s.rebuys || 0,
         shame: s.shame || 0,
+        sitOut: !!s.sitOut,
         skin: s.skin || null,
       }),
     };
