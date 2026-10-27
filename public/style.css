@@ -897,3 +897,6 @@ body.excel .pos-row .pos-chip { min-width: 0; padding: 0 4px; height: 15px; line
 body.excel .seat { width: 96px; }
 body.excel .seat .ava-wrap { gap: 1px; }
 body.excel .shame-tag { font-size: 9px; padding: 0 2px; margin: 0; }
+
+.ex-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.ex-grid .btn { padding: 10px 4px; font-size: 14px; }

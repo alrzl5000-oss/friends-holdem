@@ -16,7 +16,8 @@ const DATA_VERSION = 4;
 const RESET_ID = process.env.RESET_ID || '';
 const SHAME_MS = 24 * 60 * 60 * 1000; // 충전 후 좃밥 유지 시간
 const DAILY_BAILOUTS = 3;
-const BAILOUT_AMOUNT = 3e8;              // 충전 1회 금액 3억
+const BAILOUT_AMOUNT = 3e8;
+const TROPHY_RATE = 1e8;                 // 트로피 1개 = 1억              // 충전 1회 금액 3억
 const RANK_MIN_TOURNEYS = 5;            // 평균 순위 랭킹에 오르려면 토너먼트 5회 이상              // 하루 충전 한도 (한국 날짜 기준)
 
 let data = { users: {}, sessions: {} };
@@ -174,6 +175,7 @@ function pub(u) {
     bailoutsToday: bailoutsToday(u),
     bailoutLimit: DAILY_BAILOUTS,
     bailoutAmount: BAILOUT_AMOUNT,
+    trophyRate: TROPHY_RATE,
     avatar: u.avatar,
     stats: u.stats,
     total: total(u),
@@ -193,6 +195,15 @@ module.exports = {
   ENTRY_FEE,
   DAILY_BAILOUTS,
   skinOf,
+  sellTrophy(u, n) {
+    n = Math.floor(Number(n));
+    if (!(n >= 1 && n <= 100)) return { error: '개수가 올바르지 않아요' };
+    if ((u.trophies || 0) < n) return { error: `🏆가 ${n - (u.trophies || 0)}개 부족해요` };
+    u.trophies -= n;
+    u.assets += n * TROPHY_RATE;
+    save();
+    return { ok: true, amount: n * TROPHY_RATE };
+  },
   buy(u, id) {
     const item = Shop.byId(id);
     if (!item) return { error: '없는 상품이에요' };

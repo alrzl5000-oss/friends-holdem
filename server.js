@@ -161,6 +161,7 @@ io.on('connection', socket => {
     if (r) { const s = r.table.seat(user.id); if (s) { s.skin = db.skinOf(user); r.emit(); } }
     ctx.pushMe(user.id);
   };
+  socket.on('sellTrophy', guard((cb, n) => { const r = db.sellTrophy(user, n); if (r.ok) ctx.pushMe(user.id); cb(r); }));
   socket.on('buy', guard((cb, id) => { const r = db.buy(user, String(id)); if (r.ok) refreshSkin(); cb(r); }));
   socket.on('equip', guard((cb, { cat, id } = {}) => { const r = db.equip(user, String(cat), id ? String(id) : null); if (r.ok) refreshSkin(); cb(r); }));
 

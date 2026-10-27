@@ -1070,6 +1070,10 @@ function renderShop() {
     return `<div class="pv-fx">${{ e_gold: '🪙', e_fire: '🎆', e_money: '💸' }[it.id] || '✨'}</div>`;
   };
   let h = `<div class="shop-head glass"><div><span>보유 트로피</span><b>🏆 ${me.trophies}</b></div><p class="hint">토너먼트 우승(찹 포함)할 때마다 🏆 1개 · 써도 랭킹 우승 횟수는 안 줄어요</p></div>`;
+  // 트로피 → 돈 환전
+  const opts = [1, 3, 5, 10];
+  h += `<div class="shop-cat">💰 돈으로 바꾸기 <small>🏆 1개 = ${won(me.trophyRate)}</small></div>
+    <div class="ex-grid">${opts.map(n => `<button class="btn ${me.trophies >= n ? 'gold' : ''}" data-sell="${n}" ${me.trophies >= n ? '' : 'disabled'}>🏆 ${n}<small>→ ${short(n * me.trophyRate)}</small></button>`).join('')}</div>`;
   for (const [cat, label] of Object.entries(Shop.CATS)) {
     h += `<div class="shop-cat">${label}${cat === 'back' ? ' <small>다른 사람이 내 카드를 볼 때</small>' : cat === 'fx' ? ' <small>내가 이겼을 때</small>' : ''}</div><div class="shop-grid">`;
     for (const it of Shop.SHOP.filter(x => x.cat === cat)) {
@@ -1085,6 +1089,11 @@ function renderShop() {
     h += '</div>';
   }
   el.innerHTML = h;
+  el.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => {
+    const n = Number(b.dataset.sell);
+    confirmBox('트로피 환전', `🏆 ${n}개를 <b>${won(n * me.trophyRate)}</b>으로 바꿀까요?<br>바꾼 트로피는 돌아오지 않아요. (랭킹 우승 횟수는 그대로)`, '바꾸기', () =>
+      socket.emit('sellTrophy', n, res => res.error ? toast(res.error) : toast(`+${won(res.amount)} 입금 완료`, true)));
+  });
   el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => {
     const it = Shop.byId(b.dataset.buy);
     confirmBox('스킨 구매', `<b>${esc(it.name)}</b> (${Shop.CATS[it.cat]})을 🏆 ${it.price}개로 살까요?<br>사면 바로 장착돼요.`, '구매', () =>
