@@ -528,7 +528,7 @@ function renderSeats() {
       ${act}
       <div class="plate"><div class="nm">${esc(p.name)}</div>${p.skin && p.skin.title ? `<div class="ttl-s">${esc(p.skin.title)}</div>` : ''}<div class="st">${stack}</div></div>
       ${handTag}
-      ${s.stage !== 'waiting' ? [i === s.dealer ? '<i class="pos-chip d">D</i>' : '', i === s.sbSeat ? '<i class="pos-chip sb">SB</i>' : '', i === s.bbSeat ? '<i class="pos-chip bb">BB</i>' : ''].join('') : ''}
+      ${s.stage !== 'waiting' && (i === s.dealer || i === s.sbSeat || i === s.bbSeat) ? `<div class="pos-row">${[i === s.dealer ? '<i class="pos-chip d">D</i>' : '', i === s.sbSeat ? '<i class="pos-chip sb">SB</i>' : '', i === s.bbSeat ? '<i class="pos-chip bb">BB</i>' : ''].join('')}</div>` : ''}
     </div>`;
 
     if (p.bet > 0) {

@@ -886,3 +886,14 @@ body.excel .seat .hn-b.win { background: #e2efda; color: #217346; }
 @keyframes wobble2 { 50% { transform: scale(1.04); } }
 /* 관전자 말풍선 한 줄 */
 .bubble.watcher { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 86%; }
+
+/* D/SB/BB를 묶어서 배치 (기본: 아바타 왼쪽 위 세로 / 엑셀: 이름판 아래 가로) */
+.pos-row { position: absolute; top: -4px; left: -12px; display: flex; flex-direction: column; gap: 2px; z-index: 5; }
+.seat.left .pos-row { left: auto; right: -12px; }
+.pos-row .pos-chip, .pos-row .pos-chip + .pos-chip { position: static; }
+body.excel .pos-row, body.excel .seat.left .pos-row { position: static; flex-direction: row; justify-content: center; margin-top: 2px; }
+body.excel .pos-row .pos-chip { min-width: 0; padding: 0 4px; height: 15px; line-height: 13px; font-size: 9px; }
+/* 엑셀: 좃밥 딱지 때문에 카드가 밀려 가려지지 않게 */
+body.excel .seat { width: 96px; }
+body.excel .seat .ava-wrap { gap: 1px; }
+body.excel .shame-tag { font-size: 9px; padding: 0 2px; margin: 0; }
