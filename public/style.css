@@ -938,7 +938,7 @@ body.excel .card.red[class*="fc-"] { color: #c00000; }
 .av.fr-f_custom.cf-pix { border: 0; background: var(--pxf) center / 100% 100% no-repeat, #15231d; image-rendering: pixelated; }
 .av.fr-f_custom.cf-pix img { width: 70%; height: 70%; border-radius: 50%; }
 .cf-pixel { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-#cfCanvas { width: min(100%, 300px); aspect-ratio: 1; border-radius: 50%; touch-action: none; image-rendering: pixelated; border: 1px solid var(--line2); }
+#cfCanvas { width: min(100%, 250px, 42vh); flex-shrink: 0; aspect-ratio: 1; border-radius: 50%; touch-action: none; image-rendering: pixelated; border: 1px solid var(--line2); }
 #cfPalette { width: min(100%, 300px); }
 .cf-pixel .pe-tools .on { border-color: var(--gold); color: var(--gold2); }
 

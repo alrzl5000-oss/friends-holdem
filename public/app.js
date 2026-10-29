@@ -260,10 +260,10 @@ function renderRank(data) {
       <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar, r.skin)}
       <div class="nm"><b>${badgeTag(r.skin)}${esc(r.username)} ${titleTag(r.skin)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
       <div class="amt">${right}</div></div>`;
-  }).join('') || `<div class="empty-note">${rankMode === 'avg' ? `아직 토너먼트 ${rankData.minTourneys}회 이상 참가한 사람이 없어요` : '아직 랭킹이 없어요'}</div>`);
-  if (rankMode === 'avg' && me) {
+  }).join('') || `<div class="empty-note">아직 토너먼트 ${rankData.minTourneys}회 이상 참가한 사람이 없어요</div>`);
+  if (me) {
     const need = rankData.minTourneys - me.stats.tPlayed;
-    $('rankSeg').insertAdjacentHTML('afterend', `<p class="hint rank-rule">점수 = <b>최종 등수 ÷ 참가 인원</b>의 평균 (4명 중 1위 0.25 · 4명 중 4위 1.00 · 찹은 1.5위) · <b>낮을수록 위</b><br>등록 기준: 전체 평균 참가 수의 70% (지금 <b>${rankData.minTourneys}회</b> 이상)${need > 0 ? ` · 나는 <b>${need}회</b> 더 참가하면 등록` : ''}</p>`);
+    $('rankSeg').insertAdjacentHTML('afterend', `<p class="hint rank-rule">${rankMode === 'avg' ? `점수 = <b>최종 등수 ÷ 참가 인원</b>의 평균 (4명 중 1위 0.25 · 4명 중 4위 1.00 · 찹은 1.5위) · <b>낮을수록 위</b><br>` : ''}등록 기준: 전체 평균 참가 수의 70% (지금 <b>${rankData.minTourneys}회</b> 이상)${need > 0 ? ` · 나는 <b>${need}회</b> 더 참가하면 등록` : ''}</p>`);
   }
   $('rankSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; rankMode = b.dataset.m; renderRank(); };
 }
@@ -1191,9 +1191,9 @@ function openFrameEditor() {
       <div class="field-label">모양</div><div class="opt-group">${opt('style', 'solid', '단색')}${opt('style', 'grad', '그라데이션')}${opt('style', 'ring', '링')}</div>
     </div>
     <div data-sec="pixel" class="cf-pixel">
-      <span class="hint">아바타 둘레(밝은 칸)만 칠할 수 있어요 · 드래그로 쭉 칠하기</span>
-      <canvas id="cfCanvas" width="336" height="336"></canvas>
+      <span class="hint">아래 색을 고르고 → 아바타 둘레(밝은 칸)를 눌러 칠해요 · 드래그로 쭉 칠하기</span>
       <div class="palette" id="cfPalette"></div>
+      <canvas id="cfCanvas" width="336" height="336"></canvas>
       <div class="pe-tools">
         <button class="btn small on" data-ft="pen">✏️ 펜</button>
         <button class="btn small" data-ft="fill">🪣 채우기</button>
