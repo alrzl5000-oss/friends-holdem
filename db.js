@@ -373,7 +373,7 @@ module.exports = {
     const minT = all.length ? Math.floor(all.reduce((n, u) => n + (u.tPlayed || 0), 0) / all.length * RANK_MIN_RATIO) : 0;
     return {
       // 충전 적은 순 → 같으면 총 자산 많은 순
-      assets: all.slice().sort((a, b) => b.total - a.total).slice(0, 100),
+      assets: all.filter(u => u.tPlayed >= minT).sort((a, b) => b.total - a.total).slice(0, 100),
       minTourneys: minT,
       // 토너 점수 낮은 순 (참가 자격 충족 + 점수 기록이 있는 사람)
       avg: all.filter(u => u.tPlayed >= minT && u.scored > 0).sort((a, b) => a.score - b.score || b.tPlayed - a.tPlayed).slice(0, 100),
