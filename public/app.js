@@ -263,7 +263,7 @@ function renderRank(data) {
   }).join('') || `<div class="empty-note">${rankMode === 'avg' ? `아직 토너먼트 ${rankData.minTourneys}회 이상 참가한 사람이 없어요` : '아직 랭킹이 없어요'}</div>`);
   if (rankMode === 'avg' && me) {
     const need = rankData.minTourneys - me.stats.tPlayed;
-    $('rankSeg').insertAdjacentHTML('afterend', `<p class="hint rank-rule">점수 = <b>최종 등수 ÷ 참가 인원</b>의 평균 (4명 중 1위 0.25 · 4명 중 4위 1.00 · 찹은 1.5위) · <b>낮을수록 위</b><br>토너먼트 ${rankData.minTourneys}회 이상 참가해야 등록돼요${need > 0 ? ` · 나는 <b>${need}회</b> 더 참가하면 등록` : ''}</p>`);
+    $('rankSeg').insertAdjacentHTML('afterend', `<p class="hint rank-rule">점수 = <b>최종 등수 ÷ 참가 인원</b>의 평균 (4명 중 1위 0.25 · 4명 중 4위 1.00 · 찹은 1.5위) · <b>낮을수록 위</b><br>등록 기준: 전체 평균 참가 수의 70% (지금 <b>${rankData.minTourneys}회</b> 이상)${need > 0 ? ` · 나는 <b>${need}회</b> 더 참가하면 등록` : ''}</p>`);
   }
   $('rankSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; rankMode = b.dataset.m; renderRank(); };
 }
