@@ -119,6 +119,7 @@ function skinOf(u) {
     frame: e.frame || null, back: e.back || null, title: e.title ? (Shop.byId(e.title) || {}).name || null : null, fx: e.fx || null,
     cf: e.frame === 'f_custom' ? Object.assign({}, CF_DEFAULT, u.customFrame) : null,
     badge: u.badge || null,
+    aura: e.aura || null, sdfx: e.sdfx || null, enter: e.enter || null,
   };
 }
 
@@ -283,7 +284,7 @@ module.exports = {
     return { ok: true };
   },
   equip(u, cat, id) {
-    if (!Shop.CATS[cat]) return { error: '잘못된 종류예요' };
+    if (!Shop.SLOTS[cat]) return { error: '잘못된 종류예요' };
     if (id && (!u.owned.includes(id) || Shop.byId(id).cat !== cat)) return { error: '가지고 있지 않아요' };
     if (id) u.equip[cat] = id; else delete u.equip[cat];
     save();
@@ -299,6 +300,7 @@ module.exports = {
     u.bailoutLog = u.bailoutLog.slice(-20);
     u.stats.bailouts++;
     save();
+    require('./achievements.js').onBailout(u, bailoutsToday(u));
     return { ok: true, amount, level: shameLevel(u) };
   },
   save,

@@ -958,3 +958,75 @@ body.excel .seat .s1-s { color: #217346; }
 .hist-grid span { display: block; font-size: 11px; color: var(--muted); }
 .hist-grid b { font-size: 15px; }
 body.excel .hist-grid div { background: #f3f2f1; border-radius: 0; }
+
+/* ======================================================================
+   업적 전용 보상
+   ====================================================================== */
+/* --- 테두리 --- */
+.av.fr-a_dragon { border: 3px solid transparent; background: linear-gradient(#15231d, #15231d) padding-box, conic-gradient(#ff3b0b, #ffb300, #ff3b0b, #7a0000, #ff3b0b) border-box; animation: fireGlow .8s ease-in-out infinite alternate; }
+.av.fr-a_emperor { border: 3px solid #ffe08a; animation: emperor 1.6s ease-in-out infinite; }
+@keyframes emperor { 0%, 100% { box-shadow: 0 0 0 2px #8a6412, 0 0 0 4px #ffe08a, 0 0 12px rgba(255,215,0,.7); } 50% { box-shadow: 0 0 0 2px #8a6412, 0 0 0 4px #fff3c4, 0 0 28px rgba(255,215,0,1); } }
+.av.fr-a_half { border: 3px solid transparent; background: linear-gradient(#15231d, #15231d) padding-box, linear-gradient(90deg, #ffffff 50%, #111111 50%) border-box; box-shadow: 0 0 10px rgba(255,255,255,.35); }
+
+/* --- 카드 (뒷면 / 앞면) --- */
+.card.back.bk-a_royal { background: radial-gradient(circle, rgba(255,215,120,.25), transparent 60%), repeating-linear-gradient(45deg, #6d0f1c 0 3px, #5a0b17 3px 6px); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #e9c46a, inset 0 0 0 4px #5a0b17; }
+.card.back.bk-a_royal::after { content: "♛"; position: absolute; inset: 0; display: grid; place-items: center; color: #e9c46a; font-size: 70%; text-shadow: 0 0 6px rgba(233,196,106,.8); }
+.card.fc-a_royal:not(.back) { background: linear-gradient(160deg, #fffaf0, #f3e3c0); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #b8860b, inset 0 0 0 3px #6d0f1c; }
+.card.back.bk-a_glass { background: linear-gradient(115deg, transparent 46%, rgba(255,255,255,.9) 47%, transparent 49%), linear-gradient(35deg, transparent 58%, rgba(255,255,255,.8) 59%, transparent 61%), linear-gradient(160deg, transparent 30%, rgba(255,255,255,.7) 31%, transparent 33%), linear-gradient(160deg, #bfefff, #6fc3e8); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #e8fbff; }
+.card.fc-a_glass:not(.back) { background: linear-gradient(115deg, transparent 60%, rgba(120,190,230,.55) 61%, transparent 63%), linear-gradient(40deg, transparent 70%, rgba(120,190,230,.45) 71%, transparent 73%), linear-gradient(160deg, #f5fdff, #dff4fc); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #8fd3f0; }
+.card.back.bk-a_diamond { background: conic-gradient(from 45deg, #e8fbff, #7fd8ff, #ffffff, #4fb6ff, #e8fbff, #9fe6ff, #ffffff, #63c3ff, #e8fbff); box-shadow: 0 0 10px rgba(127,216,255,.8), inset 0 0 0 2px #fff; }
+.card.fc-a_diamond:not(.back) { background: linear-gradient(160deg, #ffffff, #eefbff); box-shadow: 0 0 10px rgba(127,216,255,.9), inset 0 0 0 2px #7fd8ff; }
+
+/* --- 프로필 이펙트 (오라) --- */
+.ava-wrap { isolation: isolate; }
+.ava-wrap[class*="au-"]::before { content: ""; position: absolute; border-radius: 50%; z-index: -1; pointer-events: none; }
+.ava-wrap.au-a_violet::before { inset: -9px; background: conic-gradient(rgba(162,75,255,0), rgba(162,75,255,.95), rgba(255,122,224,.7), rgba(162,75,255,0) 70%); filter: blur(4px); animation: spin 2.2s linear infinite; }
+.ava-wrap.au-a_smoke::before { inset: -14px; background: radial-gradient(circle at 30% 35%, rgba(210,210,210,.55), transparent 42%), radial-gradient(circle at 72% 62%, rgba(170,170,170,.55), transparent 46%), radial-gradient(circle at 45% 80%, rgba(190,190,190,.45), transparent 40%); filter: blur(5px); animation: smoke 3s ease-in-out infinite alternate; }
+.ava-wrap.au-a_cloud::after { content: "🌧️"; position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font-size: 20px; z-index: 6; pointer-events: none; animation: bob 2s ease-in-out infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes smoke { from { transform: scale(.92) rotate(0); opacity: .7; } to { transform: scale(1.12) rotate(40deg); opacity: 1; } }
+@keyframes bob { 50% { transform: translate(-50%, -4px); } }
+
+/* --- 쇼다운 / 입장 이펙트 (자리 위) --- */
+.sdfx, .enfx { position: absolute; left: 50%; top: 50%; z-index: 9; pointer-events: none; font-style: normal; line-height: 1; transform: translate(-50%, -50%); animation-fill-mode: forwards; }
+.sd-a_thunder { font-size: 44px; animation: thunder 2.2s ease-out forwards; text-shadow: 0 0 18px #fff36b; }
+.sd-a_thunder::before { content: ""; position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px; border-radius: 50%; background: radial-gradient(circle, rgba(255,250,170,.9), transparent 65%); animation: flashout .6s ease-out forwards; z-index: -1; }
+@keyframes thunder { 0% { opacity: 0; transform: translate(-50%, -140%) scale(2); } 10% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); } 18%, 34% { opacity: .55; } 26%, 42% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); } }
+@keyframes flashout { from { opacity: 1; } to { opacity: 0; } }
+.sd-a_lol { font-size: 40px; animation: lol 2.2s ease-out forwards; }
+@keyframes lol { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.3); } 15% { opacity: 1; transform: translate(-50%, -110%) scale(1.3) rotate(-12deg); } 30% { transform: translate(-50%, -100%) rotate(12deg); } 45% { transform: translate(-50%, -110%) rotate(-12deg); } 60% { transform: translate(-50%, -100%) rotate(10deg); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -170%) scale(1); } }
+.sd-a_phoenix { font-size: 42px; animation: phoenix 2.2s ease-out forwards; filter: drop-shadow(0 0 10px #ff7a00); }
+.sd-a_phoenix::before { content: ""; position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px; border-radius: 50%; border: 4px solid #ffb300; box-shadow: 0 0 16px #ff5a00; animation: ring 1s ease-out forwards; }
+@keyframes phoenix { 0% { opacity: 0; transform: translate(-50%, 0) scale(.5); } 20% { opacity: 1; transform: translate(-50%, -60%) scale(1.3); } 80% { opacity: 1; transform: translate(-50%, -150%) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -220%) scale(.8); } }
+@keyframes ring { from { transform: scale(.5); opacity: 1; } to { transform: scale(4); opacity: 0; } }
+.en-a_crown { font-size: 34px; animation: crown 3.2s ease-out forwards; filter: drop-shadow(0 0 8px gold); }
+@keyframes crown { 0% { opacity: 0; transform: translate(-50%, -400%) rotate(-20deg); } 25% { opacity: 1; transform: translate(-50%, -120%) rotate(0); } 32% { transform: translate(-50%, -105%) scale(1.15, .85); } 40% { transform: translate(-50%, -115%) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -125%); } }
+.en-a_flame { font-size: 30px; animation: enflame 3s ease-out forwards; }
+.en-a_flame::before { content: ""; position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -30px; border-radius: 50%; background: radial-gradient(circle, transparent 45%, rgba(255,120,0,.9) 55%, rgba(255,200,0,.6) 65%, transparent 72%); animation: flamering 1.4s ease-out 2 forwards; z-index: -1; }
+@keyframes enflame { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.6); } 80% { opacity: 1; transform: translate(-50%, -90%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -140%); } }
+@keyframes flamering { from { transform: scale(.4); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+
+/* --- 승리 이펙트: 용 --- */
+.dragon-fly { position: absolute; top: 28%; left: -30%; font-size: 120px; font-style: normal; animation: dragonfly 2.4s ease-in-out forwards; filter: drop-shadow(0 0 20px #ff5a00); }
+@keyframes dragonfly { 0% { left: -40%; transform: scaleX(-1) translateY(0); } 50% { transform: scaleX(-1) translateY(-30px); } 100% { left: 110%; transform: scaleX(-1) translateY(10px); } }
+
+/* --- 업적 화면 --- */
+.hist-head small { color: var(--muted); font-weight: 600; margin-left: 4px; }
+.ach-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.ach { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); text-align: center; }
+.ach.on { border-color: var(--gold); background: rgba(233,196,106,.08); }
+.ach.locked { opacity: .55; justify-content: center; min-height: 92px; }
+.ach .ach-ic { font-size: 22px; }
+.ach b { font-size: 13px; }
+.ach span { font-size: 11px; color: var(--muted); line-height: 1.35; }
+.ach em { font-style: normal; font-size: 11px; color: var(--gold2); font-weight: 700; }
+.ach .btn { width: 100%; margin-top: auto; padding: 7px 4px; }
+.ach .pv { height: 58px; display: grid; place-items: center; }
+.ach .pv .av { width: 44px; height: 44px; }
+.pv-aura { position: relative; width: 44px; height: 44px; }
+
+/* 엑셀·이펙트 끔에서는 숨김 */
+body.excel .sdfx, body.excel .enfx, body.nofx .sdfx, body.nofx .enfx { display: none; }
+body.excel .ava-wrap[class*="au-"]::before, body.excel .ava-wrap[class*="au-"]::after { display: none; }
+body.excel .card.back[class*="bk-a_"]::after { content: "#"; color: #b3b0ad; text-shadow: none; }
+body.excel .ach { background: #fff; border-radius: 0; }

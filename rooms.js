@@ -1,6 +1,7 @@
 // 방 종류: 일반모드(CashRoom), 토너먼트(TourneyRoom)
 const { Table } = require('./game');
 const db = require('./db');
+const ach = require('./achievements');
 
 const FEE = db.ENTRY_FEE;   // 참가비/리바이 1억
 const T_STACK = 1e8;        // 토너먼트 시작 금액 1억
@@ -127,7 +128,7 @@ class CashRoom extends BaseRoom {
     this.buyDef = tier.bb * 100;
     this.table = new Table({
       sb: tier.sb, bb: tier.bb,
-      hooks: this.hooks({ handEnd: () => this.sync() }),
+      hooks: this.hooks({ handEnd: () => { ach.onHand(this.table, db.byId, this); this.sync(); } }),
     });
     this.table.running = true;
   }
@@ -141,7 +142,7 @@ class CashRoom extends BaseRoom {
     user.assets -= buyIn;
     user.inPlay = buyIn;
     db.save();
-    const r = this.table.addPlayer(user, socketId, buyIn, { shame: db.shameLevel(user), skin: db.skinOf(user) });
+    const r = this.table.addPlayer(user, socketId, buyIn, { shame: db.shameLevel(user), skin: db.skinOf(user), enterAt: Date.now() });
     if (r.error) { user.assets += buyIn; user.inPlay = 0; return r; }
     this.log(`${user.username} 님 입장 (바이인 ${fmt(buyIn)})`);
     this.shameChat(user);
@@ -289,6 +290,7 @@ class TourneyRoom extends BaseRoom {
     this.status = 'running';
     db.save();
     this.log(`🏁 토너먼트 시작! ${this.players}명 · 상금 ${fmt(this.prizePool)}`);
+    for (const s of this.seated) s.enterAt = Date.now();
     for (const s of this.seated) { const u = db.byId(s.id); if (u) this.shameChat(u); }
     this.table.running = true;
     this.table.startHand();
@@ -302,6 +304,7 @@ class TourneyRoom extends BaseRoom {
     return this.status === 'running' && lv <= REBUY_LEVELS && s.rebuys < REBUY_MAX && u && u.assets >= FEE;
   }
   handEnd() {
+    ach.onHand(this.table, db.byId, this);
     this.shameTick();
     db.save();
     for (const s of this.seated) {
@@ -504,6 +507,7 @@ class TourneyRoom extends BaseRoom {
       this.ctx.pushMe(id);
     }
     db.save();
+    ach.onTourney(this, db.byId);
     this.finishedAt = Date.now();
     if (!chop) this.log(`🏆 우승: ${first ? first.name : '-'} (+${fmt(first ? first.prize : 0)})`);
     this.emit();

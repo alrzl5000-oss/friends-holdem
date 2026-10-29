@@ -21,8 +21,30 @@
     { id: 'e_money', cat: 'fx', name: '돈벼락', price: 15, desc: '지폐가 쏟아져요' },
   ];
   const CATS = { frame: '프로필 테두리', back: '카드 스킨', title: '칭호', fx: '우승 이펙트' };
-  const byId = id => SHOP.find(x => x.id === id);
-  const Shop = { SHOP, CATS, byId };
+
+  // 업적 전용 보상 (상점에서 못 삼)
+  const ACH_ITEMS = [
+    { id: 'a_dragon', cat: 'frame', name: '용의 테두리' },
+    { id: 'a_emperor', cat: 'frame', name: '황제의 테두리' },
+    { id: 'a_half', cat: 'frame', name: '반반 테두리' },
+    { id: 'a_royal', cat: 'back', name: '로열 벨벳' },
+    { id: 'a_glass', cat: 'back', name: '깨진 유리' },
+    { id: 'a_diamond', cat: 'back', name: '다이아 컷' },
+    { id: 'a_violet', cat: 'aura', name: '보랏빛 오라' },
+    { id: 'a_smoke', cat: 'aura', name: '연막' },
+    { id: 'a_cloud', cat: 'aura', name: '먹구름' },
+    { id: 'a_goldbar', cat: 'fx', name: '금괴 폭포' },
+    { id: 'a_dragonfx', cat: 'fx', name: '용의 숨결' },
+    { id: 'a_thunder', cat: 'sdfx', name: '번개' },
+    { id: 'a_lol', cat: 'sdfx', name: '빵 터짐' },
+    { id: 'a_phoenix', cat: 'sdfx', name: '불사조' },
+    { id: 'a_crown', cat: 'enter', name: '왕관 등장' },
+    { id: 'a_flame', cat: 'enter', name: '불꽃 등장' },
+  ];
+  // 장착 슬롯 전체 (상점 + 업적 전용)
+  const SLOTS = Object.assign({}, CATS, { aura: '프로필 이펙트', sdfx: '쇼다운 이펙트', enter: '입장 이펙트' });
+  const byId = id => SHOP.find(x => x.id === id) || ACH_ITEMS.find(x => x.id === id);
+  const Shop = { SHOP, CATS, ACH_ITEMS, SLOTS, byId };
   if (typeof module !== 'undefined' && module.exports) module.exports = Shop;
   else root.Shop = Shop;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -148,7 +148,7 @@ socket.on('connect', () => {
     afterLogin();
   });
 });
-socket.on('me', u => { me = u; if (current === 'lobby') renderWallet(); });
+socket.on('me', u => { me = u; if (current === 'lobby') { renderWallet(); if (!$('tab-profile').classList.contains('hidden')) renderAch(); } });
 socket.on('kicked', msg => { toast(msg); token = null; localStorage.removeItem('fh_token'); show('auth'); });
 
 function afterLogin() {
@@ -372,6 +372,7 @@ $('peClear').onclick = () => editor.clear();
 function renderProfile() {
   $('profilePreview').innerHTML = `<img src="${avatarURL(me.avatar)}" alt="">`;
   $('profileName').textContent = me.username;
+  loadAch();
 }
 $('peOpen').onclick = () => { editor.load(me.avatar); $('peOverlay').classList.remove('hidden'); };
 $('peClose').onclick = () => {
@@ -542,7 +543,7 @@ function renderSeats() {
     if (p.sitOut && p.tStatus !== 'out') act = '<span class="act fold">💤 자리비움</span>';
 
     h += `<div class="${cls.join(' ')}" style="left:${x}%;top:${y}%">
-      <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar, p.skin)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
+      <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''} ${p.skin && p.skin.aura ? 'au-' + p.skin.aura : ''}">${avImg(p.avatar, p.skin)}${seatFx(s, p)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
       ${act}
       <div class="plate">${p.skin && p.skin.badge ? `<div class="s1-s">${['', '🥇', '🥈', '🥉'][+p.skin.badge.match(/\d+(?=위)/)[0]] || ''}${esc(p.skin.badge)}</div>` : ''}<div class="nm">${esc(p.name)}</div>${p.skin && p.skin.title ? `<div class="ttl-s">${esc(p.skin.title)}</div>` : ''}<div class="st">${stack}</div></div>
       ${handTag}
@@ -1143,6 +1144,8 @@ function winSkinFx(id, big) {
     d.className = 'rain ' + id;
     if (id === 'e_gold') d.textContent = '🪙';
     if (id === 'e_money') d.textContent = '💵';
+    if (id === 'a_goldbar') { d.textContent = i % 3 ? '💰' : '🪙'; d.style.fontSize = '28px'; }
+    if (id === 'a_dragonfx') { d.className = 'rain e_fire'; d.style.background = ['#ff3b0b', '#ffb300', '#ff6a00'][i % 3]; }
     if (id === 'e_fire') d.style.background = ['#ff4d4d', '#ffd23f', '#3fbfff', '#ff7ae0', '#7dff7a'][i % 5];
     d.style.left = Math.random() * 100 + '%';
     d.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
@@ -1153,6 +1156,11 @@ function winSkinFx(id, big) {
     setTimeout(() => d.remove(), 4000);
   }
   if (id === 'e_fire') for (let k = 0; k < 5; k++) setTimeout(() => burst(10 + Math.random() * 80, 15 + Math.random() * 40), k * 280);
+  if (id === 'a_dragonfx') {
+    const d = document.createElement('i'); d.className = 'dragon-fly'; d.textContent = '🐉';
+    fxEl.appendChild(d); setTimeout(() => d.remove(), 2600);
+    for (let k = 0; k < 6; k++) setTimeout(() => burst(10 + k * 16, 30 + Math.random() * 20), 300 + k * 250);
+  }
 }
 function burst(x, y) {
   for (let i = 0; i < 18; i++) {
@@ -1234,3 +1242,72 @@ function openFrameEditor() {
   };
   draw();
 }
+
+// ================= 업적 이펙트 (자리 위) =================
+const SD_ICON = { a_thunder: '⚡', a_lol: '🤣', a_phoenix: '🔥' };
+const EN_ICON = { a_crown: '👑', a_flame: '🔥' };
+function seatFx(s, p) {
+  if (!p.skin || isExcel() || !fxOn()) return '';
+  const now = Date.now() + clockOffset;
+  let h = '';
+  // 쇼다운에서 내 카드가 공개될 때
+  if (p.skin.sdfx && s.stage === 'showdown' && p.cards && s.showdownAt) {
+    const el = now - s.showdownAt;
+    if (el < 2400) h += `<i class="sdfx sd-${p.skin.sdfx}" style="animation-delay:-${el}ms">${SD_ICON[p.skin.sdfx] || ''}</i>`;
+  }
+  // 게임 시작(입장) 때
+  if (p.skin.enter && p.enterAt) {
+    const el = now - p.enterAt;
+    if (el < 3200) h += `<i class="enfx en-${p.skin.enter}" style="animation-delay:-${el}ms">${EN_ICON[p.skin.enter] || ''}</i>`;
+  }
+  return h;
+}
+// 입장 이펙트가 끝나면 지우려고 한 번 더 그림
+setInterval(() => { if (state && current === 'game' && document.querySelector('.enfx, .sdfx')) renderSeats(); }, 1200);
+
+// ================= 업적 화면 =================
+const SLOT_NAME = () => Shop.SLOTS;
+let achList = [];
+function loadAch() { socket.emit('achievements', list => { if (Array.isArray(list)) { achList = list; renderAch(); } }); }
+function achPreview(it) {
+  const id = it.reward, slot = it.slot;
+  if (slot === 'frame') return avImg(me.avatar, id);
+  if (slot === 'back') return `<div class="pv-cards">${cardHTML(null, 'bk-' + id)}${cardHTML({ r: 14, s: 's' }, 'fc-' + id)}${cardHTML({ r: 13, s: 'h' }, 'fc-' + id)}</div>`;
+  if (slot === 'aura') return `<div class="ava-wrap pv-aura au-${id}">${avImg(me.avatar, me.skin)}</div>`;
+  return `<div class="ava-wrap pv-aura" data-pvwrap>${avImg(me.avatar, me.skin)}</div>`;
+}
+function renderAch() {
+  const el = $('myAch');
+  if (!el || !me) return;
+  const done = achList.filter(x => x.done).length;
+  let h = `<div class="hist-head">🏅 업적 <small>${done} / ${achList.length}</small></div><p class="hint" style="text-align:left">조건은 비밀이에요. 달성하면 이름·조건과 전용 보상이 공개돼요.</p><div class="ach-grid">`;
+  for (const x of achList) {
+    const slotName = Shop.SLOTS[x.slot];
+    if (!x.done) { h += `<div class="ach locked"><div class="ach-ic">🔒</div><b>???</b><span>보상: ${slotName}</span></div>`; continue; }
+    const on = me.equip && me.equip[x.slot] === x.reward;
+    const playable = ['fx', 'sdfx', 'enter'].includes(x.slot);
+    h += `<div class="ach ${on ? 'on' : ''}"><div class="pv">${achPreview(x)}</div><b>${esc(x.name)}</b><span>${esc(x.desc)}</span>
+      <em>${slotName} · ${esc(x.rewardName)}</em>
+      ${playable ? `<button class="pv-play" data-achplay="${x.reward}" data-slot="${x.slot}">▶ 미리보기</button>` : ''}
+      ${on ? `<button class="btn small line" data-uneq="${x.slot}">장착 중 ✓</button>` : `<button class="btn small gold" data-eq="${x.reward}" data-slot="${x.slot}">장착</button>`}</div>`;
+  }
+  el.innerHTML = h + '</div>';
+  el.querySelectorAll('[data-eq]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.slot, id: b.dataset.eq }, r => r.error ? toast(r.error) : null));
+  el.querySelectorAll('[data-uneq]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.uneq, id: null }, r => r.error ? toast(r.error) : null));
+  el.querySelectorAll('[data-achplay]').forEach(b => b.onclick = () => {
+    const id = b.dataset.achplay, slot = b.dataset.slot;
+    if (!fxOn()) return toast('설정에서 이펙트를 켜면 볼 수 있어요');
+    if (slot === 'fx') { fxBanner('승리!', '미리보기', 'win'); winSkinFx(id, true); return; }
+    const wrap = b.closest('.ach').querySelector('[data-pvwrap]');
+    if (!wrap) return;
+    const i = document.createElement('i');
+    i.className = slot === 'sdfx' ? `sdfx sd-${id}` : `enfx en-${id}`;
+    i.textContent = (slot === 'sdfx' ? SD_ICON : EN_ICON)[id] || '';
+    wrap.appendChild(i); setTimeout(() => i.remove(), 3300);
+  });
+}
+socket.on('ach', a => {
+  toast(`🏅 업적 달성! 「${a.name}」`, true);
+  if (fxOn()) { fxFlash('gold'); fxBanner('🏅 업적 달성!', a.name, 'made'); confetti(40); }
+  if (current === 'lobby') loadAch();
+});

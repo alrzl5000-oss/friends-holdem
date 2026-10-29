@@ -3,6 +3,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const db = require('./db');
+const ach = require('./achievements');
 const { CashRoom, TourneyRoom } = require('./rooms');
 
 const app = express();
@@ -32,9 +33,22 @@ const ctx = {
   pushMe(uid) {
     const sid = userSocket.get(uid);
     const u = db.byId(uid);
+    if (u) ach.onAssets(u, db.pub(u).total);
     if (sid && u) io.to(sid).emit('me', me(u));
   },
 };
+
+// 업적 달성 알림: 본인에게 배너 + 같은 방에 채팅 공지
+ach.init({
+  save: () => db.save(),
+  notify: (u, def, room) => {
+    const sid = userSocket.get(u.id);
+    if (sid) io.to(sid).emit('ach', { name: def.name, desc: def.desc, reward: def.reward });
+    const r = room || rooms.get(userRoom.get(u.id));
+    if (r) r.log(`🏅 ${u.username} 님 업적 달성: 「${def.name}」`);
+    setTimeout(() => ctx.pushMe(u.id), 0);
+  },
+});
 
 function roomList() {
   return [...rooms.values()]
@@ -163,6 +177,7 @@ io.on('connection', socket => {
   };
   socket.on('sellTrophy', guard((cb, n) => { const r = db.sellTrophy(user, n); if (r.ok) ctx.pushMe(user.id); cb(r); }));
   socket.on('buy', guard((cb, id) => { const r = db.buy(user, String(id)); if (r.ok) refreshSkin(); cb(r); }));
+  socket.on('achievements', guard(cb => cb(ach.listFor(user))));
   socket.on('customFrame', guard((cb, cfg) => { const r = db.setCustomFrame(user, cfg || {}); if (r.ok) refreshSkin(); cb(r); }));
   socket.on('equip', guard((cb, { cat, id } = {}) => { const r = db.equip(user, String(cat), id ? String(id) : null); if (r.ok) refreshSkin(); cb(r); }));
 

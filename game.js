@@ -157,7 +157,7 @@ class Table {
     const ready = [];
     this.seats.forEach((s, i) => {
       if (!s) return;
-      Object.assign(s, { hand: [], bet: 0, total: 0, allIn: false, acted: false, lastAction: '', revealed: false, bestName: '', won: 0 });
+      Object.assign(s, { hand: [], bet: 0, total: 0, allIn: false, allInStage: '', acted: false, lastAction: '', revealed: false, bestName: '', won: 0 });
       s.inHand = this.eligible(s);
       s.folded = !s.inHand;
       if (s.inHand) ready.push(i);
@@ -206,6 +206,7 @@ class Table {
   postBlind(i, amount, label) {
     const s = this.seats[i];
     this.put(s, Math.min(amount, s.chips));
+    if (s.allIn) s.allInStage = 'blind'; // 블라인드 내다 올인된 건 직접 올인한 게 아님
     s.lastAction = s.allIn ? '올인' : label;
   }
 
@@ -213,7 +214,10 @@ class Table {
     s.chips -= x;
     s.bet += x;
     s.total += x;
-    if (s.chips === 0) s.allIn = true;
+    if (s.chips === 0) {
+      if (!s.allIn) s.allInStage = this.stage; // 어느 단계에서 올인했는지 (업적용)
+      s.allIn = true;
+    }
   }
 
   startTimer() {
@@ -405,6 +409,7 @@ class Table {
 
   showdown() {
     this.clearTimers();
+    this.showdownAt = Date.now();
     this.stage = 'showdown';
     this.turn = -1;
     const scores = {};
@@ -474,6 +479,7 @@ class Table {
       turnMs: this.opts.turnMs,
       now: Date.now(),
       dealer: this.dealer,
+      showdownAt: this.showdownAt || 0,
       sbSeat: this.stage === 'waiting' ? -1 : this.sbIdx,
       bbSeat: this.stage === 'waiting' ? -1 : this.bbIdx,
       me,
@@ -499,6 +505,7 @@ class Table {
         rebuys: s.rebuys || 0,
         shame: s.shame || 0,
         sitOut: !!s.sitOut,
+        enterAt: s.enterAt || 0,
         skin: s.skin || null,
       }),
     };
