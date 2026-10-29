@@ -18,7 +18,7 @@ const SHAME_MS = 24 * 60 * 60 * 1000; // 충전 후 좃밥 유지 시간
 const DAILY_BAILOUTS = 3;
 const BAILOUT_AMOUNT = 3e8;
 const TROPHY_RATE = 1e8;                 // 트로피 1개 = 1억              // 충전 1회 금액 3억
-const RANK_MIN_TOURNEYS = 5;            // 평균 순위 랭킹에 오르려면 토너먼트 5회 이상              // 하루 충전 한도 (한국 날짜 기준)
+const RANK_MIN_RATIO = 0.7;             // 평균 순위 랭킹 자격: 전체 유저 평균 토너 참가 수의 70% (소수점 버림)              // 하루 충전 한도 (한국 날짜 기준)
 
 let data = { users: {}, sessions: {} };
 try { data = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch { /* 첫 실행 */ }
@@ -369,12 +369,14 @@ module.exports = {
       score: u.stats.scored ? u.stats.scoreSum / u.stats.scored : null,
       scored: u.stats.scored || 0,
     }));
+    // 자격 = (전체 유저 토너 참가 수 합 ÷ 유저 수) × 70%, 소수점 버림
+    const minT = all.length ? Math.floor(all.reduce((n, u) => n + (u.tPlayed || 0), 0) / all.length * RANK_MIN_RATIO) : 0;
     return {
       // 충전 적은 순 → 같으면 총 자산 많은 순
       assets: all.slice().sort((a, b) => b.total - a.total).slice(0, 100),
-      minTourneys: RANK_MIN_TOURNEYS,
-      // 토너 점수 낮은 순 (참가 5회 이상 + 점수 기록이 있는 사람)
-      avg: all.filter(u => u.tPlayed >= RANK_MIN_TOURNEYS && u.scored > 0).sort((a, b) => a.score - b.score || b.tPlayed - a.tPlayed).slice(0, 100),
+      minTourneys: minT,
+      // 토너 점수 낮은 순 (참가 자격 충족 + 점수 기록이 있는 사람)
+      avg: all.filter(u => u.tPlayed >= minT && u.scored > 0).sort((a, b) => a.score - b.score || b.tPlayed - a.tPlayed).slice(0, 100),
     };
   },
 
