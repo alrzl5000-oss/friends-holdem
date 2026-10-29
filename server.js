@@ -163,6 +163,7 @@ io.on('connection', socket => {
   };
   socket.on('sellTrophy', guard((cb, n) => { const r = db.sellTrophy(user, n); if (r.ok) ctx.pushMe(user.id); cb(r); }));
   socket.on('buy', guard((cb, id) => { const r = db.buy(user, String(id)); if (r.ok) refreshSkin(); cb(r); }));
+  socket.on('customFrame', guard((cb, cfg) => { const r = db.setCustomFrame(user, cfg || {}); if (r.ok) refreshSkin(); cb(r); }));
   socket.on('equip', guard((cb, { cat, id } = {}) => { const r = db.equip(user, String(cat), id ? String(id) : null); if (r.ok) refreshSkin(); cb(r); }));
 
   // 구제금(충전): 현금 1억 미만이면 3억 지급 · 하루 3회 · 24시간 좃밥

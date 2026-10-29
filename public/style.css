@@ -907,3 +907,54 @@ body.excel .shame-tag { font-size: 9px; padding: 0 2px; margin: 0; }
 .away-bar small { color: var(--muted); font-size: 12px; }
 .away-bar .btn { flex: none; padding: 12px 14px; }
 body.excel .away-bar { background: #fff2cc; border-color: #c8c6c4; border-radius: 0; }
+
+/* ===== 커스텀 테두리 ===== */
+.av.fr-f_custom { border: 3px solid transparent; background: linear-gradient(#15231d, #15231d) padding-box, var(--cfb, #e9c46a) border-box; }
+.av.fr-f_custom.cf-glow { box-shadow: 0 0 14px var(--cg, #e9c46a); }
+.av.fr-f_custom.cf-pulse { animation: cfPulse 1.1s ease-in-out infinite alternate; }
+@keyframes cfPulse { from { box-shadow: 0 0 2px var(--cg, #e9c46a); } to { box-shadow: 0 0 24px var(--cg, #e9c46a), 0 0 0 2px var(--cg, #e9c46a); } }
+.cf-preview { display: grid; place-items: center; padding: 8px 0; }
+.cf-preview .av { width: 84px; height: 84px; }
+.cf-sw { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
+.cf-sw button, .cf-pick { aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); padding: 0; }
+.cf-sw button.on { border-color: #fff; box-shadow: 0 0 0 2px var(--gold); }
+.cf-pick { position: relative; display: grid; place-items: center; font-weight: 800; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); color: #fff; text-shadow: 0 1px 2px #000; overflow: hidden; cursor: pointer; }
+.cf-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* ===== 카드 스킨: 앞면 ===== */
+.card.fc-b_navy:not(.back) { background: linear-gradient(160deg, #f4f7ff, #dce4fa); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #1d3a7a, inset 0 0 0 3px #e9c46a; }
+.card.fc-b_black:not(.back) { background: linear-gradient(160deg, #2b2b2b, #0c0c0c); color: #e9c46a; box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #e9c46a; }
+.card.fc-b_black.red:not(.back) { color: #ff6b6b; }
+.card.fc-b_neon:not(.back) { background: linear-gradient(160deg, #1b0040, #0a0020); color: #00f0ff; text-shadow: 0 0 6px #00f0ff; box-shadow: 0 0 10px #ff2bd6, inset 0 0 0 2px #ff2bd6; }
+.card.fc-b_neon.red:not(.back) { color: #ff4fd8; text-shadow: 0 0 6px #ff4fd8; }
+.card.fc-b_money:not(.back) { background: repeating-linear-gradient(90deg, #f6e8bd 0 3px, #f0dc9f 3px 6px); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 2px #7a5a14; }
+.pv-cards .card + .card { margin-left: -8px; }
+
+/* 엑셀: 스킨 숨김 */
+body.excel .card[class*="fc-"] { background: #fff; color: #252423; text-shadow: none; box-shadow: none; }
+body.excel .card.red[class*="fc-"] { color: #c00000; }
+
+/* 도트 테두리 */
+.av.fr-f_custom.cf-pix { border: 0; background: var(--pxf) center / 100% 100% no-repeat, #15231d; image-rendering: pixelated; }
+.av.fr-f_custom.cf-pix img { width: 70%; height: 70%; border-radius: 50%; }
+.cf-pixel { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+#cfCanvas { width: min(100%, 300px); aspect-ratio: 1; border-radius: 50%; touch-action: none; image-rendering: pixelated; border: 1px solid var(--line2); }
+#cfPalette { width: min(100%, 300px); }
+.cf-pixel .pe-tools .on { border-color: var(--gold); color: var(--gold2); }
+
+/* 시즌 칭호 */
+.s1b { font-style: normal; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 6px; background: linear-gradient(180deg, #fff3cf, #e9c46a 60%, #b98a2c); color: #2a1d05; vertical-align: 2px; white-space: nowrap; }
+.seat .s1-s { font-size: 9px; font-weight: 900; color: var(--gold2); white-space: nowrap; line-height: 1.1; }
+body.excel .s1b { background: #fff2cc; border: 1px solid #c8c6c4; border-radius: 0; color: #252423; }
+body.excel .seat .s1-s { color: #217346; }
+
+/* 시즌 히스토리 */
+.stats { grid-template-columns: 1fr 1fr !important; }
+.hist { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.hist:empty { display: none; }
+.hist-head { font-weight: 800; font-size: 15px; }
+.hist-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+.hist-grid div { background: rgba(0,0,0,.25); border-radius: 10px; padding: 8px 4px; }
+.hist-grid span { display: block; font-size: 11px; color: var(--muted); }
+.hist-grid b { font-size: 15px; }
+body.excel .hist-grid div { background: #f3f2f1; border-radius: 0; }

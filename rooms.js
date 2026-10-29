@@ -491,6 +491,9 @@ class TourneyRoom extends BaseRoom {
       if (!u) continue;
       u.assets += r.prize;
       u.stats.placeSum = (u.stats.placeSum || 0) + r.place;
+      // 토너 점수 = 최종 등수 ÷ 참가 인원 (4명 중 1위 = 0.25, 4명 중 4위 = 1.00, 찹은 1.5위) — 낮을수록 좋음
+      u.stats.scoreSum = (u.stats.scoreSum || 0) + r.place / this.players;
+      u.stats.scored = (u.stats.scored || 0) + 1;
       if (r.place === 1 || r.co) { u.stats.tWins++; u.trophies = (u.trophies || 0) + 1; }
     }
     for (const id of this.entrants) {

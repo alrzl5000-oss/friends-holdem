@@ -75,7 +75,21 @@ function modal(html) {
 }
 function closeModal() { $('modal').classList.add('hidden'); }
 document.querySelectorAll('#modal [data-close]').forEach(e => e.onclick = closeModal);
-function avImg(str, frame) { return `<div class="av ${frame ? 'fr-' + frame : ''}"><img src="${avatarURL(str)}" alt=""></div>`; }
+function cfStyle(cf) {
+  if (!cf) return '';
+  if (cf.mode === 'pixel' && cf.px) return `style="--pxf:url(${frameURL(cf.px)});--cg:${cf.c1}"`;
+  const b = cf.style === 'solid' ? cf.c1 : cf.style === 'ring' ? `conic-gradient(${cf.c1}, ${cf.c2}, ${cf.c1}, ${cf.c2}, ${cf.c1})` : `linear-gradient(135deg, ${cf.c1}, ${cf.c2})`;
+  return `style="--cfb:${b};--cg:${cf.c1}"`;
+}
+// sk: 테두리 id(문자열) 또는 스킨 객체 { frame, cf }
+function avImg(str, sk) {
+  const frame = typeof sk === 'string' ? sk : sk && sk.frame;
+  const cf = frame === 'f_custom' ? (typeof sk === 'object' && sk.cf) || (me && me.customFrame) : null;
+  const pix = cf && cf.mode === 'pixel' && cf.px ? 'cf-pix' : '';
+  return `<div class="av ${frame ? 'fr-' + frame : ''} ${cf ? 'cf-' + cf.fx : ''} ${pix}" ${cfStyle(cf)}><img src="${avatarURL(str)}" alt=""></div>`;
+}
+const faceCls = sk => sk && sk.back ? 'fc-' + sk.back : '';
+const badgeTag = sk => sk && sk.badge ? `<i class="s1b">${esc(sk.badge)}</i> ` : '';
 const titleTag = sk => sk && sk.title ? `<i class="ttl">${esc(sk.title)}</i>` : '';
 function confirmBox(title, text, okText, cb, danger) {
   const p = modal(`<h3>${title}</h3><p class="hint" style="text-align:left">${text}</p>
@@ -159,7 +173,7 @@ function goLobby() {
 function renderWallet() {
   if (!me) return;
   setTimeout(renderExcelBars, 0);
-  $('meChip').innerHTML = `${avImg(me.avatar, me.skin && me.skin.frame)}<div><b>${esc(me.username)} ${titleTag(me.skin)}</b><span>토너먼트 우승 ${me.stats.tWins}회 · 🏆 ${me.trophies}</span></div>`;
+  $('meChip').innerHTML = `${avImg(me.avatar, me.skin)}<div><b>${badgeTag(me.skin)}${esc(me.username)} ${titleTag(me.skin)}</b><span>토너먼트 우승 ${me.stats.tWins}회 · 🏆 ${me.trophies}</span></div>`;
   if (current === 'lobby' && !$('tab-shop').classList.contains('hidden')) renderShop();
   $('wTotal').textContent = won(me.total);
   $('wCash').textContent = short(me.assets);
@@ -179,12 +193,15 @@ function renderWallet() {
   if (me.shame > 0) bh += `<p class="hint">${SHAME_EMOJI[me.shame]} 현재 <b>${SHAME[me.shame]}</b> · ${remain} 뒤 해제 · 오늘 충전 ${me.bailoutsToday}/${me.bailoutLimit}회</p>`;
   $('bailout').innerHTML = bh;
   const bb2 = $('bailout').querySelector('button');
-  if (bb2) bb2.onclick = () => confirmBox('자산 충전', `현금 <b>${won(me.bailoutAmount)}</b>을 받아요.<br>대신 <b>24시간 동안 ${SHAME[Math.min(3, me.shame + 1)]}</b> 딱지가 붙고, 랭킹(충전 적은 순)에서 내려가요.<br>오늘 남은 충전: ${left}회`, '충전', () =>
+  if (bb2) bb2.onclick = () => confirmBox('자산 충전', `현금 <b>${won(me.bailoutAmount)}</b>을 받아요.<br>대신 <b>24시간 동안 ${SHAME[Math.min(3, me.shame + 1)]}</b> 딱지가 붙어요.<br>오늘 남은 충전: ${left}회`, '충전', () =>
     socket.emit('bailout', res => res.error ? toast(res.error) : (fxBanner(SHAME[res.level] + ' 등극', `+${won(res.amount)}`, 'lose'), toast('충전 완료', true))), true);
   $('backToRoom').innerHTML = me.room && me.room !== leftRoom ? `<button class="btn gold back-room">참여 중인 방으로 돌아가기 (${me.room})</button>` : '';
   const bb = $('backToRoom').querySelector('button');
   if (bb) bb.onclick = () => joinRoom(me.room);
-  $('myStats').innerHTML = `<div><span>총 자산</span><b>${short(me.total)}</b></div><div><span>총 충전</span><b>${me.stats.bailouts || 0}회</b></div><div><span>토너 우승</span><b>${me.stats.tWins}회</b></div><div><span>토너 참가</span><b>${me.stats.tPlayed}회</b></div>`;
+  $('myStats').innerHTML = `<div><span>총 자산</span><b>${short(me.total)}</b></div><div><span>시즌2 토너 우승</span><b>${me.stats.tWins}회</b></div><div><span>시즌2 토너 참가</span><b>${me.stats.tPlayed}회</b></div><div><span>시즌2 토너 점수</span><b>${avgText(me.stats)}</b></div>`;
+  const h1 = me.history && me.history.s1;
+  $('myHistory').innerHTML = h1 ? `<div class="hist-head">📜 시즌1 기록${h1.place ? ` <i class="s1b">시즌1 ${h1.place}위</i>` : ''}</div>
+    <div class="hist-grid"><div><span>우승</span><b>${h1.wins}회</b></div><div><span>참가</span><b>${h1.played}회</b></div><div><span>우승률</span><b>${h1.played ? Math.round(h1.wins / h1.played * 1000) / 10 + '%' : '-'}</b></div><div><span>평균 등수</span><b>${h1.avg != null ? h1.avg.toFixed(2) + '위' : '-'}</b></div></div>` : '';
 }
 $('logoutBtn').onclick = () => confirmBox('로그아웃', '로그아웃할까요?', '로그아웃', () => {
   socket.emit('logout', () => {});
@@ -229,24 +246,24 @@ function hoursLeft(until) {
   const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
   return h ? `${h}시간 ${m}분` : `${m}분`;
 }
-function avgText(st) { return st && st.tPlayed ? (st.placeSum / st.tPlayed).toFixed(2).replace(/\.?0+$/, '') + '위' : '-'; }
-let rankData = null, rankMode = 'bailouts';
+function avgText(st) { return st && st.scored ? (st.scoreSum / st.scored).toFixed(2) : '-'; }
+let rankData = null, rankMode = 'assets';
 function renderRank(data) {
   if (data) rankData = data;
   if (!rankData) return;
   const list = rankData[rankMode];
-  const seg = `<div class="seg" id="rankSeg"><button data-m="bailouts" class="${rankMode === 'bailouts' ? 'on' : ''}">🧼 충전 적은 순</button><button data-m="avg" class="${rankMode === 'avg' ? 'on' : ''}">🏆 토너 평균 순위</button></div>`;
+  const seg = `<div class="seg" id="rankSeg"><button data-m="assets" class="${rankMode === 'assets' ? 'on' : ''}">💰 총 자산</button><button data-m="avg" class="${rankMode === 'avg' ? 'on' : ''}">🏆 토너 점수</button></div>`;
   $('rankList').innerHTML = seg + (list.map((r, i) => {
     const medal = ['🥇', '🥈', '🥉'][i];
-    const right = rankMode === 'bailouts' ? `충전 ${r.bailouts}회<small>${short(r.total)}</small>` : avgText({ tPlayed: r.tPlayed, placeSum: r.avgPlace * r.tPlayed });
+    const right = rankMode === 'assets' ? short(r.total) : `${r.score.toFixed(2)}<small>${r.scored}회 평균</small>`;
     return `<div class="rank-row ${me && r.username === me.username ? 'me' : ''}">
-      <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar, r.skin && r.skin.frame)}
-      <div class="nm"><b>${esc(r.username)} ${titleTag(r.skin)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
+      <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar, r.skin)}
+      <div class="nm"><b>${badgeTag(r.skin)}${esc(r.username)} ${titleTag(r.skin)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
       <div class="amt">${right}</div></div>`;
   }).join('') || `<div class="empty-note">${rankMode === 'avg' ? `아직 토너먼트 ${rankData.minTourneys}회 이상 참가한 사람이 없어요` : '아직 랭킹이 없어요'}</div>`);
   if (rankMode === 'avg' && me) {
     const need = rankData.minTourneys - me.stats.tPlayed;
-    $('rankSeg').insertAdjacentHTML('afterend', `<p class="hint rank-rule">토너먼트 ${rankData.minTourneys}회 이상 참가해야 등록돼요${need > 0 ? ` · 나는 <b>${need}회</b> 더 참가하면 등록` : ''}</p>`);
+    $('rankSeg').insertAdjacentHTML('afterend', `<p class="hint rank-rule">점수 = <b>최종 등수 ÷ 참가 인원</b>의 평균 (4명 중 1위 0.25 · 4명 중 4위 1.00 · 찹은 1.5위) · <b>낮을수록 위</b><br>토너먼트 ${rankData.minTourneys}회 이상 참가해야 등록돼요${need > 0 ? ` · 나는 <b>${need}회</b> 더 참가하면 등록` : ''}</p>`);
   }
   $('rankSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; rankMode = b.dataset.m; renderRank(); };
 }
@@ -512,7 +529,7 @@ function renderSeats() {
 
     let mini = '';
     if (i !== s.me && p.hasCards && !p.folded) {
-      mini = `<div class="mini ${p.cards ? 'face' : ''}">${p.cards ? cardHTML(p.cards[0]) + cardHTML(p.cards[1]) : cardHTML(null, p.skin && p.skin.back ? 'bk-' + p.skin.back : '') + cardHTML(null, p.skin && p.skin.back ? 'bk-' + p.skin.back : '')}</div>`;
+      mini = `<div class="mini ${p.cards ? 'face' : ''}">${p.cards ? cardHTML(p.cards[0], faceCls(p.skin)) + cardHTML(p.cards[1], faceCls(p.skin)) : cardHTML(null, p.skin && p.skin.back ? 'bk-' + p.skin.back : '') + cardHTML(null, p.skin && p.skin.back ? 'bk-' + p.skin.back : '')}</div>`;
     }
 
     let act = p.lastAction ? `<span class="act ${ACT_CLS[p.lastAction] || ''}">${p.lastAction}</span>` : '';
@@ -525,9 +542,9 @@ function renderSeats() {
     if (p.sitOut && p.tStatus !== 'out') act = '<span class="act fold">💤 자리비움</span>';
 
     h += `<div class="${cls.join(' ')}" style="left:${x}%;top:${y}%">
-      <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar, p.skin && p.skin.frame)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
+      <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''}">${avImg(p.avatar, p.skin)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
       ${act}
-      <div class="plate"><div class="nm">${esc(p.name)}</div>${p.skin && p.skin.title ? `<div class="ttl-s">${esc(p.skin.title)}</div>` : ''}<div class="st">${stack}</div></div>
+      <div class="plate">${p.skin && p.skin.badge ? `<div class="s1-s">${['', '🥇', '🥈', '🥉'][+p.skin.badge.match(/\d+(?=위)/)[0]] || ''}${esc(p.skin.badge)}</div>` : ''}<div class="nm">${esc(p.name)}</div>${p.skin && p.skin.title ? `<div class="ttl-s">${esc(p.skin.title)}</div>` : ''}<div class="st">${stack}</div></div>
       ${handTag}
       ${s.stage !== 'waiting' && (i === s.dealer || i === s.sbSeat || i === s.bbSeat) ? `<div class="pos-row">${[i === s.dealer ? '<i class="pos-chip d">D</i>' : '', i === s.sbSeat ? '<i class="pos-chip sb">SB</i>' : '', i === s.bbSeat ? '<i class="pos-chip bb">BB</i>' : ''].join('')}</div>` : ''}
     </div>`;
@@ -554,7 +571,8 @@ function renderMine() {
   const hand = $('myHand');
   hand.classList.toggle('folded', !!(my && my.folded));
   const key = cards ? JSON.stringify(cards) : '';
-  if (hand.dataset.k !== key) { hand.dataset.k = key; hand.innerHTML = cards ? cards.map(c => cardHTML(c)).join('') : ''; }
+  const fk = key + faceCls(my && my.skin);
+  if (hand.dataset.k !== fk) { hand.dataset.k = fk; hand.innerHTML = cards ? cards.map(c => cardHTML(c, faceCls(my.skin))).join('') : ''; }
   if (cards && s.stage === 'showdown' && my.bestCards) {
     hand.querySelectorAll('.card').forEach((el, i) => el.classList.toggle('hl', my.won > 0 && my.bestCards.some(c => sameCard(c, cards[i]))));
   }
@@ -1074,8 +1092,8 @@ function renderShop() {
   if (!me) return;
   const el = $('tab-shop');
   const preview = it => {
-    if (it.cat === 'frame') return avImg(me.avatar, it.id);
-    if (it.cat === 'back') return `<div class="pv-cards">${cardHTML(null, 'bk-' + it.id)}${cardHTML(null, 'bk-' + it.id)}</div>`;
+    if (it.cat === 'frame') return avImg(me.avatar, { frame: it.id, cf: me.customFrame });
+    if (it.cat === 'back') return `<div class="pv-cards">${cardHTML(null, 'bk-' + it.id)}${cardHTML({ r: 14, s: 's' }, 'fc-' + it.id)}${cardHTML({ r: 13, s: 'h' }, 'fc-' + it.id)}</div>`;
     if (it.cat === 'title') return `<i class="ttl big">${esc(it.name)}</i>`;
     return `<div class="pv-fx">${{ e_gold: '🪙', e_fire: '🎆', e_money: '💸' }[it.id] || '✨'}</div>`;
   };
@@ -1085,7 +1103,7 @@ function renderShop() {
   h += `<div class="shop-cat">💰 돈으로 바꾸기 <small>🏆 1개 = ${won(me.trophyRate)}</small></div>
     <div class="ex-grid">${opts.map(n => `<button class="btn ${me.trophies >= n ? 'gold' : ''}" data-sell="${n}" ${me.trophies >= n ? '' : 'disabled'}>🏆 ${n}<small>→ ${short(n * me.trophyRate)}</small></button>`).join('')}</div>`;
   for (const [cat, label] of Object.entries(Shop.CATS)) {
-    h += `<div class="shop-cat">${label}${cat === 'back' ? ' <small>다른 사람이 내 카드를 볼 때</small>' : cat === 'fx' ? ' <small>내가 이겼을 때</small>' : ''}</div><div class="shop-grid">`;
+    h += `<div class="shop-cat">${label}${cat === 'back' ? ' <small>뒷면 + 내 카드 앞면</small>' : cat === 'fx' ? ' <small>내가 이겼을 때</small>' : ''}</div><div class="shop-grid">`;
     for (const it of Shop.SHOP.filter(x => x.cat === cat)) {
       const own = me.owned.includes(it.id);
       const on = me.equip[cat] === it.id;
@@ -1094,11 +1112,13 @@ function renderShop() {
       else if (own) btn = `<button class="btn small" data-equip="${it.id}" data-cat="${cat}">장착</button>`;
       else btn = `<button class="btn small gold" data-buy="${it.id}" ${me.trophies < it.price ? 'disabled' : ''}>🏆 ${it.price}</button>`;
       h += `<div class="shop-item ${on ? 'on' : ''}"><div class="pv">${preview(it)}</div><b>${esc(it.name)}</b>${it.desc ? `<span>${esc(it.desc)}</span>` : ''}
-        ${cat === 'fx' ? `<button class="pv-play" data-play="${it.id}">▶ 미리보기</button>` : ''}${btn}</div>`;
+        ${cat === 'fx' ? `<button class="pv-play" data-play="${it.id}">▶ 미리보기</button>` : ''}${it.id === 'f_custom' && own ? `<button class="pv-play" data-custom>🎨 꾸미기</button>` : ''}${btn}</div>`;
     }
     h += '</div>';
   }
   el.innerHTML = h;
+  const cb = el.querySelector('[data-custom]');
+  if (cb) cb.onclick = openFrameEditor;
   el.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => {
     const n = Number(b.dataset.sell);
     confirmBox('트로피 환전', `🏆 ${n}개를 <b>${won(n * me.trophyRate)}</b>으로 바꿀까요?<br>바꾼 트로피는 돌아오지 않아요. (랭킹 우승 횟수는 그대로)`, '바꾸기', () =>
@@ -1146,4 +1166,71 @@ function burst(x, y) {
     fxEl.appendChild(d);
     setTimeout(() => d.remove(), 1000);
   }
+}
+
+// ================= 커스텀 테두리 꾸미기 =================
+const CF_COLORS = ['#e9c46a', '#ffd23f', '#ff8a1f', '#ff4d4d', '#ff4d6d', '#ff7ae0', '#a24bff', '#3d7be0', '#00c2ff', '#5de0d1', '#2fb874', '#7dff7a', '#ffffff', '#9aa3ad', '#141414', '#8b5a2b'];
+function openFrameEditor() {
+  const cf = Object.assign({ mode: 'color', px: '' }, me.customFrame);
+  const sw = key => `<div class="cf-sw" data-k="${key}">${CF_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${cf[key] === c ? 'on' : ''}"></button>`).join('')}<label class="cf-pick">＋<input type="color" value="${cf[key]}" data-pick="${key}"></label></div>`;
+  const opt = (key, v, t) => `<button data-o="${key}" data-v="${v}" class="${cf[key] === v ? 'on' : ''}">${t}</button>`;
+  const p = modal(`<h3>🎨 커스텀 테두리</h3>
+    <div class="cf-preview" data-pv></div>
+    <div class="opt-group">${opt('mode', 'color', '🎨 색으로')}${opt('mode', 'pixel', '🟩 도트로 그리기')}</div>
+    <div data-sec="color">
+      <div class="field-label">색 1</div>${sw('c1')}
+      <div class="field-label">색 2 (그라데이션·링에 사용)</div>${sw('c2')}
+      <div class="field-label">모양</div><div class="opt-group">${opt('style', 'solid', '단색')}${opt('style', 'grad', '그라데이션')}${opt('style', 'ring', '링')}</div>
+    </div>
+    <div data-sec="pixel" class="cf-pixel">
+      <span class="hint">아바타 둘레(밝은 칸)만 칠할 수 있어요 · 드래그로 쭉 칠하기</span>
+      <canvas id="cfCanvas" width="336" height="336"></canvas>
+      <div class="palette" id="cfPalette"></div>
+      <div class="pe-tools">
+        <button class="btn small on" data-ft="pen">✏️ 펜</button>
+        <button class="btn small" data-ft="fill">🪣 채우기</button>
+        <button class="btn small" data-ft="mirror">↔️ 대칭</button>
+        <button class="btn small" data-ft="undo">↶</button>
+        <button class="btn small" data-ft="clear">비우기</button>
+      </div>
+    </div>
+    <div class="field-label">빛 (색 1 기준)</div><div class="opt-group">${opt('fx', 'none', '없음')}${opt('fx', 'glow', '빛남')}${opt('fx', 'pulse', '깜빡임')}</div>
+    <div class="row2"><button class="btn" data-x>취소</button><button class="btn gold" data-ok>저장하고 장착</button></div>`);
+  const pe = new PixelEditor(p.querySelector('#cfCanvas'), p.querySelector('#cfPalette'), { size: FRAME_N, mask: frameMask });
+  pe.color = 5;
+  pe.buildPalette(p.querySelector('#cfPalette'));
+  pe.load(cf.px);
+  const draw = () => {
+    if (cf.mode === 'pixel') cf.px = pe.value();
+    p.querySelectorAll('[data-sec]').forEach(x => x.classList.toggle('hidden', x.dataset.sec !== cf.mode));
+    p.querySelector('[data-pv]').innerHTML = avImg(me.avatar, { frame: 'f_custom', cf: Object.assign({}, cf, { px: cf.mode === 'pixel' ? pe.value() : cf.px }) });
+    p.querySelectorAll('.cf-sw').forEach(g => g.querySelectorAll('[data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === cf[g.dataset.k])));
+    p.querySelectorAll('[data-o]').forEach(b => b.classList.toggle('on', cf[b.dataset.o] === b.dataset.v));
+  };
+  const cv = p.querySelector('#cfCanvas');
+  ['pointerup', 'pointerleave'].forEach(ev => cv.addEventListener(ev, draw));
+  cv.addEventListener('pointerdown', () => setTimeout(draw, 0));
+  p.querySelectorAll('[data-ft]').forEach(b => b.onclick = () => {
+    const t = b.dataset.ft;
+    if (t === 'pen' || t === 'fill') { pe.tool = t; p.querySelectorAll('[data-ft=pen],[data-ft=fill]').forEach(x => x.classList.toggle('on', x === b)); }
+    if (t === 'mirror') { pe.mirror = !pe.mirror; b.classList.toggle('on', pe.mirror); pe.draw(); }
+    if (t === 'undo') pe.back();
+    if (t === 'clear') pe.clear();
+    draw();
+  });
+  p.querySelectorAll('.cf-sw').forEach(g => g.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { cf[g.dataset.k] = b.dataset.c; draw(); }));
+  p.querySelectorAll('[data-pick]').forEach(i => i.oninput = () => { cf[i.dataset.pick] = i.value; draw(); });
+  p.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { cf[b.dataset.o] = b.dataset.v; draw(); });
+  p.querySelector('[data-x]').onclick = closeModal;
+  p.querySelector('[data-ok]').onclick = () => {
+    if (cf.mode === 'pixel') {
+      cf.px = pe.value();
+      if (!/[1-9a-f]/.test(cf.px)) return toast('테두리를 조금이라도 칠해주세요');
+    }
+    socket.emit('customFrame', cf, res => {
+      if (res.error) return toast(res.error);
+      closeModal(); toast('테두리 저장 완료', true);
+    });
+  };
+  draw();
 }

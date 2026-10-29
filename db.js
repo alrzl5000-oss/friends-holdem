@@ -65,9 +65,61 @@ for (const u of Object.values(data.users)) {
   u.owned = u.owned || [];
   u.equip = u.equip || {};
 }
+// 한 번만: 예전 테두리(금테·불꽃·얼음·무지개·다이아) 회수하고 산 가격만큼 트로피 환불
+const OLD_FRAMES = { f_gold: 3, f_fire: 5, f_ice: 5, f_rainbow: 10, f_diamond: 20 };
+data.migrations = data.migrations || [];
+if (!data.migrations.includes('refund-frames')) {
+  for (const u of Object.values(data.users)) {
+    const had = (u.owned || []).filter(id => OLD_FRAMES[id]);
+    if (!had.length) continue;
+    const refund = had.reduce((a, id) => a + OLD_FRAMES[id], 0);
+    u.owned = u.owned.filter(id => !OLD_FRAMES[id]);
+    if (u.equip && OLD_FRAMES[u.equip.frame]) delete u.equip.frame;
+    u.trophies = (u.trophies || 0) + refund;
+    console.log(`테두리 환불: ${u.username} ${had.join(',')} → 🏆 +${refund}`);
+  }
+  data.migrations.push('refund-frames');
+}
+
+// ===== 시즌 1 종료 → 시즌 2 시작 (한 번만) =====
+// 시즌1 토너 평균 등수(참가 5회 이상) 1·2·3위에게 '시즌1 N위' 칭호, 전원 돈 10억으로 초기화
+// 트로피·스킨·우승/참가/충전 기록은 그대로
+if (!data.migrations.includes('season2')) {
+  const ranked = Object.values(data.users)
+    .filter(u => (u.stats.tPlayed || 0) >= 5)
+    .sort((a, b) => a.stats.placeSum / a.stats.tPlayed - b.stats.placeSum / b.stats.tPlayed || b.stats.tPlayed - a.stats.tPlayed)
+    .slice(0, 3);
+  ranked.forEach((u, i) => {
+    u.badge = `시즌1 ${i + 1}위`;
+    console.log(`시즌1 ${i + 1}위: ${u.username} (평균 ${(u.stats.placeSum / u.stats.tPlayed).toFixed(2)}위, ${u.stats.tPlayed}회)`);
+  });
+  data.season1 = ranked.map((u, i) => ({ place: i + 1, username: u.username, avg: u.stats.placeSum / u.stats.tPlayed, played: u.stats.tPlayed }));
+  for (const u of Object.values(data.users)) {
+    // 시즌1 우승·참가 기록은 프로필 히스토리로 옮기고, 시즌2 기록은 0부터
+    const st = u.stats;
+    u.history = u.history || {};
+    u.history.s1 = {
+      wins: st.tWins || 0, played: st.tPlayed || 0,
+      avg: st.tPlayed ? st.placeSum / st.tPlayed : null,
+      place: ranked.indexOf(u) >= 0 ? ranked.indexOf(u) + 1 : null,
+    };
+    u.stats = { tWins: 0, tPlayed: 0, placeSum: 0, scoreSum: 0, scored: 0, bailouts: 0 };
+    u.bailoutLog = [];          // 충전 기록 삭제 (좃밥 딱지도 해제)
+    u.assets = START_ASSETS; u.inPlay = 0; u.tourneyHold = 0;
+  }
+  console.log(`시즌 2 시작: 전원 ${START_ASSETS / 1e8}억으로 초기화 (${Object.keys(data.users).length}명)`);
+  data.season = 2;
+  data.migrations.push('season2');
+}
+
+const CF_DEFAULT = { mode: 'color', c1: '#e9c46a', c2: '#ff4d6d', style: 'grad', fx: 'glow', px: '' };
 function skinOf(u) {
   const e = u.equip || {};
-  return { frame: e.frame || null, back: e.back || null, title: e.title ? (Shop.byId(e.title) || {}).name || null : null, fx: e.fx || null };
+  return {
+    frame: e.frame || null, back: e.back || null, title: e.title ? (Shop.byId(e.title) || {}).name || null : null, fx: e.fx || null,
+    cf: e.frame === 'f_custom' ? Object.assign({}, CF_DEFAULT, u.customFrame) : null,
+    badge: u.badge || null,
+  };
 }
 
 // 한 번만: 예전 규칙(10억까지 채워줌)으로 충전했던 사람은 충전 1회당 5억 회수 (0원 밑으로는 안 내려감)
@@ -183,6 +235,8 @@ function pub(u) {
     owned: u.owned || [],
     equip: u.equip || {},
     skin: skinOf(u),
+    customFrame: Object.assign({}, CF_DEFAULT, u.customFrame),
+    history: u.history || {},
   };
 }
 
@@ -195,6 +249,19 @@ module.exports = {
   ENTRY_FEE,
   DAILY_BAILOUTS,
   skinOf,
+  setCustomFrame(u, cfg = {}) {
+    if (!(u.owned || []).includes('f_custom')) return { error: '커스텀 테두리를 먼저 사야 해요' };
+    const hex = v => /^#[0-9a-f]{6}$/i.test(String(v || ''));
+    if (!hex(cfg.c1) || !hex(cfg.c2)) return { error: '색이 올바르지 않아요' };
+    if (!['solid', 'grad', 'ring'].includes(cfg.style) || !['none', 'glow', 'pulse'].includes(cfg.fx)) return { error: '스타일이 올바르지 않아요' };
+    const mode = cfg.mode === 'pixel' ? 'pixel' : 'color';
+    const px = String(cfg.px || '');
+    if (mode === 'pixel' && !/^[0-9a-f]{576}$/.test(px)) return { error: '도트 그림이 올바르지 않아요' };
+    u.customFrame = { mode, c1: cfg.c1.toLowerCase(), c2: cfg.c2.toLowerCase(), style: cfg.style, fx: cfg.fx, px: /^[0-9a-f]{576}$/.test(px) ? px : '' };
+    u.equip.frame = 'f_custom';
+    save();
+    return { ok: true };
+  },
   sellTrophy(u, n) {
     n = Math.floor(Number(n));
     if (!(n >= 1 && n <= 100)) return { error: '개수가 올바르지 않아요' };
@@ -297,12 +364,15 @@ module.exports = {
       username: u.username, avatar: u.avatar, total: total(u), tWins: u.stats.tWins, tPlayed: u.stats.tPlayed, skin: skinOf(u),
       bailouts: u.stats.bailouts || 0, shame: shameLevel(u),
       avgPlace: u.stats.tPlayed ? u.stats.placeSum / u.stats.tPlayed : null,
+      score: u.stats.scored ? u.stats.scoreSum / u.stats.scored : null,
+      scored: u.stats.scored || 0,
     }));
     return {
       // 충전 적은 순 → 같으면 총 자산 많은 순
-      bailouts: all.slice().sort((a, b) => a.bailouts - b.bailouts || b.total - a.total).slice(0, 100),
+      assets: all.slice().sort((a, b) => b.total - a.total).slice(0, 100),
       minTourneys: RANK_MIN_TOURNEYS,
-      avg: all.filter(u => u.tPlayed >= RANK_MIN_TOURNEYS).sort((a, b) => a.avgPlace - b.avgPlace || b.tPlayed - a.tPlayed).slice(0, 100),
+      // 토너 점수 낮은 순 (참가 5회 이상 + 점수 기록이 있는 사람)
+      avg: all.filter(u => u.tPlayed >= RANK_MIN_TOURNEYS && u.scored > 0).sort((a, b) => a.score - b.score || b.tPlayed - a.tPlayed).slice(0, 100),
     };
   },
 
