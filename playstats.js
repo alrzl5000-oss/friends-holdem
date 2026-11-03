@@ -42,15 +42,28 @@ function summary(u) {
   const h = p.hands || 0;
   const vpip = pct(p.vpip, h);
   const agg = p.call ? Math.round((p.agg || 0) / p.call * 10) / 10 : (p.agg ? 9.9 : 0);
-  let style = '';
+  let style = '', trait = '';
   if (h >= MIN_HANDS) {
-    const a = agg >= 1.5;
-    if (vpip >= 40) style = a ? '🎰 도박꾼' : '🐟 물고기';
-    else if (vpip < 22) style = a ? '🦈 상어' : '🪨 바위';
-    else style = a ? '🔥 공격형' : '🙂 무난';
+    // 기본 성향: 참여율(타이트/보통/루즈) × 공격성(수동/보통/공격) = 9가지
+    const A = agg < 1 ? 0 : agg < 2 ? 1 : 2;
+    const V = vpip < 22 ? 0 : vpip < 40 ? 1 : 2;
+    style = [
+      ['🪨 바위', '🐢 신중파', '🦈 상어'],
+      ['📞 콜러', '⚖️ 정석파', '🔥 공격형'],
+      ['🐟 물고기', '🎲 한량', '🎰 도박꾼'],
+    ][V][A];
+    // 특징 (위에서부터 먼저 맞는 하나)
+    const ffr = pct(p.ffr, p.fr), sdw = pct(p.sdw, p.sd), bl = pct(p.bluff, p.sdb), ai = pct(p.allin, h), sd = pct(p.sd, h);
+    if (ai >= 25) trait = '💣 올인 중독';
+    else if ((p.sdb || 0) >= 3 && bl >= 40) trait = '🎭 블러퍼';
+    else if ((p.fr || 0) >= 5 && ffr >= 70) trait = '🐔 쫄보';
+    else if ((p.fr || 0) >= 5 && ffr <= 15) trait = '🧟 안 접는 좀비';
+    else if ((p.sd || 0) >= 5 && sdw >= 65) trait = '🎯 저격수';
+    else if ((p.sd || 0) >= 5 && sdw <= 30) trait = '💸 기부천사';
+    else if (sd >= 45) trait = '👀 끝장파';
   }
   return {
-    hands: h, minHands: MIN_HANDS, style,
+    hands: h, minHands: MIN_HANDS, style, trait,
     vpip, pfr: pct(p.pfr, h), agg,
     ffr: pct(p.ffr, p.fr), allin: pct(p.allin, h),
     sd: pct(p.sd, h), sdw: pct(p.sdw, p.sd), bluff: pct(p.bluff, p.sdb),
