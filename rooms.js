@@ -2,6 +2,7 @@
 const { Table } = require('./game');
 const db = require('./db');
 const ach = require('./achievements');
+const playstats = require('./playstats');
 
 const FEE = db.ENTRY_FEE;   // 참가비/리바이 1억
 const T_STACK = 1e8;        // 토너먼트 시작 금액 1억
@@ -128,7 +129,7 @@ class CashRoom extends BaseRoom {
     this.buyDef = tier.bb * 100;
     this.table = new Table({
       sb: tier.sb, bb: tier.bb,
-      hooks: this.hooks({ handEnd: () => { ach.onHand(this.table, db.byId, this); this.sync(); } }),
+      hooks: this.hooks({ handEnd: () => { playstats.onHand(this.table, db.byId); ach.onHand(this.table, db.byId, this); this.sync(); } }),
     });
     this.table.running = true;
   }
@@ -304,6 +305,7 @@ class TourneyRoom extends BaseRoom {
     return this.status === 'running' && lv <= REBUY_LEVELS && s.rebuys < REBUY_MAX && u && u.assets >= FEE;
   }
   handEnd() {
+    playstats.onHand(this.table, db.byId);
     ach.onHand(this.table, db.byId, this);
     this.shameTick();
     db.save();

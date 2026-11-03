@@ -157,7 +157,7 @@ class Table {
     const ready = [];
     this.seats.forEach((s, i) => {
       if (!s) return;
-      Object.assign(s, { hand: [], bet: 0, total: 0, allIn: false, allInStage: '', acted: false, lastAction: '', revealed: false, bestName: '', won: 0 });
+      Object.assign(s, { hand: [], bet: 0, total: 0, allIn: false, allInStage: '', ps: {}, acted: false, lastAction: '', revealed: false, bestName: '', won: 0 });
       s.inHand = this.eligible(s);
       s.folded = !s.inHand;
       if (s.inHand) ready.push(i);
@@ -256,6 +256,20 @@ class Table {
       if (!Number.isFinite(amount)) return { error: '금액이 올바르지 않아요' };
       if (amount >= s.bet + s.chips) type = 'allin';
       else if (amount < this.currentBet + this.minRaise) return { error: '최소 레이즈 금액보다 작아요' };
+    }
+
+    // 플레이 성향 기록 (playstats.js) — 자동 행동은 표시만 하고 집계에서 뺌
+    const ps = s.ps || (s.ps = {});
+    if (auto) ps.auto = 1;
+    else {
+      const pre = this.stage === 'preflop';
+      const raising = type === 'raise' || (type === 'allin' && s.bet + s.chips > this.currentBet);
+      const calling = type === 'call' || (type === 'allin' && !raising);
+      if (toCall > 0 && this.currentBet > (pre ? this.bb : 0)) { ps.fr = 1; if (type === 'fold') ps.ffr = 1; }
+      if (pre && (raising || calling)) ps.vpip = 1;
+      if (pre && raising) ps.pfr = 1;
+      if (raising) { ps.agg = (ps.agg || 0) + 1; if (!pre) ps.pagg = 1; }
+      if (calling) ps.call = (ps.call || 0) + 1;
     }
 
     let msg;

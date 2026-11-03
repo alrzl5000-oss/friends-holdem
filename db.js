@@ -1,5 +1,6 @@
 // 아주 간단한 파일 저장소 (Railway 볼륨에 db.json으로 저장)
 const fs = require('fs');
+const playstats = require('./playstats');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -231,6 +232,7 @@ function pub(u) {
     trophyRate: TROPHY_RATE,
     avatar: u.avatar,
     stats: u.stats,
+    play: playstats.summary(u),
     total: total(u),
     trophies: u.trophies || 0,
     owned: u.owned || [],
@@ -368,6 +370,7 @@ module.exports = {
       avgPlace: u.stats.tPlayed ? u.stats.placeSum / u.stats.tPlayed : null,
       score: u.stats.scored ? u.stats.scoreSum / u.stats.scored : null,
       scored: u.stats.scored || 0,
+      play: playstats.summary(u),
     }));
     // 자격 = (전체 유저 토너 참가 수 합 ÷ 유저 수) × 70%, 소수점 버림
     const minT = all.length ? Math.floor(all.reduce((n, u) => n + (u.tPlayed || 0), 0) / all.length * RANK_MIN_RATIO) : 0;
