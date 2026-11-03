@@ -261,7 +261,7 @@ function playHTML(p, title) {
     ['쇼다운 승률', v(p.sdw), '패 까서 이긴 비율'],
     ['블러핑 적발', v(p.bluff), '베팅하고 깠는데 하이카드'],
   ];
-  const tag = p.style ? `<i class="ps-style">${p.style}</i>` : `<small>${p.hands}/${p.minHands}판 · ${p.minHands}판부터 성향 분석</small>`;
+  const tag = p.style ? `<i class="ps-style">${p.style}</i>${p.trait ? `<i class="ps-style">${p.trait}</i>` : ''}` : `<small>${p.hands}/${p.minHands}판 · ${p.minHands}판부터 성향 분석</small>`;
   return `<div class="hist-head">${title} ${tag}</div><div class="hist-grid ps-grid">${rows.map(r => `<div title="${r[2]}"><span>${r[0]}</span><b>${r[1]}</b><em>${r[2]}</em></div>`).join('')}</div><p class="hint">기록된 판: ${p.hands}판 (시간초과·자리비움 판 제외)</p>`;
 }
 function avgText(st) { return st && st.scored ? (st.scoreSum / st.scored).toFixed(2) : '-'; }
@@ -276,7 +276,7 @@ function renderRank(data) {
     const right = rankMode === 'assets' ? short(r.total) : `${r.score.toFixed(2)}<small>${r.scored}회 평균</small>`;
     return `<div class="rank-row ${me && r.username === me.username ? 'me' : ''}" data-i="${i}">
       <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar, r.skin)}
-      <div class="nm"><b>${badgeTag(r.skin)}${esc(r.username)} ${titleTag(r.skin)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회${r.play && r.play.style ? ` · ${r.play.style}` : ''}</span></div>
+      <div class="nm"><b>${badgeTag(r.skin)}${esc(r.username)} ${titleTag(r.skin)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회${r.play && r.play.style ? ` · ${r.play.style}${r.play.trait ? ' ' + r.play.trait : ''}` : ''}</span></div>
       <div class="amt">${right}</div></div>`;
   }).join('') || `<div class="empty-note">아직 토너먼트 ${rankData.minTourneys}회 이상 참가한 사람이 없어요</div>`);
   if (me) {
