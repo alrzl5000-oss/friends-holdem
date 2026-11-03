@@ -199,6 +199,7 @@ function renderWallet() {
   const bb = $('backToRoom').querySelector('button');
   if (bb) bb.onclick = () => joinRoom(me.room);
   $('myStats').innerHTML = `<div><span>총 자산</span><b>${short(me.total)}</b></div><div><span>시즌2 토너 우승</span><b>${me.stats.tWins}회</b></div><div><span>시즌2 토너 참가</span><b>${me.stats.tPlayed}회</b></div><div><span>시즌2 토너 점수</span><b>${avgText(me.stats)}</b></div>`;
+  $('myPlay').innerHTML = playHTML(me.play, '🧠 내 플레이 성향');
   const h1 = me.history && me.history.s1;
   $('myHistory').innerHTML = h1 ? `<div class="hist-head">📜 시즌1 기록${h1.place ? ` <i class="s1b">시즌1 ${h1.place}위</i>` : ''}</div>
     <div class="hist-grid"><div><span>우승</span><b>${h1.wins}회</b></div><div><span>참가</span><b>${h1.played}회</b></div><div><span>우승률</span><b>${h1.played ? Math.round(h1.wins / h1.played * 1000) / 10 + '%' : '-'}</b></div><div><span>평균 등수</span><b>${h1.avg != null ? h1.avg.toFixed(2) + '위' : '-'}</b></div></div>` : '';
@@ -246,6 +247,23 @@ function hoursLeft(until) {
   const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
   return h ? `${h}시간 ${m}분` : `${m}분`;
 }
+// 플레이 성향 (베팅 습관) 카드
+function playHTML(p, title) {
+  if (!p) return '';
+  const v = (x, unit = '%') => x == null ? '-' : x + unit;
+  const rows = [
+    ['참여율', v(p.vpip), '프리플랍에 돈 넣고 들어간 판'],
+    ['프리플랍 레이즈', v(p.pfr), '프리플랍에 레이즈로 들어간 판'],
+    ['공격성', p.hands ? String(p.agg) : '-', '(벳+레이즈) ÷ 콜 · 1.5↑ 공격적'],
+    ['벳·레이즈에 폴드', v(p.ffr), '상대가 베팅하면 접은 비율'],
+    ['올인', v(p.allin), '직접 올인한 판'],
+    ['쇼다운', v(p.sd), '끝까지 가서 패 깐 판'],
+    ['쇼다운 승률', v(p.sdw), '패 까서 이긴 비율'],
+    ['블러핑 적발', v(p.bluff), '베팅하고 깠는데 하이카드'],
+  ];
+  const tag = p.style ? `<i class="ps-style">${p.style}</i>` : `<small>${p.hands}/${p.minHands}판 · ${p.minHands}판부터 성향 분석</small>`;
+  return `<div class="hist-head">${title} ${tag}</div><div class="hist-grid ps-grid">${rows.map(r => `<div title="${r[2]}"><span>${r[0]}</span><b>${r[1]}</b><em>${r[2]}</em></div>`).join('')}</div><p class="hint">기록된 판: ${p.hands}판 (시간초과·자리비움 판 제외)</p>`;
+}
 function avgText(st) { return st && st.scored ? (st.scoreSum / st.scored).toFixed(2) : '-'; }
 let rankData = null, rankMode = 'assets';
 function renderRank(data) {
@@ -256,15 +274,20 @@ function renderRank(data) {
   $('rankList').innerHTML = seg + (list.map((r, i) => {
     const medal = ['🥇', '🥈', '🥉'][i];
     const right = rankMode === 'assets' ? short(r.total) : `${r.score.toFixed(2)}<small>${r.scored}회 평균</small>`;
-    return `<div class="rank-row ${me && r.username === me.username ? 'me' : ''}">
+    return `<div class="rank-row ${me && r.username === me.username ? 'me' : ''}" data-i="${i}">
       <div class="no ${medal ? 'top' : ''}">${medal || i + 1}</div>${avImg(r.avatar, r.skin)}
-      <div class="nm"><b>${badgeTag(r.skin)}${esc(r.username)} ${titleTag(r.skin)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회</span></div>
+      <div class="nm"><b>${badgeTag(r.skin)}${esc(r.username)} ${titleTag(r.skin)}${r.shame ? ` <i class="shame-mini lv${r.shame}">${SHAME[r.shame]}</i>` : ''}</b><span>토너 우승 ${r.tWins}회 · 참가 ${r.tPlayed}회${r.play && r.play.style ? ` · ${r.play.style}` : ''}</span></div>
       <div class="amt">${right}</div></div>`;
   }).join('') || `<div class="empty-note">아직 토너먼트 ${rankData.minTourneys}회 이상 참가한 사람이 없어요</div>`);
   if (me) {
     const need = rankData.minTourneys - me.stats.tPlayed;
     $('rankSeg').insertAdjacentHTML('afterend', `<p class="hint rank-rule">${rankMode === 'avg' ? `점수 = <b>최종 등수 ÷ 참가 인원</b>의 평균 (4명 중 1위 0.25 · 4명 중 4위 1.00 · 찹은 1.5위) · <b>낮을수록 위</b><br>` : ''}등록 기준: 전체 평균 참가 수의 70% (지금 <b>${rankData.minTourneys}회</b> 이상)${need > 0 ? ` · 나는 <b>${need}회</b> 더 참가하면 등록` : ''}</p>`);
   }
+  $('rankList').querySelectorAll('.rank-row').forEach(row => row.onclick = () => {
+    const r = list[+row.dataset.i];
+    const p = modal(`${playHTML(r.play, '🧠 ' + esc(r.username) + ' 플레이 성향')}<button class="btn" data-x>닫기</button>`);
+    p.querySelector('[data-x]').onclick = closeModal;
+  });
   $('rankSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; rankMode = b.dataset.m; renderRank(); };
 }
 

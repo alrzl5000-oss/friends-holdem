@@ -1030,3 +1030,8 @@ body.excel .sdfx, body.excel .enfx, body.nofx .sdfx, body.nofx .enfx { display: 
 body.excel .ava-wrap[class*="au-"]::before, body.excel .ava-wrap[class*="au-"]::after { display: none; }
 body.excel .card.back[class*="bk-a_"]::after { content: "#"; color: #b3b0ad; text-shadow: none; }
 body.excel .ach { background: #fff; border-radius: 0; }
+
+/* 플레이 성향 */
+.ps-grid div em { display: block; font-style: normal; font-size: 9.5px; line-height: 1.25; color: var(--muted); opacity: .75; margin-top: 3px; }
+.ps-style { font-style: normal; font-size: 13px; padding: 2px 8px; border-radius: 99px; background: rgba(233,196,106,.15); color: var(--gold2); margin-left: 4px; }
+.rank-row { cursor: pointer; }
