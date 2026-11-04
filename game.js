@@ -157,7 +157,7 @@ class Table {
     const ready = [];
     this.seats.forEach((s, i) => {
       if (!s) return;
-      Object.assign(s, { hand: [], bet: 0, total: 0, allIn: false, allInStage: '', ps: {}, acted: false, lastAction: '', revealed: false, bestName: '', won: 0 });
+      Object.assign(s, { hand: [], bet: 0, total: 0, allIn: false, allInStage: '', foldStage: '', ps: {}, acted: false, lastAction: '', revealed: false, bestName: '', won: 0 });
       s.inHand = this.eligible(s);
       s.folded = !s.inHand;
       if (s.inHand) ready.push(i);
@@ -275,7 +275,7 @@ class Table {
     let msg;
     switch (type) {
       case 'fold':
-        s.folded = true; s.lastAction = '폴드'; msg = '폴드';
+        s.folded = true; s.foldStage = this.stage; s.lastAction = '폴드'; msg = '폴드';
         break;
       case 'check':
         s.lastAction = '체크'; msg = '체크';

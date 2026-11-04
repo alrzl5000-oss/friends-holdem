@@ -179,7 +179,8 @@ io.on('connection', socket => {
   socket.on('buy', guard((cb, id) => { const r = db.buy(user, String(id)); if (r.ok) refreshSkin(); cb(r); }));
   socket.on('achievements', guard(cb => cb(ach.listFor(user))));
   socket.on('customFrame', guard((cb, cfg) => { const r = db.setCustomFrame(user, cfg || {}); if (r.ok) refreshSkin(); cb(r); }));
-  socket.on('equip', guard((cb, { cat, id } = {}) => { const r = db.equip(user, String(cat), id ? String(id) : null); if (r.ok) refreshSkin(); cb(r); }));
+  socket.on('seenSeason', guard(cb => { db.seenSeason(user); cb({ ok: true }); }));
+  socket.on('equip', guard((cb, { cat, id, off } = {}) => { const r = db.equip(user, String(cat), id ? String(id) : null, !!off); if (r.ok) refreshSkin(); cb(r); }));
 
   // 구제금(충전): 현금 1억 미만이면 3억 지급 · 하루 3회 · 24시간 좃밥
   socket.on('bailout', guard(cb => {
@@ -300,6 +301,7 @@ io.on('connection', socket => {
       socket.lastWatchChat = now;
     }
     r.pushChat({ name: user.username, uid: user.id, text, ts: Date.now(), watcher: isWatcher });
+    ach.onChat(user);
     cb({ ok: true });
   }));
 

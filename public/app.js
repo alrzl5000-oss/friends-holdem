@@ -75,18 +75,26 @@ function modal(html) {
 }
 function closeModal() { $('modal').classList.add('hidden'); }
 document.querySelectorAll('#modal [data-close]').forEach(e => e.onclick = closeModal);
-function cfStyle(cf) {
-  if (!cf) return '';
-  if (cf.mode === 'pixel' && cf.px) return `style="--pxf:url(${frameURL(cf.px)});--cg:${cf.c1}"`;
-  const b = cf.style === 'solid' ? cf.c1 : cf.style === 'ring' ? `conic-gradient(${cf.c1}, ${cf.c2}, ${cf.c1}, ${cf.c2}, ${cf.c1})` : `linear-gradient(135deg, ${cf.c1}, ${cf.c2})`;
-  return `style="--cfb:${b};--cg:${cf.c1}"`;
-}
-// sk: 테두리 id(문자열) 또는 스킨 객체 { frame, cf }
+// 프로필 + 테두리. sk: 테두리 id(문자열) 또는 스킨 객체 { frame, cf }
+// 도트 테두리(.pf)는 32x32 판 위에 덮어 그림 — 2장짜리는 번갈아 깜빡임(.pf2)
 function avImg(str, sk) {
   const frame = typeof sk === 'string' ? sk : sk && sk.frame;
   const cf = frame === 'f_custom' ? (typeof sk === 'object' && sk.cf) || (me && me.customFrame) : null;
-  const pix = cf && cf.mode === 'pixel' && cf.px ? 'cf-pix' : '';
-  return `<div class="av ${frame ? 'fr-' + frame : ''} ${cf ? 'cf-' + cf.fx : ''} ${pix}" ${cfStyle(cf)}><img src="${avatarURL(str)}" alt=""></div>`;
+  let cls = 'av', st = '';
+  if (cf) {
+    cls += ` fr-f_custom cf-${cf.fx}`;
+    const url = cf.mode === 'pixel' && cf.px ? frameURL(cf.px) : '';
+    if (url) { cls += ' pf'; st = `--pf:url(${url});--pfn:1;--cg:${cf.c1}`; }
+    else {
+      const b = cf.style === 'solid' ? cf.c1 : cf.style === 'ring' ? `conic-gradient(${cf.c1}, ${cf.c2}, ${cf.c1}, ${cf.c2}, ${cf.c1})` : `linear-gradient(135deg, ${cf.c1}, ${cf.c2})`;
+      st = `--cfb:${b};--cg:${cf.c1}`;
+    }
+  } else if (frame) {
+    const pf = pixelFrame(frame);
+    cls += ' fr-' + frame;
+    if (pf) { cls += ' pf' + (pf.n > 1 ? ' pfa' : ''); st = `--pf:url(${pf.url});--pfn:${pf.n}`; }
+  }
+  return `<div class="${cls}"${st ? ` style="${st}"` : ''}><img src="${avatarURL(str)}" alt=""></div>`;
 }
 const faceCls = sk => sk && sk.back ? 'fc-' + sk.back : '';
 const badgeTag = sk => sk && sk.badge ? `<i class="s1b">${esc(sk.badge)}</i> ` : '';
@@ -151,7 +159,31 @@ socket.on('connect', () => {
 socket.on('me', u => { me = u; if (current === 'lobby') { renderWallet(); if (!$('tab-profile').classList.contains('hidden')) renderAch(); } });
 socket.on('kicked', msg => { toast(msg); token = null; localStorage.removeItem('fh_token'); show('auth'); });
 
+// 시즌 시작 팝업 (계정마다 시즌당 한 번)
+function seasonPopup() {
+  if (!me || !me.seasonNew) return;
+  me.seasonNew = false;
+  const prev = me.season - 1, h = (me.history || {})['s' + prev];
+  const aw = h && h.awards && h.awards.length ? `<div class="sp-box"><b>🎁 시즌${prev} 보상</b><span>${h.awards.map(esc).join(' · ')}</span></div>` : '';
+  const p = modal(`<div class="season-pop">
+    <div class="sp-top"><span>SEASON</span><b>${me.season}</b></div>
+    <h3>시즌 ${me.season} 시작!</h3>
+    <ul>
+      <li>💰 전원 자산 <b>10억</b>으로 새 출발</li>
+      <li>📊 토너 기록·랭킹·플레이 성향은 <b>0부터</b> (지난 기록은 프로필 히스토리에)</li>
+      <li>🏷️ 칭호는 <b>2개</b>까지 골라 달기 · 시즌${prev} 칭호는 이번 시즌 동안만</li>
+      <li>🖼️ 프로필이 네모로 · <b>도트 테두리</b> 새 디자인</li>
+      <li>🏅 신규 업적 <b>16개</b> · 상점 신규 아이템</li>
+    </ul>
+    ${aw}
+    <button class="btn gold big" data-ok>시작하기</button></div>`);
+  const bg = document.querySelectorAll('#modal [data-close]');
+  const ok = () => { socket.emit('seenSeason', () => {}); bg.forEach(e => e.onclick = closeModal); closeModal(); if (fxOn()) confetti(60); };
+  p.querySelector('[data-ok]').onclick = ok;
+  bg.forEach(e => e.onclick = ok);
+}
 function afterLogin() {
+  setTimeout(seasonPopup, 400);
   if (me.room) {
     socket.emit('joinRoom', { code: me.room }, res => {
       if (res.ok) enterGame();
@@ -198,11 +230,42 @@ function renderWallet() {
   $('backToRoom').innerHTML = me.room && me.room !== leftRoom ? `<button class="btn gold back-room">참여 중인 방으로 돌아가기 (${me.room})</button>` : '';
   const bb = $('backToRoom').querySelector('button');
   if (bb) bb.onclick = () => joinRoom(me.room);
-  $('myStats').innerHTML = `<div><span>총 자산</span><b>${short(me.total)}</b></div><div><span>시즌2 토너 우승</span><b>${me.stats.tWins}회</b></div><div><span>시즌2 토너 참가</span><b>${me.stats.tPlayed}회</b></div><div><span>시즌2 토너 점수</span><b>${avgText(me.stats)}</b></div>`;
+  $('myStats').innerHTML = `<div><span>총 자산</span><b>${short(me.total)}</b></div><div><span>시즌${me.season} 토너 우승</span><b>${me.stats.tWins}회</b></div><div><span>시즌${me.season} 토너 참가</span><b>${me.stats.tPlayed}회</b></div><div><span>시즌${me.season} 토너 점수</span><b>${avgText(me.stats)}</b></div>`;
   $('myPlay').innerHTML = playHTML(me.play, '🧠 내 플레이 성향');
-  const h1 = me.history && me.history.s1;
-  $('myHistory').innerHTML = h1 ? `<div class="hist-head">📜 시즌1 기록${h1.place ? ` <i class="s1b">시즌1 ${h1.place}위</i>` : ''}</div>
-    <div class="hist-grid"><div><span>우승</span><b>${h1.wins}회</b></div><div><span>참가</span><b>${h1.played}회</b></div><div><span>우승률</span><b>${h1.played ? Math.round(h1.wins / h1.played * 1000) / 10 + '%' : '-'}</b></div><div><span>평균 등수</span><b>${h1.avg != null ? h1.avg.toFixed(2) + '위' : '-'}</b></div></div>` : '';
+  renderTitles();
+  const hs = me.history || {}, h1 = hs.s1, h2 = hs.s2;
+  const rate = h => h.played ? Math.round(h.wins / h.played * 1000) / 10 + '%' : '-';
+  $('myHistory').innerHTML = (h2 ? `<div class="hist-head">📜 시즌2 기록${h2.scoreRank ? ` <i class="s1b">시즌2 ${h2.scoreRank}위</i>` : ''}</div>
+    <div class="hist-grid"><div><span>우승</span><b>${h2.wins}회</b></div><div><span>참가</span><b>${h2.played}회</b></div><div><span>우승률</span><b>${rate(h2)}</b></div><div><span>토너 점수</span><b>${h2.score != null ? h2.score.toFixed(2) : '-'}</b></div></div>
+    <div class="hist-grid"><div><span>최종 자산</span><b>${short(h2.total)}</b></div><div><span>자산 순위</span><b>${h2.assetRank ? h2.assetRank + '위' : '-'}</b></div></div>
+    ${h2.awards && h2.awards.length ? `<p class="hint">🎁 받은 보상: ${h2.awards.map(esc).join(' · ')}</p>` : ''}` : '')
+    + (h1 ? `<div class="hist-head">📜 시즌1 기록${h1.place ? ` <i class="s1b">시즌1 ${h1.place}위</i>` : ''}</div>
+    <div class="hist-grid"><div><span>우승</span><b>${h1.wins}회</b></div><div><span>참가</span><b>${h1.played}회</b></div><div><span>우승률</span><b>${rate(h1)}</b></div><div><span>평균 등수</span><b>${h1.avg != null ? h1.avg.toFixed(2) + '위' : '-'}</b></div></div>` : '');
+  $('myHistory').classList.toggle('hidden', !h1 && !h2);
+}
+// 칭호 고르기 (최대 2개) + 시즌 보상 아이템 장착
+function renderTitles() {
+  const el = $('myTitles');
+  const on = (me.equip && me.equip.titles) || [];
+  const items = Shop.SEASON_ITEMS.filter(it => me.owned.includes(it.id));
+  let h = `<div class="hist-head">🏷️ 내 칭호 <small>${on.length}/${me.maxTitles}개 장착 · 눌러서 달기/빼기</small></div>`;
+  h += me.titles.length ? `<div class="ttl-pick">${me.titles.map(t => `<button class="${on.includes(t.key) ? 'on' : ''}" data-tk="${esc(t.key)}">${on.includes(t.key) ? '✓ ' : ''}${esc(t.name)}</button>`).join('')}</div>`
+    : `<p class="hint">아직 칭호가 없어요 · 상점에서 사거나 시즌 보상으로 받아요</p>`;
+  if (me.titles.some(t => /^시즌\d/.test(t.name))) h += `<p class="hint" style="text-align:left">⏳ 시즌 칭호는 기간 한정 — 시즌${me.season}이 끝나면 사라져요</p>`;
+  if (items.length) {
+    h += `<div class="hist-head">🎁 시즌 보상</div><div class="season-items">${items.map(it => {
+      const eq = me.equip[it.cat] === it.id;
+      const pv = it.cat === 'frame' ? avImg(me.avatar, { frame: it.id }) : `<div class="pv-cards">${cardHTML(null, 'bk-' + it.id)}${cardHTML({ r: 14, s: 's' }, 'fc-' + it.id)}</div>`;
+      return `<div class="si">${pv}<b>${esc(it.name)}<small>${esc(it.desc || '')}</small></b>${eq ? `<button class="btn small line" data-sun="${it.cat}">장착 중 ✓</button>` : `<button class="btn small gold" data-seq="${it.id}" data-cat="${it.cat}">장착</button>`}</div>`;
+    }).join('')}</div>`;
+  }
+  el.innerHTML = h;
+  el.querySelectorAll('[data-tk]').forEach(b => b.onclick = () => {
+    const k = b.dataset.tk, off = on.includes(k);
+    socket.emit('equip', { cat: 'title', id: k, off }, r => r.error && toast(r.error));
+  });
+  el.querySelectorAll('[data-seq]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.cat, id: b.dataset.seq }, r => r.error && toast(r.error)));
+  el.querySelectorAll('[data-sun]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.sun, id: null }, r => r.error && toast(r.error)));
 }
 $('logoutBtn').onclick = () => confirmBox('로그아웃', '로그아웃할까요?', '로그아웃', () => {
   socket.emit('logout', () => {});
@@ -1119,7 +1182,7 @@ function renderShop() {
     if (it.cat === 'frame') return avImg(me.avatar, { frame: it.id, cf: me.customFrame });
     if (it.cat === 'back') return `<div class="pv-cards">${cardHTML(null, 'bk-' + it.id)}${cardHTML({ r: 14, s: 's' }, 'fc-' + it.id)}${cardHTML({ r: 13, s: 'h' }, 'fc-' + it.id)}</div>`;
     if (it.cat === 'title') return `<i class="ttl big">${esc(it.name)}</i>`;
-    return `<div class="pv-fx">${{ e_gold: '🪙', e_fire: '🎆', e_money: '💸' }[it.id] || '✨'}</div>`;
+    return `<div class="pv-fx">${{ e_gold: '🪙', e_fire: '🎆', e_money: '💸', e_confetti: '🎊', e_hearts: '💖' }[it.id] || '✨'}</div>`;
   };
   let h = `<div class="shop-head glass"><div><span>보유 트로피</span><b>🏆 ${me.trophies}</b></div><p class="hint">토너먼트 우승(찹 포함)할 때마다 🏆 1개 · 써도 랭킹 우승 횟수는 안 줄어요</p></div>`;
   // 트로피 → 돈 환전
@@ -1130,9 +1193,9 @@ function renderShop() {
     h += `<div class="shop-cat">${label}${cat === 'back' ? ' <small>뒷면 + 내 카드 앞면</small>' : cat === 'fx' ? ' <small>내가 이겼을 때</small>' : ''}</div><div class="shop-grid">`;
     for (const it of Shop.SHOP.filter(x => x.cat === cat)) {
       const own = me.owned.includes(it.id);
-      const on = me.equip[cat] === it.id;
+      const on = cat === 'title' ? ((me.equip.titles || []).includes(it.id)) : me.equip[cat] === it.id;
       let btn;
-      if (on) btn = `<button class="btn small line" data-unequip="${cat}">장착 중 ✓</button>`;
+      if (on) btn = `<button class="btn small line" data-unequip="${cat}" data-uid="${it.id}">장착 중 ✓</button>`;
       else if (own) btn = `<button class="btn small" data-equip="${it.id}" data-cat="${cat}">장착</button>`;
       else btn = `<button class="btn small gold" data-buy="${it.id}" ${me.trophies < it.price ? 'disabled' : ''}>🏆 ${it.price}</button>`;
       h += `<div class="shop-item ${on ? 'on' : ''}"><div class="pv">${preview(it)}</div><b>${esc(it.name)}</b>${it.desc ? `<span>${esc(it.desc)}</span>` : ''}
@@ -1154,7 +1217,7 @@ function renderShop() {
       socket.emit('buy', it.id, res => res.error ? toast(res.error) : toast(`${it.name} 구매 완료!`, true)));
   });
   el.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.cat, id: b.dataset.equip }, res => res.error && toast(res.error)));
-  el.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.unequip, id: null }, res => res.error && toast(res.error)));
+  el.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => socket.emit('equip', b.dataset.unequip === 'title' ? { cat: 'title', id: b.dataset.uid, off: true } : { cat: b.dataset.unequip, id: null }, res => res.error && toast(res.error)));
   el.querySelectorAll('[data-play]').forEach(b => b.onclick = () => { if (!fxOn()) return toast('설정에서 이펙트를 켜면 볼 수 있어요'); fxBanner('승리!', '미리보기', 'win'); winSkinFx(b.dataset.play, true); });
 }
 
@@ -1169,6 +1232,9 @@ function winSkinFx(id, big) {
     if (id === 'e_money') d.textContent = '💵';
     if (id === 'a_goldbar') { d.textContent = i % 3 ? '💰' : '🪙'; d.style.fontSize = '28px'; }
     if (id === 'a_dragonfx') { d.className = 'rain e_fire'; d.style.background = ['#ff3b0b', '#ffb300', '#ff6a00'][i % 3]; }
+    if (id === 'a_ko') { d.textContent = i % 4 ? '💥' : '💀'; d.style.fontSize = '24px'; }
+    if (id === 'e_confetti') { d.className = 'rain e_confetti'; d.style.background = ['#ff4d6d', '#ffd23f', '#3fbfff', '#7dff7a', '#a24bff', '#ff8a1f'][i % 6]; }
+    if (id === 'e_hearts') { d.textContent = ['💖', '💗', '💘', '❤️'][i % 4]; d.style.fontSize = (18 + Math.random() * 16) + 'px'; }
     if (id === 'e_fire') d.style.background = ['#ff4d4d', '#ffd23f', '#3fbfff', '#ff7ae0', '#7dff7a'][i % 5];
     d.style.left = Math.random() * 100 + '%';
     d.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
@@ -1179,6 +1245,11 @@ function winSkinFx(id, big) {
     setTimeout(() => d.remove(), 4000);
   }
   if (id === 'e_fire') for (let k = 0; k < 5; k++) setTimeout(() => burst(10 + Math.random() * 80, 15 + Math.random() * 40), k * 280);
+  if (id === 'a_ko') {
+    const k = document.createElement('i'); k.className = 'ko-text'; k.textContent = 'K.O.';
+    fxEl.appendChild(k); setTimeout(() => k.remove(), 1900);
+    if (navigator.vibrate) try { navigator.vibrate([60, 40, 120]); } catch { /* 무시 */ }
+  }
   if (id === 'a_dragonfx') {
     const d = document.createElement('i'); d.className = 'dragon-fly'; d.textContent = '🐉';
     fxEl.appendChild(d); setTimeout(() => d.remove(), 2600);
@@ -1214,9 +1285,9 @@ function openFrameEditor() {
       <div class="field-label">모양</div><div class="opt-group">${opt('style', 'solid', '단색')}${opt('style', 'grad', '그라데이션')}${opt('style', 'ring', '링')}</div>
     </div>
     <div data-sec="pixel" class="cf-pixel">
-      <span class="hint">아래 색을 고르고 → 아바타 둘레(밝은 칸)를 눌러 칠해요 · 드래그로 쭉 칠하기</span>
+      <span class="hint">색을 고르고 칸을 눌러 칠해요 · 얼굴(어두운 가운데)만 빼고 어디든 칠할 수 있어요</span>
       <div class="palette" id="cfPalette"></div>
-      <canvas id="cfCanvas" width="336" height="336"></canvas>
+      <canvas id="cfCanvas" width="384" height="384"></canvas>
       <div class="pe-tools">
         <button class="btn small on" data-ft="pen">✏️ 펜</button>
         <button class="btn small" data-ft="fill">🪣 채우기</button>
@@ -1227,7 +1298,10 @@ function openFrameEditor() {
     </div>
     <div class="field-label">빛 (색 1 기준)</div><div class="opt-group">${opt('fx', 'none', '없음')}${opt('fx', 'glow', '빛남')}${opt('fx', 'pulse', '깜빡임')}</div>
     <div class="row2"><button class="btn" data-x>취소</button><button class="btn gold" data-ok>저장하고 장착</button></div>`);
-  const pe = new PixelEditor(p.querySelector('#cfCanvas'), p.querySelector('#cfPalette'), { size: FRAME_N, mask: frameMask });
+  const under = { img: new Image(), x0: AV_WIN[0], size: AV_WIN[1] - AV_WIN[0] + 1 };
+  const pe = new PixelEditor(p.querySelector('#cfCanvas'), p.querySelector('#cfPalette'), { size: FRAME_N, mask: frameMask, under });
+  under.img.onload = () => pe.draw();
+  under.img.src = avatarURL(me.avatar);
   pe.color = 5;
   pe.buildPalette(p.querySelector('#cfPalette'));
   pe.load(cf.px);
@@ -1267,8 +1341,8 @@ function openFrameEditor() {
 }
 
 // ================= 업적 이펙트 (자리 위) =================
-const SD_ICON = { a_thunder: '⚡', a_lol: '🤣', a_phoenix: '🔥' };
-const EN_ICON = { a_crown: '👑', a_flame: '🔥' };
+const SD_ICON = { a_thunder: '⚡', a_lol: '🤣', a_phoenix: '🔥', a_mic: '🎤', a_wave: '🌊' };
+const EN_ICON = { a_crown: '👑', a_flame: '🔥', a_carpet: '🌟', a_mega: '📢' };
 function seatFx(s, p) {
   if (!p.skin || isExcel() || !fxOn()) return '';
   const now = Date.now() + clockOffset;
@@ -1297,6 +1371,7 @@ function achPreview(it) {
   if (slot === 'frame') return avImg(me.avatar, id);
   if (slot === 'back') return `<div class="pv-cards">${cardHTML(null, 'bk-' + id)}${cardHTML({ r: 14, s: 's' }, 'fc-' + id)}${cardHTML({ r: 13, s: 'h' }, 'fc-' + id)}</div>`;
   if (slot === 'aura') return `<div class="ava-wrap pv-aura au-${id}">${avImg(me.avatar, me.skin)}</div>`;
+  if (slot === 'title') return `<i class="ttl big">${esc(it.rewardName)}</i>`;
   return `<div class="ava-wrap pv-aura" data-pvwrap>${avImg(me.avatar, me.skin)}</div>`;
 }
 function renderAch() {
@@ -1307,16 +1382,16 @@ function renderAch() {
   for (const x of achList) {
     const slotName = Shop.SLOTS[x.slot];
     if (!x.done) { h += `<div class="ach locked"><div class="ach-ic">🔒</div><b>???</b><span>보상: ${slotName}</span></div>`; continue; }
-    const on = me.equip && me.equip[x.slot] === x.reward;
+    const on = x.slot === 'title' ? ((me.equip && me.equip.titles) || []).includes(x.reward) : me.equip && me.equip[x.slot] === x.reward;
     const playable = ['fx', 'sdfx', 'enter'].includes(x.slot);
     h += `<div class="ach ${on ? 'on' : ''}"><div class="pv">${achPreview(x)}</div><b>${esc(x.name)}</b><span>${esc(x.desc)}</span>
       <em>${slotName} · ${esc(x.rewardName)}</em>
       ${playable ? `<button class="pv-play" data-achplay="${x.reward}" data-slot="${x.slot}">▶ 미리보기</button>` : ''}
-      ${on ? `<button class="btn small line" data-uneq="${x.slot}">장착 중 ✓</button>` : `<button class="btn small gold" data-eq="${x.reward}" data-slot="${x.slot}">장착</button>`}</div>`;
+      ${on ? `<button class="btn small line" data-uneq="${x.slot}" data-uid="${x.reward}">장착 중 ✓</button>` : `<button class="btn small gold" data-eq="${x.reward}" data-slot="${x.slot}">장착</button>`}</div>`;
   }
   el.innerHTML = h + '</div>';
   el.querySelectorAll('[data-eq]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.slot, id: b.dataset.eq }, r => r.error ? toast(r.error) : null));
-  el.querySelectorAll('[data-uneq]').forEach(b => b.onclick = () => socket.emit('equip', { cat: b.dataset.uneq, id: null }, r => r.error ? toast(r.error) : null));
+  el.querySelectorAll('[data-uneq]').forEach(b => b.onclick = () => socket.emit('equip', b.dataset.uneq === 'title' ? { cat: 'title', id: b.dataset.uid, off: true } : { cat: b.dataset.uneq, id: null }, r => r.error ? toast(r.error) : null));
   el.querySelectorAll('[data-achplay]').forEach(b => b.onclick = () => {
     const id = b.dataset.achplay, slot = b.dataset.slot;
     if (!fxOn()) return toast('설정에서 이펙트를 켜면 볼 수 있어요');

@@ -113,13 +113,40 @@ if (!data.migrations.includes('season2')) {
   data.migrations.push('season2');
 }
 
+// ===== 칭호: 상점 칭호 + 시즌/부문상 칭호 중 2개까지 골라 달기 =====
+const MAX_TITLES = 2;
+const isRankTitle = n => /^시즌\d+ \d위$/.test(n); // 시즌 순위 칭호는 금색 뱃지로 이름 앞에
+// 가진 칭호 전체: { key, name }  (상점 칭호는 상품 id, 그 외는 'aw:이름')
+// 시즌 칭호('시즌N …')는 기간 한정: 바로 다음 시즌 동안만 쓸 수 있음 (시즌2 칭호 → 시즌3 동안만)
+const seasonTitleOk = n => { const m = /^시즌(\d+)/.exec(n); return !m || +m[1] === (data.season || 1) - 1; };
+function titleList(u) {
+  const out = [];
+  for (const id of u.owned || []) { const it = Shop.byId(id); if (it && it.cat === 'title') out.push({ key: id, name: it.name }); }
+  const aw = (u.badge ? [u.badge] : []).concat(u.awards || []);
+  for (const n of aw) if (seasonTitleOk(n) && !out.some(t => t.name === n)) out.push({ key: 'aw:' + n, name: n });
+  return out;
+}
+function equippedTitles(u) {
+  const all = titleList(u);
+  return ((u.equip || {}).titles || []).map(k => all.find(t => t.key === k)).filter(Boolean).slice(0, MAX_TITLES).map(t => t.name);
+}
+// 새로 받은 칭호: 빈 자리 있으면 바로 달아줌
+function autoTitle(u, key) {
+  u.equip = u.equip || {};
+  const valid = titleList(u).map(x => x.key);
+  const t = u.equip.titles = (u.equip.titles || []).filter(k => valid.includes(k)); // 기간 끝난 칭호는 자리 비움
+  if (!t.includes(key) && t.length < MAX_TITLES) t.push(key);
+}
+
 const CF_DEFAULT = { mode: 'color', c1: '#e9c46a', c2: '#ff4d6d', style: 'grad', fx: 'glow', px: '' };
 function skinOf(u) {
   const e = u.equip || {};
+  const tt = equippedTitles(u);
+  const rank = tt.filter(isRankTitle), other = tt.filter(n => !isRankTitle(n));
   return {
-    frame: e.frame || null, back: e.back || null, title: e.title ? (Shop.byId(e.title) || {}).name || null : null, fx: e.fx || null,
+    frame: e.frame || null, back: e.back || null, title: other.length ? other.join(' · ') : null, fx: e.fx || null,
     cf: e.frame === 'f_custom' ? Object.assign({}, CF_DEFAULT, u.customFrame) : null,
-    badge: u.badge || null,
+    badge: rank.length ? rank.join(' · ') : null,
     aura: e.aura || null, sdfx: e.sdfx || null, enter: e.enter || null,
   };
 }
@@ -218,6 +245,94 @@ function randomAvatar() {
   return px.join('');
 }
 
+// ===== 칭호 2개 장착으로 바뀜 (한 번만): 예전 시즌 칭호 + 장착 칭호를 새 목록으로 옮김 =====
+if (!data.migrations.includes('titles2')) {
+  for (const u of Object.values(data.users)) {
+    u.equip = u.equip || {};
+    const t = [];
+    if (u.badge) t.push('aw:' + u.badge);
+    if (u.equip.title) t.push(u.equip.title);
+    u.equip.titles = t.slice(0, MAX_TITLES);
+    delete u.equip.title;
+  }
+  data.migrations.push('titles2');
+}
+
+// ===== 커스텀 도트 테두리 24x24(원형) → 32x32(네모) 변환 (한 번만) =====
+if (!data.migrations.includes('frame32')) {
+  const oldMask = (x, y) => { const d = Math.hypot(x + .5 - 12, y + .5 - 12); return d > 8.6 && d <= 12.2; };
+  for (const u of Object.values(data.users)) {
+    const px = u.customFrame && u.customFrame.px;
+    if (!/^[0-9a-f]{576}$/.test(px || '')) continue;
+    let out = '';
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      const ox = Math.floor(x * 24 / 32), oy = Math.floor(y * 24 / 32);
+      out += oldMask(ox, oy) ? px[oy * 24 + ox] : '0';
+    }
+    u.customFrame.px = out;
+    console.log(`커스텀 테두리 변환: ${u.username}`);
+  }
+  data.migrations.push('frame32');
+}
+
+// ===== 시즌 2 종료 정산 → 시즌 3 시작 (한 번만) =====
+if (!data.migrations.includes('season3')) {
+  data.season = 3; // 먼저 올려야 시즌1 칭호가 빠지고 새 시즌2 칭호가 빈 자리에 달림
+  const users = Object.values(data.users);
+  const tp = u => u.stats.tPlayed || 0;
+  // 랭킹 자격: 전체 평균 토너 참가 수의 70% (소수점 버림) — 랭킹 화면과 같은 기준
+  const minT = users.length ? Math.floor(users.reduce((n, u) => n + tp(u), 0) / users.length * RANK_MIN_RATIO) : 0;
+  const elig = users.filter(u => tp(u) >= minT);
+  const score = u => u.stats.scoreSum / u.stats.scored;
+  const rate = (a, b) => (b ? (a || 0) / b : 0);
+  const s2 = new Map(users.map(u => [u, { wins: u.stats.tWins || 0, played: tp(u), score: u.stats.scored ? score(u) : null, total: total(u), awards: [] }]));
+  const log = [];
+  function give(u, label, { title, item, trophies = 0 }) {
+    if (title) { u.awards = u.awards || []; if (!u.awards.includes(title)) u.awards.push(title); autoTitle(u, 'aw:' + title); }
+    if (item) { u.owned = u.owned || []; if (!u.owned.includes(item)) u.owned.push(item); }
+    u.trophies = (u.trophies || 0) + trophies;
+    s2.get(u).awards.push(label);
+    log.push(`${label}: ${u.username}${title ? ` [${title}]` : ''}${item ? ` +${item}` : ''}${trophies ? ` 🏆+${trophies}` : ''}`);
+  }
+  // 1) 토너 점수 1~3위
+  const byScore = elig.filter(u => u.stats.scored > 0).sort((a, b) => score(a) - score(b) || tp(b) - tp(a)).slice(0, 3);
+  const SR = [{ title: '시즌2 1위', item: 's2_champ', trophies: 10 }, { title: '시즌2 2위', trophies: 6 }, { title: '시즌2 3위', trophies: 3 }];
+  byScore.forEach((u, i) => { s2.get(u).scoreRank = i + 1; give(u, `토너 점수 ${i + 1}위`, SR[i]); });
+  // 2) 총 자산 1~3위
+  const byAssets = elig.slice().sort((a, b) => total(b) - total(a)).slice(0, 3);
+  const AR = [{ title: '시즌2 재벌', item: 's2_gold' }, { trophies: 3 }, { trophies: 2 }];
+  byAssets.forEach((u, i) => { s2.get(u).assetRank = i + 1; give(u, `총 자산 ${i + 1}위`, AR[i]); });
+  // 3) 부문상 1~3위 (1위 칭호 + 🏆3, 2위 🏆2, 3위 🏆1)
+  const AWARDS = [
+    { title: '우승 머신', ok: u => (u.stats.tWins || 0) > 0, val: u => (u.stats.tWins || 0) - tp(u) / 1e6 },
+    { title: '올인왕', ok: u => (u.play || {}).hands >= 10 && u.play.allin > 0, val: u => rate(u.play.allin, u.play.hands) },
+    { title: '쫄보왕', ok: u => (u.play || {}).fr >= 5 && u.play.ffr > 0, val: u => rate(u.play.ffr, u.play.fr) },
+    { title: '블러핑왕', ok: u => (u.play || {}).sdb >= 3 && u.play.bluff > 0, val: u => rate(u.play.bluff, u.play.sdb) },
+    { title: '기부천사', ok: u => (u.stats.bailouts || 0) > 0, val: u => u.stats.bailouts },
+  ];
+  for (const a of AWARDS) {
+    users.filter(a.ok).sort((x, y) => a.val(y) - a.val(x)).slice(0, 3)
+      .forEach((u, i) => give(u, `${a.title} ${i + 1}위`, i === 0 ? { title: a.title, trophies: 3 } : { trophies: 3 - i }));
+  }
+  // 4) 참가 보상: 랭킹 자격 채운 사람 전원
+  for (const u of elig) if (tp(u) >= Math.max(1, minT)) give(u, '시즌2 참가', { title: '시즌2 참가', trophies: 1 });
+  log.forEach(x => console.log('시즌2 보상 · ' + x));
+
+  data.season2 = { minTourneys: minT, score: byScore.map(u => u.username), assets: byAssets.map(u => u.username) };
+  for (const u of users) {
+    u.history = u.history || {};
+    u.history.s2 = s2.get(u);
+    u.stats = { tWins: 0, tPlayed: 0, placeSum: 0, scoreSum: 0, scored: 0, bailouts: 0 };
+    u.play = {};               // 플레이 성향도 시즌3부터 새로
+    u.bailoutLog = [];
+    u.assets = START_ASSETS; u.inPlay = 0; u.tourneyHold = 0;
+  }
+  data.season = 3;
+  data.migrations.push('season3');
+  console.log(`시즌 3 시작: 전원 ${START_ASSETS / 1e8}억으로 초기화 (${users.length}명, 랭킹 자격 ${minT}회)`);
+  save();
+}
+
 function pub(u) {
   return {
     id: u.id,
@@ -240,6 +355,10 @@ function pub(u) {
     skin: skinOf(u),
     customFrame: Object.assign({}, CF_DEFAULT, u.customFrame),
     history: u.history || {},
+    titles: titleList(u),
+    maxTitles: MAX_TITLES,
+    season: data.season || 1,
+    seasonNew: (u.seenSeason || 0) < (data.season || 1), // 이번 시즌 시작 팝업을 아직 안 봤음
   };
 }
 
@@ -252,6 +371,7 @@ module.exports = {
   ENTRY_FEE,
   DAILY_BAILOUTS,
   skinOf,
+  seenSeason(u) { u.seenSeason = data.season || 1; save(); },
   setCustomFrame(u, cfg = {}) {
     if (!(u.owned || []).includes('f_custom')) return { error: '커스텀 테두리를 먼저 사야 해요' };
     const hex = v => /^#[0-9a-f]{6}$/i.test(String(v || ''));
@@ -259,8 +379,8 @@ module.exports = {
     if (!['solid', 'grad', 'ring'].includes(cfg.style) || !['none', 'glow', 'pulse'].includes(cfg.fx)) return { error: '스타일이 올바르지 않아요' };
     const mode = cfg.mode === 'pixel' ? 'pixel' : 'color';
     const px = String(cfg.px || '');
-    if (mode === 'pixel' && !/^[0-9a-f]{576}$/.test(px)) return { error: '도트 그림이 올바르지 않아요' };
-    u.customFrame = { mode, c1: cfg.c1.toLowerCase(), c2: cfg.c2.toLowerCase(), style: cfg.style, fx: cfg.fx, px: /^[0-9a-f]{576}$/.test(px) ? px : '' };
+    if (mode === 'pixel' && !/^[0-9a-f]{1024}$/.test(px)) return { error: '도트 그림이 올바르지 않아요' };
+    u.customFrame = { mode, c1: cfg.c1.toLowerCase(), c2: cfg.c2.toLowerCase(), style: cfg.style, fx: cfg.fx, px: /^[0-9a-f]{1024}$/.test(px) ? px : '' };
     u.equip.frame = 'f_custom';
     save();
     return { ok: true };
@@ -275,18 +395,26 @@ module.exports = {
     return { ok: true, amount: n * TROPHY_RATE };
   },
   buy(u, id) {
-    const item = Shop.byId(id);
+    const item = Shop.SHOP.find(x => x.id === id); // 업적·시즌 전용 보상은 못 삼
     if (!item) return { error: '없는 상품이에요' };
     if (u.owned.includes(id)) return { error: '이미 가지고 있어요' };
     if ((u.trophies || 0) < item.price) return { error: `🏆가 ${item.price - (u.trophies || 0)}개 부족해요` };
     u.trophies -= item.price;
     u.owned.push(id);
-    u.equip[item.cat] = id; // 사면 바로 장착
+    if (item.cat === 'title') autoTitle(u, id); else u.equip[item.cat] = id; // 사면 바로 장착
     save();
     return { ok: true };
   },
-  equip(u, cat, id) {
+  equip(u, cat, id, off) {
     if (!Shop.SLOTS[cat]) return { error: '잘못된 종류예요' };
+    if (cat === 'title') {
+      const t = u.equip.titles = (u.equip.titles || []).filter(k => titleList(u).some(x => x.key === k));
+      if (off || !id) { u.equip.titles = id ? t.filter(k => k !== id) : []; save(); return { ok: true }; }
+      if (!titleList(u).some(x => x.key === id)) return { error: '가지고 있지 않은 칭호예요' };
+      if (t.includes(id)) return { ok: true };
+      if (t.length >= MAX_TITLES) return { error: `칭호는 ${MAX_TITLES}개까지 달 수 있어요 — 하나 빼고 달아주세요` };
+      t.push(id); save(); return { ok: true };
+    }
     if (id && (!u.owned.includes(id) || Shop.byId(id).cat !== cat)) return { error: '가지고 있지 않아요' };
     if (id) u.equip[cat] = id; else delete u.equip[cat];
     save();

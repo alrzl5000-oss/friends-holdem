@@ -307,6 +307,7 @@ class TourneyRoom extends BaseRoom {
   handEnd() {
     playstats.onHand(this.table, db.byId);
     ach.onHand(this.table, db.byId, this);
+    ach.onTourneyHand(this, db.byId);
     this.shameTick();
     db.save();
     for (const s of this.seated) {
