@@ -62,6 +62,9 @@
     clearInterval(timerIv);
     const d = duelState;
     let h = '';
+    const chatOn = d && (d.status === 'play' || d.status === 'done');
+    $('bjChat').classList.toggle('hidden', !chatOn);
+    if (chatOn) renderChat(d);
     if (!d || d.status === 'gone') {
       h += `<p class="hint" style="text-align:left">같은 금액을 걸고 친구와 한 판 승부 · 21에 더 가까운 사람이 판돈 전부 (블랙잭 > 21, 둘 다 버스트면 무승부)</p>`;
       h += betPicker() + `<button class="btn gold big" data-dop="create" ${me.assets < bet ? 'disabled' : ''}>⚔️ 결투 열기 · ${short(bet)}</button>`;
@@ -73,6 +76,7 @@
         <button class="btn big" data-dop="cancel">취소하고 돌려받기</button>`;
     } else {
       const done = d.status === 'done';
+      h += `<div class="bj-score"><b>${esc(d.me.name)}</b> <em>${d.score.me}</em> : <em>${d.score.opp}</em> <b>${esc(d.opp.name)}</b><span>${d.round}판째 · 판돈 ${short(d.bet)}</span></div>`;
       h += `<div class="bj-felt">
         <div class="bj-side"><span>${esc(d.opp.name)} ${done ? `<em>${d.opp.t}</em>` : d.opp.stood ? '<em class="st">멈춤</em>' : '<em class="st">고민 중…</em>'}</span><div class="bj-cards">${cards(d.opp.cards)}</div></div>
         <div class="bj-mid">${done ? `<div class="bj-res ${RES[d.result][1]}">${RES[d.result][0]} ${d.result === 'win' ? `<small>+${short(d.bet * 2)}</small>` : ''}</div>` : `<div class="bj-betnow">판돈 ${short(d.bet)} × 2 · <span data-left></span></div>`}</div>
@@ -80,17 +84,20 @@
       </div>`;
       if (!done && !d.me.stood) h += `<div class="bj-acts"><button class="btn big" data-dop="hit">히트</button><button class="btn gold big" data-dop="stand">스탠드</button></div>`;
       else if (!done) h += `<p class="hint">상대가 끝나길 기다리는 중…</p>`;
-      else h += `<button class="btn gold big" data-dop="again">확인</button>`;
+      else {
+        if (d.ready.opp && !d.ready.me) h += `<p class="bj-ready">🔥 ${esc(d.opp.name)} 님이 한 판 더 원해요!</p>`;
+        h += `<div class="bj-acts">${d.ready.me ? `<button class="btn big" disabled>상대 기다리는 중…</button>` : `<button class="btn gold big" data-dop="again">한 판 더 <small>판돈 ${short(d.bet)}</small></button>`}<button class="btn big" data-dop="leave">나가기</button></div>`;
+      }
     }
     el().innerHTML = h;
     bindBet(renderDuel);
     el().querySelectorAll('[data-dop]').forEach(b => b.onclick = () => {
       const op = b.dataset.dop;
-      if (op === 'again') { duelState = null; return loadDuels(); }
       socket.emit('duel', { op, arg: op === 'create' ? bet : undefined }, r => {
         if (r.error) return toast(r.error);
         if (op === 'create') duelState = r.state;
         if (op === 'cancel') { duelState = null; toast('결투를 취소하고 돌려받았어요', true); }
+        if (op === 'leave') { duelState = null; loadDuels(); return; }
         renderDuel(); head();
       });
     });
@@ -101,14 +108,29 @@
       tick(); timerIv = setInterval(tick, 500);
     }
   }
+  // 1대1 채팅
+  function renderChat(d) {
+    const log = $('bjChatLog');
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
+    log.innerHTML = (d.chat || []).map(m => m.sys ? `<div class="sys">${esc(m.text)}</div>` : `<div class="${m.name === d.me.name ? 'me' : ''}"><b>${esc(m.name)}</b>${esc(m.text)}</div>`).join('') || '<div class="sys">채팅으로 도발해 보세요 😎</div>';
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+  $('bjChatForm').onsubmit = e => {
+    e.preventDefault();
+    const i = $('bjChatInput'), text = i.value.trim();
+    if (!text) return;
+    socket.emit('duel', { op: 'chat', arg: text }, r => { if (r.error) toast(r.error); });
+    i.value = '';
+  };
   function loadDuels() {
     socket.emit('duel', { op: 'list' }, r => { if (r.ok) { duelList = r.list; duelState = r.mine || duelState; } if (tab === 'duel') renderDuel(); });
   }
   socket.on('duels', list => { duelList = list || []; if (open() && tab === 'duel' && (!duelState || duelState.status === 'open')) renderDuel(); });
   socket.on('duelState', st => {
     const prev = duelState;
+    if (st.status === 'gone') { duelState = null; if (st.msg) toast(st.msg); $('bjChat').classList.add('hidden'); if (open() && tab === 'duel') loadDuels(); return; }
     duelState = st;
-    if (st.status === 'play' && (!prev || prev.status !== 'play')) { toast('⚔️ 결투 시작!', true); if (!open()) openBJ('duel'); }
+    if (st.status === 'play' && (!prev || prev.status !== 'play')) { toast(st.round > 1 ? `⚔️ ${st.round}판째 시작!` : '⚔️ 결투 시작!', true); if (!open()) openBJ('duel'); }
     if (st.status === 'done' && (!prev || prev.status !== 'done') && fxOn()) { const [t, c] = RES[st.result]; fxBanner(t, st.result === 'win' ? '+' + short(st.bet * 2) : '', c); }
     if (open() && tab === 'duel') renderDuel();
   });
@@ -156,5 +178,5 @@
     p.querySelector('[data-x]').onclick = closeModal;
   };
   $('bjClose').onclick = () => { $('bjOverlay').classList.add('hidden'); clearInterval(timerIv); };
-  $('bjTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; tab = b.dataset.bt; openBJ(); };
+  $('bjTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; tab = b.dataset.bt; if (tab !== 'duel') $('bjChat').classList.add('hidden'); openBJ(); };
 })();
