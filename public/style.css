@@ -1270,3 +1270,5 @@ body.excel .season-pop .sp-top b { color: #217346; background: none; -webkit-tex
 .qp button.on { border-color: var(--gold); }
 .qp button img { width: 100%; height: 100%; image-rendering: pixelated; }
 .qp button .av { width: 38px; height: 38px; }
+/* 모달 안 내용이 길어도 위쪽 칸들이 납작하게 줄어들지 않게 (스크롤로 보기) */
+.modal-panel > * { flex-shrink: 0; }
