@@ -152,14 +152,19 @@ function spriteURL(frames) {
   return c.toDataURL();
 }
 const frameCache = new Map();
-function frameURL(str) {
-  if (!/^[0-9a-f]{1024}$/.test(str || '')) return '';
+// 커스텀 도트 테두리: 1024칸 × 1~5프레임 문자열 → { url, n }
+function frameSprite(str) {
+  if (!/^(?:[0-9a-f]{1024}){1,5}$/.test(str || '')) return null;
   if (frameCache.has(str)) return frameCache.get(str);
-  const px = [...str].map((h, i) => frameMask(i % FRAME_N, Math.floor(i / FRAME_N)) ? PIXEL_PALETTE[parseInt(h, 16)] : null);
-  const url = spriteURL([px]);
-  frameCache.set(str, url);
-  return url;
+  const frames = [];
+  for (let f = 0; f < str.length / 1024; f++) {
+    frames.push([...str.slice(f * 1024, f * 1024 + 1024)].map((h, i) => frameMask(i % FRAME_N, Math.floor(i / FRAME_N)) ? PIXEL_PALETTE[parseInt(h, 16)] : null));
+  }
+  const out = { url: spriteURL(frames), n: frames.length };
+  frameCache.set(str, out);
+  return out;
 }
+function frameURL(str) { const s = frameSprite(str); return s ? s.url : ''; }
 
 // ----- 그리기 도구 -----
 const PF = (() => {

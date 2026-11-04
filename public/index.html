@@ -99,6 +99,7 @@
         <div class="av big-av" id="profilePreview"></div>
         <b id="profileName"></b>
         <button class="btn gold" id="peOpen">✏️ 프로필 그리기</button>
+        <div class="quick-presets" id="quickPresets"></div>
       </div>
       <div class="stats glass" id="myStats"></div>
       <div class="hist glass" id="myTitles"></div>
@@ -178,6 +179,8 @@
       <button class="btn gold small" id="peSave">저장</button>
     </header>
     <div class="pixel-editor">
+      <div class="field-label" style="align-self:stretch">저장 칸 <small>눌러서 불러오기 · 저장하면 그 칸에 들어가요</small></div>
+      <div id="avPresets" style="align-self:stretch"></div>
       <span class="hint">16×16 · 칸을 누르거나 드래그해서 칠해요</span>
       <canvas id="peCanvas" width="320" height="320"></canvas>
       <div class="palette" id="palette"></div>

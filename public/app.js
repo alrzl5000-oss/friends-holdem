@@ -75,6 +75,7 @@ function modal(html) {
 }
 function closeModal() { $('modal').classList.add('hidden'); }
 document.querySelectorAll('#modal [data-close]').forEach(e => e.onclick = closeModal);
+const CF_SPD = { slow: '.4s', mid: '.22s', fast: '.12s' }; // 커스텀 테두리 애니메이션 한 장당 시간
 // 프로필 + 테두리. sk: 테두리 id(문자열) 또는 스킨 객체 { frame, cf }
 // 도트 테두리(.pf)는 32x32 판 위에 덮어 그림 — 2장짜리는 번갈아 깜빡임(.pf2)
 function avImg(str, sk) {
@@ -83,8 +84,8 @@ function avImg(str, sk) {
   let cls = 'av', st = '';
   if (cf) {
     cls += ` fr-f_custom cf-${cf.fx}`;
-    const url = cf.mode === 'pixel' && cf.px ? frameURL(cf.px) : '';
-    if (url) { cls += ' pf'; st = `--pf:url(${url});--pfn:1;--cg:${cf.c1}`; }
+    const sp = cf.mode === 'pixel' && cf.px ? frameSprite(cf.px) : null;
+    if (sp) { cls += ' pf' + (sp.n > 1 ? ' pfa' : ''); st = `--pf:url(${sp.url});--pfn:${sp.n};--pfd:${CF_SPD[cf.spd] || CF_SPD.mid};--cg:${cf.c1}`; }
     else {
       const b = cf.style === 'solid' ? cf.c1 : cf.style === 'ring' ? `conic-gradient(${cf.c1}, ${cf.c2}, ${cf.c1}, ${cf.c2}, ${cf.c1})` : `linear-gradient(135deg, ${cf.c1}, ${cf.c2})`;
       st = `--cfb:${b};--cg:${cf.c1}`;
@@ -156,7 +157,7 @@ socket.on('connect', () => {
     afterLogin();
   });
 });
-socket.on('me', u => { me = u; if (current === 'lobby') { renderWallet(); if (!$('tab-profile').classList.contains('hidden')) renderAch(); } });
+socket.on('me', u => { me = u; if (current === 'lobby') { renderWallet(); if (!$('tab-profile').classList.contains('hidden')) { renderAch(); renderQuick(); $('profilePreview').innerHTML = `<img src="${avatarURL(me.avatar)}" alt="">`; } } });
 socket.on('kicked', msg => { toast(msg); token = null; localStorage.removeItem('fh_token'); show('auth'); });
 
 // 시즌 시작 팝업 (계정마다 시즌당 한 번)
@@ -458,20 +459,43 @@ $('peClear').onclick = () => editor.clear();
 function renderProfile() {
   $('profilePreview').innerHTML = `<img src="${avatarURL(me.avatar)}" alt="">`;
   $('profileName').textContent = me.username;
+  renderQuick();
   loadAch();
 }
-$('peOpen').onclick = () => { editor.load(me.avatar); $('peOverlay').classList.remove('hidden'); };
+// 프로필 탭: 저장해둔 프로필·테두리 바로 바꾸기
+function renderQuick() {
+  const el = $('quickPresets');
+  if (!el || !me.slots) return;
+  let h = '';
+  const row = (kind, sel, list, thumb, label) => {
+    if (!list.some(Boolean) || me.slots[kind] < 2) return '';
+    return `<div class="qp"><span>${label}</span><div>${list.map((x, i) => x ? `<button class="${i === sel ? 'on' : ''}" data-qk="${kind}" data-qs="${i}">${thumb(x)}</button>` : '').join('')}</div></div>`;
+  };
+  h += row('av', me.avSel, me.avPresets, a => `<img src="${avatarURL(a)}" alt="">`, '프로필');
+  if (me.owned.includes('f_custom')) h += row('fr', me.equip.frame === 'f_custom' ? me.frSel : -1, me.frPresets, c => avImg(me.avatar, { frame: 'f_custom', cf: c }), '커스텀 테두리');
+  el.innerHTML = h;
+  el.querySelectorAll('[data-qk]').forEach(b => b.onclick = () => socket.emit('useSlot', { kind: b.dataset.qk, slot: +b.dataset.qs }, r => r.error ? toast(r.error) : toast('바꿨어요', true)));
+}
+let peSlot = 0;
+function renderAvPresets() {
+  $('avPresets').innerHTML = presetRow('av', peSlot, a => `<img src="${avatarURL(a)}" alt="">`);
+  $('avPresets').querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { peSlot = +b.dataset.slot; editor.load(me.avPresets[peSlot] || ''); renderAvPresets(); });
+  const add = $('avPresets').querySelector('[data-addslot]');
+  if (add) add.onclick = () => buySlot('av', i => { peSlot = i; editor.load(''); renderAvPresets(); });
+  $('peSave').textContent = `${peSlot + 1}번 칸에 저장`;
+}
+$('peOpen').onclick = () => { peSlot = me.avSel || 0; editor.load(me.avatar); renderAvPresets(); $('peOverlay').classList.remove('hidden'); };
 $('peClose').onclick = () => {
   const close = () => $('peOverlay').classList.add('hidden');
-  if (editor.value() === me.avatar) return close();
+  if (editor.value() === (me.avPresets[peSlot] || me.avatar)) return close();
   confirmBox('그리기 취소', '저장하지 않은 그림은 사라져요. 닫을까요?', '닫기', close, true);
 };
-$('peSave').onclick = () => socket.emit('avatar', editor.value(), res => {
+$('peSave').onclick = () => socket.emit('avatar', { pixels: editor.value(), slot: peSlot }, res => {
   if (res.error) return toast(res.error);
   me.avatar = editor.value();
   renderProfile(); renderWallet();
   $('peOverlay').classList.add('hidden');
-  toast('프로필을 저장했어요', true);
+  toast(`프로필을 ${peSlot + 1}번 칸에 저장했어요`, true);
 });
 
 // ================= 게임 =================
@@ -1205,7 +1229,7 @@ function renderShop() {
   }
   el.innerHTML = h;
   const cb = el.querySelector('[data-custom]');
-  if (cb) cb.onclick = openFrameEditor;
+  if (cb) cb.onclick = () => openFrameEditor();
   el.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => {
     const n = Number(b.dataset.sell);
     confirmBox('트로피 환전', `🏆 ${n}개를 <b>${won(n * me.trophyRate)}</b>으로 바꿀까요?<br>바꾼 트로피는 돌아오지 않아요. (랭킹 우승 횟수는 그대로)`, '바꾸기', () =>
@@ -1270,13 +1294,41 @@ function burst(x, y) {
   }
 }
 
+// 프리셋 칸 줄: kind 'av' | 'fr', sel = 지금 고른 칸, onPick(i), 마지막에 칸 늘리기 버튼
+function presetRow(kind, sel, thumb) {
+  const n = me.slots[kind], list = kind === 'av' ? me.avPresets : me.frPresets;
+  let h = `<div class="preset-row" data-kind="${kind}">`;
+  for (let i = 0; i < n; i++) h += `<button class="pr ${i === sel ? 'on' : ''}" data-slot="${i}">${list[i] ? thumb(list[i]) : '<span class="pr-empty">빈 칸</span>'}<i>${i + 1}</i></button>`;
+  if (n < me.maxSlots) h += `<button class="pr add" data-addslot="${kind}">＋<small>🏆${me.slotPrice}</small></button>`;
+  return h + '</div>';
+}
+function buySlot(kind, done) {
+  confirmBox('칸 늘리기', `🏆 ${me.slotPrice}개로 ${kind === 'av' ? '프로필' : '테두리'} 저장 칸을 1개 늘릴까요?<br>(지금 ${me.slots[kind]}칸 · 최대 ${me.maxSlots}칸)`, '늘리기', () =>
+    socket.emit('buySlot', kind, r => {
+      if (r.error) return toast(r.error);
+      toast('칸이 늘었어요', true);
+      socket.emit('me', u => { if (u && u.slots) me = u; if (done) done(r.slot); }); // 최신 칸 수 받아서 다시 그림
+    }));
+}
+
 // ================= 커스텀 테두리 꾸미기 =================
 const CF_COLORS = ['#e9c46a', '#ffd23f', '#ff8a1f', '#ff4d4d', '#ff4d6d', '#ff7ae0', '#a24bff', '#3d7be0', '#00c2ff', '#5de0d1', '#2fb874', '#7dff7a', '#ffffff', '#9aa3ad', '#141414', '#8b5a2b'];
-function openFrameEditor() {
-  const cf = Object.assign({ mode: 'color', px: '' }, me.customFrame);
+const MAX_FRAMES = 5;
+function openFrameEditor(slotArg) {
+  let slot = slotArg != null ? slotArg : me.frSel;
+  const base = me.frPresets[slot] || (slot === me.frSel ? me.customFrame : null) || {};
+  const cf = Object.assign({ mode: 'pixel', c1: '#e9c46a', c2: '#ff4d6d', style: 'grad', fx: 'glow', px: '', spd: 'mid' }, base);
+  // 도트 프레임 나누기 (1024칸씩)
+  let frames = [];
+  for (let i = 0; i < (cf.px || '').length / 1024; i++) frames.push(cf.px.slice(i * 1024, i * 1024 + 1024));
+  if (!frames.length) frames = ['0'.repeat(1024)];
+  let cur = 0;
+  const thumbFr = c => avImg(me.avatar, { frame: 'f_custom', cf: c });
   const sw = key => `<div class="cf-sw" data-k="${key}">${CF_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${cf[key] === c ? 'on' : ''}"></button>`).join('')}<label class="cf-pick">＋<input type="color" value="${cf[key]}" data-pick="${key}"></label></div>`;
   const opt = (key, v, t) => `<button data-o="${key}" data-v="${v}" class="${cf[key] === v ? 'on' : ''}">${t}</button>`;
   const p = modal(`<h3>🎨 커스텀 테두리</h3>
+    <div class="field-label">저장 칸 <small>눌러서 불러오기 · 저장하면 그 칸에 들어가요</small></div>
+    ${presetRow('fr', slot, thumbFr)}
     <div class="cf-preview" data-pv></div>
     <div class="opt-group">${opt('mode', 'color', '🎨 색으로')}${opt('mode', 'pixel', '🟩 도트로 그리기')}</div>
     <div data-sec="color">
@@ -1286,6 +1338,7 @@ function openFrameEditor() {
     </div>
     <div data-sec="pixel" class="cf-pixel">
       <span class="hint">색을 고르고 칸을 눌러 칠해요 · 얼굴(어두운 가운데)만 빼고 어디든 칠할 수 있어요</span>
+      <div class="frame-bar" data-fbar></div>
       <div class="palette" id="cfPalette"></div>
       <canvas id="cfCanvas" width="384" height="384"></canvas>
       <div class="pe-tools">
@@ -1295,20 +1348,33 @@ function openFrameEditor() {
         <button class="btn small" data-ft="undo">↶</button>
         <button class="btn small" data-ft="clear">비우기</button>
       </div>
+      <div class="field-label">애니메이션 속도 <small>프레임 2장 이상일 때</small></div>
+      <div class="opt-group">${opt('spd', 'slow', '느리게')}${opt('spd', 'mid', '보통')}${opt('spd', 'fast', '빠르게')}</div>
     </div>
     <div class="field-label">빛 (색 1 기준)</div><div class="opt-group">${opt('fx', 'none', '없음')}${opt('fx', 'glow', '빛남')}${opt('fx', 'pulse', '깜빡임')}</div>
-    <div class="row2"><button class="btn" data-x>취소</button><button class="btn gold" data-ok>저장하고 장착</button></div>`);
+    <div class="row2"><button class="btn" data-x>취소</button><button class="btn gold" data-ok>${slot + 1}번 칸에 저장하고 장착</button></div>`);
   const under = { img: new Image(), x0: AV_WIN[0], size: AV_WIN[1] - AV_WIN[0] + 1 };
   const pe = new PixelEditor(p.querySelector('#cfCanvas'), p.querySelector('#cfPalette'), { size: FRAME_N, mask: frameMask, under });
   under.img.onload = () => pe.draw();
   under.img.src = avatarURL(me.avatar);
   pe.color = 5;
   pe.buildPalette(p.querySelector('#cfPalette'));
-  pe.load(cf.px);
+  pe.load(frames[cur]);
+  const allPx = () => { frames[cur] = pe.value(); return frames.join(''); };
+  const fbar = () => {
+    p.querySelector('[data-fbar]').innerHTML = frames.map((_, i) => `<button class="${i === cur ? 'on' : ''}" data-fi="${i}">${i + 1}</button>`).join('')
+      + (frames.length < MAX_FRAMES ? `<button class="fb-add" data-fadd title="지금 프레임을 복사해서 추가">＋ 복사</button>` : '')
+      + (frames.length > 1 ? `<button class="fb-del" data-fdel>삭제</button>` : '')
+      + `<span>${frames.length}/${MAX_FRAMES}프레임</span>`;
+    p.querySelectorAll('[data-fi]').forEach(b => b.onclick = () => { frames[cur] = pe.value(); cur = +b.dataset.fi; pe.load(frames[cur]); fbar(); draw(); });
+    const add = p.querySelector('[data-fadd]'), del = p.querySelector('[data-fdel]');
+    if (add) add.onclick = () => { frames[cur] = pe.value(); frames.splice(cur + 1, 0, frames[cur]); cur++; pe.load(frames[cur]); fbar(); draw(); };
+    if (del) del.onclick = () => { frames.splice(cur, 1); cur = Math.max(0, cur - 1); pe.load(frames[cur]); fbar(); draw(); };
+  };
   const draw = () => {
-    if (cf.mode === 'pixel') cf.px = pe.value();
+    if (cf.mode === 'pixel') cf.px = allPx();
     p.querySelectorAll('[data-sec]').forEach(x => x.classList.toggle('hidden', x.dataset.sec !== cf.mode));
-    p.querySelector('[data-pv]').innerHTML = avImg(me.avatar, { frame: 'f_custom', cf: Object.assign({}, cf, { px: cf.mode === 'pixel' ? pe.value() : cf.px }) });
+    p.querySelector('[data-pv]').innerHTML = avImg(me.avatar, { frame: 'f_custom', cf: Object.assign({}, cf, { px: cf.mode === 'pixel' ? allPx() : cf.px }) });
     p.querySelectorAll('.cf-sw').forEach(g => g.querySelectorAll('[data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === cf[g.dataset.k])));
     p.querySelectorAll('[data-o]').forEach(b => b.classList.toggle('on', cf[b.dataset.o] === b.dataset.v));
   };
@@ -1326,17 +1392,22 @@ function openFrameEditor() {
   p.querySelectorAll('.cf-sw').forEach(g => g.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { cf[g.dataset.k] = b.dataset.c; draw(); }));
   p.querySelectorAll('[data-pick]').forEach(i => i.oninput = () => { cf[i.dataset.pick] = i.value; draw(); });
   p.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { cf[b.dataset.o] = b.dataset.v; draw(); });
+  // 칸 고르기 / 늘리기
+  p.querySelectorAll('.preset-row [data-slot]').forEach(b => b.onclick = () => openFrameEditor(+b.dataset.slot));
+  const addSlot = p.querySelector('[data-addslot]');
+  if (addSlot) addSlot.onclick = () => buySlot('fr', i => openFrameEditor(i));
   p.querySelector('[data-x]').onclick = closeModal;
   p.querySelector('[data-ok]').onclick = () => {
     if (cf.mode === 'pixel') {
-      cf.px = pe.value();
+      cf.px = allPx();
       if (!/[1-9a-f]/.test(cf.px)) return toast('테두리를 조금이라도 칠해주세요');
     }
-    socket.emit('customFrame', cf, res => {
+    socket.emit('customFrame', Object.assign({}, cf, { slot }), res => {
       if (res.error) return toast(res.error);
-      closeModal(); toast('테두리 저장 완료', true);
+      closeModal(); toast(`테두리를 ${slot + 1}번 칸에 저장했어요`, true);
     });
   };
+  fbar();
   draw();
 }
 
