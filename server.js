@@ -38,6 +38,18 @@ const ctx = {
   },
 };
 
+// 블랙잭: 서버가 보낼 알림 (uid 없으면 전체에게)
+const bj = require('./blackjack');
+bj.init({
+  db,
+  notify: (uid, ev, payload) => {
+    if (ev === 'me') return ctx.pushMe(uid);
+    if (!uid) return io.emit(ev, payload);
+    const sid = userSocket.get(uid);
+    if (sid) io.to(sid).emit(ev, payload);
+  },
+});
+
 // 업적 달성 알림: 본인에게 배너 + 같은 방에 채팅 공지
 ach.init({
   save: () => db.save(),
@@ -290,6 +302,19 @@ io.on('connection', socket => {
     const r = roomOfUser();
     if (!r || r.mode !== 'cash') return cb({ error: '일반모드가 아니에요' });
     cb(r.topUp(user, amount));
+  }));
+
+  // 블랙잭 딜러전: op = state | deal | hit | stand | double
+  socket.on('bj', guard((cb, { op, bet } = {}) => {
+    const r = op === 'state' ? { ok: true } : bj.soloAct(user, String(op), bet);
+    if (r.ok && op !== 'state') ctx.pushMe(user.id);
+    cb(Object.assign(r, { state: bj.soloView(user) }));
+  }));
+  // 블랙잭 1대1: op = list | create | join | cancel | hit | stand
+  socket.on('duel', guard((cb, { op, arg } = {}) => {
+    const r = bj.duelAct(user, String(op), arg);
+    if (r.ok && ['create', 'join', 'cancel'].includes(op)) ctx.pushMe(user.id);
+    cb(r);
   }));
 
   socket.on('chat', guard((cb, text) => {

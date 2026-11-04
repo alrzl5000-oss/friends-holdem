@@ -35,6 +35,7 @@ for (const u of Object.values(data.users)) byIdMap.set(u.id, u);
 // 서버가 꺼졌다 켜졌을 때: 테이블에 있던 돈과 쓰던 티켓 되돌려주기
 for (const u of Object.values(data.users)) {
   if (u.inPlay) { u.assets += u.inPlay; u.inPlay = 0; }
+  if (u.bjHold) { u.assets += u.bjHold; u.bjHold = 0; } // 블랙잭 하던 판 베팅금 환불
   // 이전 버전 티켓은 돈으로 환불
   if (u.tickets) { u.assets += u.tickets * ENTRY_FEE; u.tickets = 0; }
   if (u.tourneyHold) { u.assets += u.tourneyHold < 1e6 ? u.tourneyHold * ENTRY_FEE : u.tourneyHold; u.tourneyHold = 0; }
@@ -374,6 +375,7 @@ function pub(u) {
     titles: titleList(u),
     maxTitles: MAX_TITLES,
     season: data.season || 1,
+    bj: u.bj || { hands: 0, win: 0, lose: 0, push: 0, bj: 0, net: 0 },
     seasonNew: (u.seenSeason || 0) < (data.season || 1), // 이번 시즌 시작 팝업을 아직 안 봤음
   };
 }
