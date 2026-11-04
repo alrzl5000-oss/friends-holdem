@@ -82,6 +82,7 @@
         <button class="btn green" id="newCashBtn"><small>일반모드</small>방 만들기</button>
         <button class="btn gold" id="newTourBtn"><small>토너먼트</small>대회 열기</button>
       </div>
+      <button class="btn line bj-entry" id="bjBtn">🃏 블랙잭 <small>혼자 딜러전 · 친구와 1대1</small></button>
       <div class="code-row">
         <input id="joinCode" maxlength="4" placeholder="방 코드" />
         <button class="btn" id="joinCodeBtn">입장</button>
@@ -194,6 +195,18 @@
     </div>
   </div>
 
+  <!-- 블랙잭 (전체화면) -->
+  <div class="bj-overlay hidden" id="bjOverlay">
+    <header class="pe-bar">
+      <button class="icon-btn" id="bjClose" title="닫기">✕</button>
+      <b>🃏 블랙잭</b>
+      <span class="bj-cash">현금 <b id="bjCash">-</b></span>
+      <button class="icon-btn" id="bjRules" title="기본 룰">?</button>
+    </header>
+    <div class="seg bj-tabs" id="bjTabs"><button data-bt="solo" class="on">🤵 딜러전</button><button data-bt="duel">⚔️ 1대1</button></div>
+    <div class="bj-body" id="bjBody"></div>
+  </div>
+
   <!-- 공용 모달 -->
   <div class="modal hidden" id="modal">
     <div class="modal-bg" data-close></div>
@@ -214,5 +227,6 @@
 <script src="/shop.js"></script>
 <script src="/pixel.js"></script>
 <script src="/app.js"></script>
+<script src="/bj.js"></script>
 </body>
 </html>
