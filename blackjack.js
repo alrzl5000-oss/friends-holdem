@@ -127,6 +127,10 @@ function duelView(d, uid) {
     me: { name: d.names[uid], cards: hand(uid), t: total(hand(uid)).t, stood: !!d.stood[uid] },
     opp: opp ? { name: d.names[opp], cards: oppCards, t: done ? total(hand(opp)).t : null, n: hand(opp).length, stood: !!d.stood[opp] } : null,
     result: done ? d.result[uid] : null,
+    round: d.round || 0,
+    score: opp ? { me: (d.score || {})[uid] || 0, opp: (d.score || {})[opp] || 0 } : null,
+    ready: { me: !!(d.ready || {})[uid], opp: opp ? !!(d.ready || {})[opp] : false },
+    chat: (d.chat || []).slice(-40),
   };
 }
 function duelPush(d) { for (const id of d.players) notify(id, 'duelState', duelView(d, id)); }
@@ -156,11 +160,40 @@ function duelFinish(d) {
     if (res === 'win') st.win++; else if (res === 'push') st.push++; else st.lose++;
     st.duel = (st.duel || 0) + 1;
   }
+  d.score = d.score || {};
+  if (win) d.score[win] = (d.score[win] || 0) + 1;
   d.status = 'done';
+  d.ready = {};
   db.save();
   duelPush(d);
-  for (const id of d.players) { userDuel.delete(id); notify(id, 'me'); }
-  setTimeout(() => duels.delete(d.code), 30000);
+  for (const id of d.players) notify(id, 'me');
+  // 10분 동안 다음 판을 안 하면 방 정리
+  clearTimeout(d.idle);
+  d.idle = setTimeout(() => closeDuel(d, '오래 쉬어서 결투방이 닫혔어요'), 10 * 60000);
+}
+function startRound(d) {
+  clearTimeout(d.idle);
+  for (const id of d.players) hold(db.byId(id), d.bet);
+  d.status = 'play';
+  d.round = (d.round || 0) + 1;
+  d.stood = {}; d.ready = {}; d.result = null;
+  const deck = shoe();
+  for (const id of d.players) d.hands[id] = [deck.pop(), deck.pop()];
+  d.deck = deck;
+  d.deadline = Date.now() + DUEL_MS;
+  d.timer = setTimeout(() => { for (const id of d.players) d.stood[id] = true; duelFinish(d); }, DUEL_MS);
+  for (const id of d.players) if (isBJ(d.hands[id])) d.stood[id] = true; // 블랙잭은 자동 스탠드
+  db.save();
+  duelPush(d);
+  duelMaybeEnd(d);
+}
+// 결투방 닫기 (나가기·정리) — 진행 중인 판은 없을 때만 호출
+function closeDuel(d, msg) {
+  clearTimeout(d.timer); clearTimeout(d.idle);
+  if (d.status === 'open') { const u = db.byId(d.host); if (u) release(u, d.bet, d.bet); }
+  duels.delete(d.code);
+  for (const id of d.players) { userDuel.delete(id); notify(id, 'duelState', { status: 'gone', msg }); notify(id, 'me'); }
+  db.save();
   notify(null, 'duels', duelList());
 }
 function duelMaybeEnd(d) { if (d.players.every(id => d.stood[id])) duelFinish(d); }
@@ -184,29 +217,39 @@ function duelAct(u, op, arg) {
     if (!d || d.status !== 'open') return { error: '들어갈 수 없는 결투예요' };
     if (d.host === u.id) return { error: '내가 연 결투예요' };
     if (u.assets < d.bet) return { error: '보유 현금이 부족해요' };
-    hold(u, d.bet);
     d.players.push(u.id); d.names[u.id] = u.username; userDuel.set(u.id, d.code);
-    d.status = 'play';
-    const deck = shoe();
-    for (const id of d.players) d.hands[id] = [deck.pop(), deck.pop()];
-    d.deck = deck;
-    d.deadline = Date.now() + DUEL_MS;
-    d.timer = setTimeout(() => { for (const id of d.players) d.stood[id] = true; duelFinish(d); }, DUEL_MS);
-    for (const id of d.players) if (isBJ(d.hands[id])) d.stood[id] = true; // 블랙잭은 자동 스탠드
-    db.save();
+    const host = db.byId(d.host);
+    release(host, d.bet, d.bet); // 방장 판돈은 startRound 에서 다시 잡음
+    d.chat = [{ sys: true, text: `${u.username} 님이 도전! ⚔️` }];
     notify(null, 'duels', duelList());
-    duelPush(d);
-    duelMaybeEnd(d);
+    startRound(d);
     return { ok: true };
   }
   if (!cur) return { error: '참여 중인 결투가 없어요' };
   const d = cur;
-  if (op === 'cancel') {
-    if (d.status !== 'open') return { error: '이미 시작했어요' };
-    release(u, d.bet, d.bet);
-    duels.delete(d.code); userDuel.delete(u.id);
-    db.save();
-    notify(null, 'duels', duelList());
+  if (op === 'cancel' || op === 'leave') {
+    if (d.status === 'play') return { error: '이번 판이 끝나면 나갈 수 있어요' };
+    closeDuel(d, d.status === 'open' ? '' : `${u.username} 님이 나갔어요`);
+    return { ok: true };
+  }
+  if (op === 'chat') {
+    const text = String(arg || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+    if (!text) return { ok: true };
+    d.chat = d.chat || [];
+    d.chat.push({ name: u.username, uid: u.id, text });
+    if (d.chat.length > 60) d.chat.shift();
+    duelPush(d);
+    return { ok: true };
+  }
+  if (op === 'again') {
+    if (d.status !== 'done') return { error: '판이 끝난 뒤에 할 수 있어요' };
+    if (u.assets < d.bet) return { error: `현금이 부족해요 (판돈 ${d.bet / 1e4}만)` };
+    d.ready[u.id] = true;
+    if (d.players.every(id => d.ready[id])) {
+      const poor = d.players.map(id => db.byId(id)).find(x => !x || x.assets < d.bet);
+      if (poor) { d.ready = {}; duelPush(d); return { error: `${poor ? poor.username : '상대'} 님 현금이 부족해서 시작할 수 없어요` }; }
+      startRound(d);
+    } else duelPush(d);
     return { ok: true };
   }
   if (d.status !== 'play') return { error: '아직 상대가 없어요' };
