@@ -159,15 +159,20 @@ io.on('connection', socket => {
   socket.on('ranking', guard(cb => cb(db.ranking())));
   socket.on('me', guard(cb => cb(me(user))));
 
-  socket.on('avatar', guard((cb, pixels) => {
-    if (!/^[0-9a-f]{256}$/.test(String(pixels))) return cb({ error: '잘못된 그림이에요' });
-    user.avatar = pixels;
-    db.save();
+  const refreshAvatar = () => {
     const r = roomOfUser();
-    if (r) { const s = r.table.seat(user.id); if (s) { s.avatar = pixels; r.emit(); } }
+    if (r) { const s = r.table.seat(user.id); if (s) { s.avatar = user.avatar; s.skin = db.skinOf(user); r.emit(); } }
     ctx.pushMe(user.id);
-    cb({ ok: true });
+  };
+  // 예전 방식(문자열)도 받음 · { pixels, slot }
+  socket.on('avatar', guard((cb, arg) => {
+    const { pixels, slot } = typeof arg === 'object' && arg ? arg : { pixels: arg };
+    const r = db.setAvatar(user, String(pixels), slot);
+    if (r.ok) refreshAvatar();
+    cb(r);
   }));
+  socket.on('useSlot', guard((cb, { kind, slot } = {}) => { const r = db.useSlot(user, String(kind), Number(slot)); if (r.ok) refreshAvatar(); cb(r); }));
+  socket.on('buySlot', guard((cb, kind) => { const r = db.buySlot(user, String(kind)); if (r.ok) ctx.pushMe(user.id); cb(r); }));
 
   // 스킨 상점
   const refreshSkin = () => {

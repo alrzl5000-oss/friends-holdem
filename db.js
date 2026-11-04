@@ -138,7 +138,21 @@ function autoTitle(u, key) {
   if (!t.includes(key) && t.length < MAX_TITLES) t.push(key);
 }
 
-const CF_DEFAULT = { mode: 'color', c1: '#e9c46a', c2: '#ff4d6d', style: 'grad', fx: 'glow', px: '' };
+const CF_DEFAULT = { mode: 'color', c1: '#e9c46a', c2: '#ff4d6d', style: 'grad', fx: 'glow', px: '', spd: 'mid' };
+// ===== 프리셋 슬롯: 프로필 그림 / 커스텀 테두리를 여러 개 저장해두고 골라 쓰기 =====
+const SLOT_PRICE = 5;   // 슬롯 1칸 = 🏆5
+const MAX_SLOTS = 10;
+function presets(u) {
+  u.slots = u.slots || { av: 1, fr: 1 };
+  if (!Array.isArray(u.avPresets)) u.avPresets = [u.avatar || ''];
+  if (!Array.isArray(u.frPresets)) u.frPresets = [u.customFrame ? Object.assign({}, u.customFrame) : null];
+  while (u.avPresets.length < u.slots.av) u.avPresets.push('');
+  while (u.frPresets.length < u.slots.fr) u.frPresets.push(null);
+  u.avSel = Math.min(u.avSel || 0, u.slots.av - 1);
+  u.frSel = Math.min(u.frSel || 0, u.slots.fr - 1);
+  return u;
+}
+const FRAME_PX = /^(?:[0-9a-f]{1024}){1,5}$/; // 커스텀 도트 테두리: 1~5프레임
 function skinOf(u) {
   const e = u.equip || {};
   const tt = equippedTitles(u);
@@ -354,6 +368,8 @@ function pub(u) {
     equip: u.equip || {},
     skin: skinOf(u),
     customFrame: Object.assign({}, CF_DEFAULT, u.customFrame),
+    slots: presets(u).slots, avPresets: u.avPresets, frPresets: u.frPresets.map(c => c && Object.assign({}, CF_DEFAULT, c)),
+    avSel: u.avSel, frSel: u.frSel, slotPrice: SLOT_PRICE, maxSlots: MAX_SLOTS,
     history: u.history || {},
     titles: titleList(u),
     maxTitles: MAX_TITLES,
@@ -371,6 +387,46 @@ module.exports = {
   ENTRY_FEE,
   DAILY_BAILOUTS,
   skinOf,
+  // 프로필 그림 저장 (slot 칸에 저장하고 바로 사용)
+  setAvatar(u, pixels, slot) {
+    if (!/^[0-9a-f]{256}$/.test(String(pixels))) return { error: '잘못된 그림이에요' };
+    presets(u);
+    slot = Number.isInteger(slot) && slot >= 0 && slot < u.slots.av ? slot : u.avSel;
+    u.avPresets[slot] = pixels;
+    u.avSel = slot;
+    u.avatar = pixels;
+    save();
+    return { ok: true };
+  },
+  // 저장해둔 칸 골라 쓰기
+  useSlot(u, kind, slot) {
+    presets(u);
+    if (kind === 'av') {
+      const p = u.avPresets[slot];
+      if (!p) return { error: '빈 칸이에요 — 먼저 그려서 저장하세요' };
+      u.avatar = p; u.avSel = slot;
+    } else if (kind === 'fr') {
+      const c = u.frPresets[slot];
+      if (!c) return { error: '빈 칸이에요 — 먼저 꾸며서 저장하세요' };
+      if (!(u.owned || []).includes('f_custom')) return { error: '커스텀 테두리를 먼저 사야 해요' };
+      u.customFrame = Object.assign({}, c); u.frSel = slot; u.equip.frame = 'f_custom';
+    } else return { error: '잘못된 종류예요' };
+    save();
+    return { ok: true };
+  },
+  // 칸 늘리기 (🏆5)
+  buySlot(u, kind) {
+    presets(u);
+    if (!['av', 'fr'].includes(kind)) return { error: '잘못된 종류예요' };
+    if (kind === 'fr' && !(u.owned || []).includes('f_custom')) return { error: '커스텀 테두리를 먼저 사야 해요' };
+    if (u.slots[kind] >= MAX_SLOTS) return { error: `최대 ${MAX_SLOTS}칸까지예요` };
+    if ((u.trophies || 0) < SLOT_PRICE) return { error: `🏆가 ${SLOT_PRICE - (u.trophies || 0)}개 부족해요` };
+    u.trophies -= SLOT_PRICE;
+    u.slots[kind]++;
+    presets(u);
+    save();
+    return { ok: true, slot: u.slots[kind] - 1 };
+  },
   seenSeason(u) { u.seenSeason = data.season || 1; save(); },
   setCustomFrame(u, cfg = {}) {
     if (!(u.owned || []).includes('f_custom')) return { error: '커스텀 테두리를 먼저 사야 해요' };
@@ -379,8 +435,13 @@ module.exports = {
     if (!['solid', 'grad', 'ring'].includes(cfg.style) || !['none', 'glow', 'pulse'].includes(cfg.fx)) return { error: '스타일이 올바르지 않아요' };
     const mode = cfg.mode === 'pixel' ? 'pixel' : 'color';
     const px = String(cfg.px || '');
-    if (mode === 'pixel' && !/^[0-9a-f]{1024}$/.test(px)) return { error: '도트 그림이 올바르지 않아요' };
-    u.customFrame = { mode, c1: cfg.c1.toLowerCase(), c2: cfg.c2.toLowerCase(), style: cfg.style, fx: cfg.fx, px: /^[0-9a-f]{1024}$/.test(px) ? px : '' };
+    if (mode === 'pixel' && !FRAME_PX.test(px)) return { error: '도트 그림이 올바르지 않아요' };
+    const spd = ['slow', 'mid', 'fast'].includes(cfg.spd) ? cfg.spd : 'mid';
+    u.customFrame = { mode, c1: cfg.c1.toLowerCase(), c2: cfg.c2.toLowerCase(), style: cfg.style, fx: cfg.fx, px: FRAME_PX.test(px) ? px : '', spd };
+    presets(u);
+    const slot = Number.isInteger(cfg.slot) && cfg.slot >= 0 && cfg.slot < u.slots.fr ? cfg.slot : u.frSel;
+    u.frPresets[slot] = Object.assign({}, u.customFrame);
+    u.frSel = slot;
     u.equip.frame = 'f_custom';
     save();
     return { ok: true };
