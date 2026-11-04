@@ -542,7 +542,7 @@ function cardHTML(c, cls = '') {
 const sameCard = (a, b) => a && b && a.r === b.r && a.s === b.s;
 
 // 좌석 위치 (나 = 아래 가운데, 시계방향)
-const POS = [[50, 90], [16, 76], [12, 49], [16, 22], [50, 9], [84, 22], [88, 49], [84, 76]];
+const POS = [[50, 91], [15, 79], [11, 50.5], [15, 22], [50, 8], [85, 22], [89, 50.5], [85, 79]];
 const ACT_CLS = { '폴드': 'fold', '올인': 'allin', '레이즈': 'raise', '벳': 'raise', '콜': 'call', '체크': 'check', 'SB': 'bl', 'BB': 'bl' };
 
 let lastBoardKey = '';
@@ -617,6 +617,13 @@ function renderGame() {
   renderExcelBars();
 }
 
+// 좌석 칭호: 시즌 뱃지 + 칭호를 한 줄로 (좌석이 겹치지 않게)
+function seatTags(sk) {
+  if (!sk || (!sk.badge && !sk.title)) return '';
+  const m = sk.badge && sk.badge.match(/(\d+)위/);
+  const medal = m ? ['', '🥇', '🥈', '🥉'][+m[1]] || '' : '';
+  return `<div class="tg">${sk.badge ? `<b>${medal}${esc(sk.badge)}</b>` : ''}${sk.badge && sk.title ? ' · ' : ''}${sk.title ? esc(sk.title) : ''}</div>`;
+}
 function renderSeats() {
   const s = state;
   const base = s.me >= 0 ? s.me : 0;
@@ -655,7 +662,7 @@ function renderSeats() {
     h += `<div class="${cls.join(' ')}" style="left:${x}%;top:${y}%">
       <div class="ava-wrap ${p.shame > 0 ? 'shame' : ''} ${p.skin && p.skin.aura ? 'au-' + p.skin.aura : ''}">${avImg(p.avatar, p.skin)}${seatFx(s, p)}${i === s.turn ? '<div class="ring" data-ring></div>' : ''}${p.shame > 0 ? `<span class="shame-tag lv${p.shame}">${SHAME[p.shame]}</span>` : ''}${mini}</div>
       ${act}
-      <div class="plate">${p.skin && p.skin.badge ? `<div class="s1-s">${['', '🥇', '🥈', '🥉'][+p.skin.badge.match(/\d+(?=위)/)[0]] || ''}${esc(p.skin.badge)}</div>` : ''}<div class="nm">${esc(p.name)}</div>${p.skin && p.skin.title ? `<div class="ttl-s">${esc(p.skin.title)}</div>` : ''}<div class="st">${stack}</div></div>
+      <div class="plate">${seatTags(p.skin)}<div class="nm">${esc(p.name)}</div><div class="st">${stack}</div></div>
       ${handTag}
       ${s.stage !== 'waiting' && (i === s.dealer || i === s.sbSeat || i === s.bbSeat) ? `<div class="pos-row">${[i === s.dealer ? '<i class="pos-chip d">D</i>' : '', i === s.sbSeat ? '<i class="pos-chip sb">SB</i>' : '', i === s.bbSeat ? '<i class="pos-chip bb">BB</i>' : ''].join('')}</div>` : ''}
     </div>`;
@@ -1314,6 +1321,8 @@ function buySlot(kind, done) {
 // ================= 커스텀 테두리 꾸미기 =================
 const CF_COLORS = ['#e9c46a', '#ffd23f', '#ff8a1f', '#ff4d4d', '#ff4d6d', '#ff7ae0', '#a24bff', '#3d7be0', '#00c2ff', '#5de0d1', '#2fb874', '#7dff7a', '#ffffff', '#9aa3ad', '#141414', '#8b5a2b'];
 const MAX_FRAMES = 5;
+// 예시: 오른쪽 아래에서 카드를 쥐고 → 들고 → 펼치고 → 한 장 뽑고 → 모으는 5프레임 (불러온 뒤 고쳐서 쓰기)
+const CF_SAMPLE_CARDS = '111111111111111111111111111111111dd5ddddddddddddddddddddddddddd11d2dddddddddddddddddddddddddd8d115ddddddddddddddddddddddddddddd11ddd555555555555555555555555ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd50000000000000000000011111111ddd50000000000000000000012221111ddd50000000000000000001111112111ddd50000000000000000001222312111ddd50000000000000000001323212111ddd55555555555555555551333212111dddddddddddddddddddddd1232212111d8ddddddddddddddddddbbb222211111ddddddddddddddddddddbbb22221dd111111111111111111111111111111111111111111111111111111111111111111dddddddddddddddddddddddddddddd11d8dddddddddddddddddddddddddd8d11dddddddddddddddddddddddddddddd11ddd555555555555555555555555ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd50000000000000000000011111111ddd50000000000000000000012221111ddd50000000000000000000111111111ddd50000000000000000000122231111ddd50000000000000000000132321111ddd50000000000000000000133321111ddd50000000000000000000123221111ddd555555555555555555bbb22221111dddddddddddddddddddddbbb22221d11d8ddddddddddddddddddddd111111d11dddddddddddddddddddddddddddddd111111111111111111111111111111111111111111111111111111111111111111dd5ddddddddddddddddddddddddddd11d2dddddddddddddddddddddddddd8d115ddddddddddddddddddddddddddddd11ddd555555555555555555555555ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd50000000000000000000001111111ddd50000000000000000000001222111ddd50000000000000000000111111211ddd50000000000000000000122211211ddd50000000000000000000121221211ddd50000000000000000000111121211ddd50000000000000000011111121211ddd50000000000000000012223121111ddd50000000000000000013232121d11ddd55555555555555555513332111d11ddddddddddddddddddddd123221ddd11d8dddddddddddddddddbbb22221d8d11dddddddddddddddddddbbb22221ddd111111111111111111111111111111111111111111111111111111111111111111dddddddddddddddddddddddddddddd11d8dddddddddddddddddddddddddd8d11dddddddddddddddddddddddddddddd11ddd555555555555555555555555ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd50000000000000000000111111d11ddd50000000000000000000122211d11ddd50000000000000000000121221111ddd50000000000000000000111121111ddd50000000000000000000112121211ddd50000000000000000000122221211ddd50000000000000000000122221211ddd50000000000000000000111111211ddd50000000000000000011111122211ddd50000000000000000012223111111ddd500000000000000000132321ddd11ddd555555555555555555133321ddd11ddddddddddddddddddddd123221ddd11d8dddddddddddddddddbbb22221d8d11dddddddddddddddddddbbb22221ddd111111111111111111111111111111111111111111111111111111111111111111dd5ddddddddddddddddddddddddddd11d2dddddddddddddddddddddddddd8d115ddddddddddddddddddddddddddddd11ddd555555555555555555555555ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd500000000000000000000005ddd11ddd50000000000000000000011111111ddd50000000000000000000012221111ddd50000000000000000001111112111ddd50000000000000000001222312111ddd50000000000000000001323212111ddd55555555555555555551333212111ddddddddddddddddddddbbb232212111d8ddddddddddddddddddbbb222211111dddddddddddddddddddddd122221dd111111111111111111111111111111111';
 function openFrameEditor(slotArg) {
   let slot = slotArg != null ? slotArg : me.frSel;
   const base = me.frPresets[slot] || (slot === me.frSel ? me.customFrame : null) || {};
@@ -1347,6 +1356,7 @@ function openFrameEditor(slotArg) {
         <button class="btn small" data-ft="mirror">↔️ 대칭</button>
         <button class="btn small" data-ft="undo">↶</button>
         <button class="btn small" data-ft="clear">비우기</button>
+        <button class="btn small" data-ft="sample">🃏 카드 예시</button>
       </div>
       <div class="field-label">애니메이션 속도 <small>프레임 2장 이상일 때</small></div>
       <div class="opt-group">${opt('spd', 'slow', '느리게')}${opt('spd', 'mid', '보통')}${opt('spd', 'fast', '빠르게')}</div>
@@ -1387,6 +1397,13 @@ function openFrameEditor(slotArg) {
     if (t === 'mirror') { pe.mirror = !pe.mirror; b.classList.toggle('on', pe.mirror); pe.draw(); }
     if (t === 'undo') pe.back();
     if (t === 'clear') pe.clear();
+    if (t === 'sample') {
+      const go = () => { frames = []; for (let i = 0; i < 5; i++) frames.push(CF_SAMPLE_CARDS.slice(i * 1024, i * 1024 + 1024)); cur = 0; cf.spd = 'slow'; pe.load(frames[0]); fbar(); draw(); };
+      // 이미 그린 게 있으면 한 번 더 눌러야 바뀜 (모달 안이라 확인창 대신)
+      if (frames.some(f => /[1-9a-f]/.test(f)) && b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = '🃏 한 번 더 누르면 바뀜'; setTimeout(() => { b.dataset.armed = ''; b.textContent = '🃏 카드 예시'; }, 2500); return; }
+      b.dataset.armed = ''; b.textContent = '🃏 카드 예시';
+      go();
+    }
     draw();
   });
   p.querySelectorAll('.cf-sw').forEach(g => g.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { cf[g.dataset.k] = b.dataset.c; draw(); }));
