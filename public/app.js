@@ -442,6 +442,14 @@ $('joinCodeBtn').onclick = () => {
 
 // 도트 에디터
 const editor = new PixelEditor($('peCanvas'), $('palette'));
+// 프로필 그리기 중에도 지금 장착한 테두리(커스텀 포함)를 같이 보여줌
+function renderLive() {
+  const el = $('peLive'); if (!el || !me) return;
+  const fr = me.equip && me.equip.frame;
+  const sk = !fr || fr === 'none' ? null : fr === 'f_custom' ? { frame: 'f_custom', cf: me.frPresets[me.frSel] || me.customFrame } : fr;
+  el.innerHTML = sk ? avImg(editor.value(), sk) : `<img src="${avatarURL(editor.value())}" alt="">`;
+}
+{ const _draw = editor.draw.bind(editor); editor.draw = () => { _draw(); renderLive(); }; }
 document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => {
   if (b.dataset.tool === 'mirror') {
     editor.mirror = !editor.mirror;

@@ -1361,3 +1361,8 @@ body.excel .bj-rules { color: #252423; } body.excel .bj-rules em { color: #21734
 .bj-chat-log .sys { color: var(--muted); font-size: 12px; text-align: center; }
 .bj-chat .chat-form { display: flex; gap: 6px; }
 .bj-chat input { padding: 9px 12px; font-size: 14px; }
+
+/* 프로필 그리기: 장착 테두리 미리보기 */
+.pe-live { display: flex; justify-content: center; align-items: center; min-height: 120px; }
+.pe-live .av { width: 120px; height: 120px; }
+.pe-live img { image-rendering: pixelated; }
