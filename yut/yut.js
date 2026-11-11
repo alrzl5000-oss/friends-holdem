@@ -177,8 +177,16 @@ function applyOption(g, optId) {
   const id = g.players[g.turn];
   const o = g.options.find(x => x.id === optId) || g.options[0];
   if (!o) return { error: '움직일 말이 없어요' };
-  g.pos[id][o.pi] = o.state;
+  // 업기: 같은 칸에 있는 내 말은 함께 움직인다 (출발 전 말은 하나씩만 나감)
+  const fromNode = nodeOf(g.pos[id][o.pi]);
+  const group = fromNode === 'start' ? [o.pi]
+    : g.pos[id].map((q, qi) => qi).filter(qi => nodeOf(g.pos[id][qi]) === fromNode);
+  for (const qi of group) g.pos[id][qi] = { ...o.state };
   const node = nodeOf(o.state);
+  if (node !== 'goal' && node !== 'start') {
+    const here = g.pos[id].filter(q => nodeOf(q) === node).length;
+    if (here > group.length) g.chat.push({ name: '📢', text: `${g.names[id]} 님이 말을 업었어요 (${here}동)` });
+  }
   if (node !== 'goal' && node !== 'start') {
     for (const other of g.players) {
       if (other === id) continue;
