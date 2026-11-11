@@ -7,7 +7,11 @@ const yut = require('./yut');
 const SHOP = require('./shop');
 
 const app = express();
-app.use(express.static(path.join(__dirname, 'public')));
+// 배포 후 옛 화면이 캐시로 남지 않도록: 매번 서버에 새 버전인지 확인하게 함
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true, lastModified: true,
+  setHeaders: res => res.setHeader('Cache-Control', 'no-cache'),
+}));
 app.get('/api/shop', (req, res) => res.json(SHOP.ITEMS));
 const server = http.createServer(app);
 const io = new Server(server);
