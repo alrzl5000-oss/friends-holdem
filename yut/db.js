@@ -12,6 +12,17 @@ let data;
 try { data = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (e) { data = { users: {} }; }
 data.users = data.users || {};
 data.sessions = data.sessions || {};
+// 한 번만 실행되는 전체 초기화 (돈·전적·트로피·꾸미기). 계정·비밀번호·로그인은 그대로
+const RESET_ID = 'reset-2026-11-11';
+if (data.resetId !== RESET_ID) {
+  for (const u of Object.values(data.users)) {
+    u.assets = START; u.yutHold = 0; u.yut = { games: 0, win: 0, net: 0 }; u.trophy = 0;
+    u.owned = SHOP.DEFAULT_OWNED.slice(); u.equip = Object.assign({}, SHOP.DEFAULT_EQUIP);
+  }
+  data.yutGames = [];
+  data.resetId = RESET_ID;
+  console.log(`전체 초기화 완료: ${Object.keys(data.users).length}명`);
+}
 const byId = new Map();
 for (const u of Object.values(data.users)) byId.set(u.id, u);
 // 서버가 다시 켜졌을 때 되살리지 못한 판의 판돈은 돌려줌 (activeIds: 복원된 판의 참가자)

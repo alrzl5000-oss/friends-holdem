@@ -6,10 +6,22 @@
 <meta name="theme-color" content="#07100c" />
 <title>FRIENDS 윷놀이</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<link rel="stylesheet" href="/style.css?v=20261111f" />
+<link rel="stylesheet" href="/style.css?v=20261111g" />
 </head>
 <body>
 <div class="app">
+  <!-- 엑셀 모드 전용 (평소엔 숨김) -->
+  <div class="xl-chrome">
+    <div class="xl-titlebar">
+      <span class="xl-logo">X</span>
+      <span class="xl-auto">자동 저장 <i></i></span>
+      <b class="xl-file">2026_4분기_매출분석.xlsx</b>
+      <span class="xl-search">⌕</span>
+    </div>
+    <div class="xl-ribbon"><span>파일</span><span class="on">홈</span><span>삽입</span><span>페이지 레이아웃</span><span>수식</span><span>데이터</span><span>검토</span><span>보기</span></div>
+    <div class="xl-formula"><span class="xl-cell" id="xlCell">A1</span><span class="xl-fx">fx</span><span class="xl-val" id="xlFormula"></span></div>
+    <div class="xl-cols"><span></span><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span></div>
+  </div>
 
   <!-- ========== 로그인 ========== -->
   <section id="auth" class="screen hidden">
@@ -35,6 +47,7 @@
   <section id="lobby" class="screen hidden">
     <header class="lobby-top">
       <div class="me-chip" id="meChip"></div>
+      <button class="icon-btn" data-settings title="설정">⚙</button>
       <button class="icon-btn" id="rulesBtn" title="규칙">?</button>
       <button class="icon-btn" id="logoutBtn" title="로그아웃">⎋</button>
     </header>
@@ -78,6 +91,7 @@
       <button class="icon-btn" id="exitBtn" title="로비로">‹</button>
       <div class="g-title"><b id="gName">-</b><span id="gSub">-</span></div>
       <button class="icon-btn" id="gRulesBtn" title="규칙">?</button>
+      <button class="icon-btn" data-settings title="설정">⚙</button>
       <button class="icon-btn" id="chatBtn" title="채팅">💬<i id="chatBadge" class="badge hidden">0</i></button>
     </header>
 
@@ -119,11 +133,16 @@
     <div class="modal-panel glass" id="modalPanel"></div>
   </div>
 
+  <div class="xl-bottom">
+    <div class="xl-sheets"><span class="xl-nav">◀ ▶</span><span class="on">매출현황</span><span>거래처</span><span>Sheet3</span><span>＋</span></div>
+    <div class="xl-status"><span>준비</span><span id="xlStatus"></span></div>
+  </div>
+
   <div id="toast" class="toast"></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/art.js?v=20261111f"></script>
-<script src="/app.js?v=20261111f"></script>
+<script src="/art.js?v=20261111g"></script>
+<script src="/app.js?v=20261111g"></script>
 </body>
 </html>

@@ -30,6 +30,50 @@ const skinPiece = skin => pieceArt(skin && skin.piece);
 const woodOf = skin => ((artOf((skin && skin.stick) || 's_basic') || {}).wood) || '#b9824a';
 const themeOf = skin => ((artOf((skin && skin.board) || 'b_hanji') || {}).theme) || 'hanji';
 const colorVars = c => `--c:${c};--cl:${Art.light(c, .45)};--cd:${Art.dark(c, .45)}`;
+
+// ---------- 설정 (테마: 기본 / 엑셀) ----------
+const settings = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem('fy_settings') || '{}'); } catch (e) {} return Object.assign({ theme: 'default' }, v); })();
+const isExcel = () => settings.theme === 'excel';
+const XL_COLORS = ['#4472c4', '#ed7d31', '#a5a5a5', '#ffc000'];
+// 엑셀 모드에선 차트 계열 색으로
+const colorOf = p => { if (!isExcel() || !room) return p.color; const i = room.players.findIndex(x => x.id === p.id); return XL_COLORS[(i < 0 ? 0 : i) % 4]; };
+function applyTheme() {
+  document.body.classList.toggle('excel', isExcel());
+  document.title = isExcel() ? '2026_4분기_매출분석.xlsx - Excel' : 'FRIENDS 윷놀이';
+  let icon = document.querySelector('link[rel=icon]');
+  if (!icon) { icon = document.createElement('link'); icon.rel = 'icon'; document.head.appendChild(icon); }
+  icon.href = 'data:image/svg+xml,' + encodeURIComponent(isExcel()
+    ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#217346"/><text x="16" y="23" font-size="20" font-family="Arial" font-weight="bold" fill="#fff" text-anchor="middle">X</text></svg>'
+    : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0d3f29"/><g fill="#e9c46a"><rect x="7" y="6" width="4" height="20" rx="2"/><rect x="14" y="6" width="4" height="20" rx="2"/><rect x="21" y="6" width="4" height="20" rx="2"/></g></svg>');
+  const tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.content = isExcel() ? '#217346' : '#07100c';
+}
+applyTheme();
+function openSettings() {
+  const opt = (val, label, sub) => `<button data-v="${val}" class="${settings.theme === val ? 'on' : ''}">${label}<small>${sub}</small></button>`;
+  modal(`<h3>설정</h3><div class="field-label">화면 테마</div>
+    <div class="opt-group theme-opts">${opt('default', '🎴 기본', '전통 윷판')}${opt('excel', '📊 엑셀', '회사에서 몰래')}</div>
+    <button class="btn gold" data-close>닫기</button>`);
+  document.querySelectorAll('.theme-opts button').forEach(b => b.onclick = () => {
+    settings.theme = b.dataset.v; try { localStorage.setItem('fy_settings', JSON.stringify(settings)); } catch (e) {}
+    applyTheme(); resetBoard(); renderAll(); openSettings();
+  });
+  document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
+}
+document.querySelectorAll('[data-settings]').forEach(b => b.onclick = openSettings);
+// 엑셀 수식줄·상태줄을 상황에 맞게
+function xlUpdate() {
+  if (!isExcel()) return;
+  if (room && inGame) {
+    const ti = room.players.findIndex(p => p.turn);
+    $('xlCell').textContent = ti >= 0 ? 'C' + (ti + 2) : 'D10';
+    $('xlFormula').textContent = room.last ? `=COUNTIF(B2:B21,"${room.last.name}")` : '=SUM(C2:C5)';
+    const done = room.players.reduce((a, p) => a + p.done, 0);
+    $('xlStatus').textContent = `평균: ${Math.round(room.pot / room.players.length).toLocaleString()}   개수: ${room.players.length}   합계: ${room.pot.toLocaleString()}   완료: ${done}`;
+  } else if (me) {
+    $('xlCell').textContent = 'B3'; $('xlFormula').textContent = '=SUM(B5:D5)';
+    $('xlStatus').textContent = `합계: ${Math.round(me.assets + (me.yutHold || 0)).toLocaleString()}`;
+  } else { $('xlCell').textContent = 'A1'; $('xlFormula').textContent = ''; $('xlStatus').textContent = ''; }
+}
 const avHTML = (art, extra = '', style = '') => `<div class="av ${extra}" style="${style}">${Art.pieceSVG(art, 40)}</div>`;
 function fan(wood) {
   const set = [[true, -21, -30], [false, -7, -10], [true, 7, 10], [false, 21, 30]];
@@ -124,6 +168,7 @@ function loadRank() {
 
 function renderLobby() {
   if (!me) return;
+  setTimeout(xlUpdate);
   const y = me.yut || {};
   $('meChip').innerHTML = `${avHTML(pieceArt(me.equip && me.equip.piece))}<div><b>${esc(me.username)}</b><span>우승 ${y.win || 0}회 · <i class="tro">🏆 ${me.trophy || 0}</i></span></div>`;
   $('wTotal').textContent = won(me.assets + (me.yutHold || 0));
@@ -205,6 +250,7 @@ if (window.ResizeObserver) new ResizeObserver(sizeTable).observe(document.queryS
 window.addEventListener('resize', sizeTable);
 
 function renderGame() {
+  setTimeout(xlUpdate);
   const v = room;
   const mine = v.players.find(p => p.id === v.you);
   $('gName').textContent = `${v.host}님의 판`;
@@ -217,7 +263,7 @@ function renderGame() {
     const wait = p.nodes.filter(n => n === 'start').length;
     const slots = [...Array(p.done).fill('done'), ...Array(Math.max(0, 4 - p.done - wait)).fill('on'), ...Array(wait).fill('')];
     const stTxt = p.afk ? '💤 자리비움' : p.turn ? '던지는 중' : v.status === 'open' ? '준비 완료' : `${p.done}개 났음`;
-    return `<div class="opp${p.turn ? ' turn' : ''}${p.afk ? ' afk' : ''}" style="${colorVars(p.color)}">${avHTML(skinPiece(p.skin))}
+    return `<div class="opp${p.turn ? ' turn' : ''}${p.afk ? ' afk' : ''}" style="${colorVars(colorOf(p))}">${avHTML(skinPiece(p.skin))}
       <div class="who"><b>${esc(p.name)}${p.host ? ' 👑' : ''}</b><span>${stTxt}</span>
         <div class="slots">${slots.map(k => `<i class="${k}"></i>`).join('')}</div></div>${p.turn ? '<i class="tbar"></i>' : ''}</div>`;
   }).join('') + Array(empties).fill('<div class="opp empty">빈 자리</div>').join('');
@@ -238,7 +284,7 @@ function renderPlay() {
   const v = room; if (!v) return;
   const mine = v.players.find(p => p.id === v.you) || { color: '#888', nodes: [], done: 0 };
   const steps = v.last ? v.last.steps : 1;
-  $('boardSvg').innerHTML = Art.boardSVG({ theme: themeOf(mine.skin), options: v.canMove ? v.options : [], steps });
+  $('boardSvg').innerHTML = Art.boardSVG({ theme: isExcel() ? 'excel' : themeOf(mine.skin), options: v.canMove ? v.options : [], steps });
   placeTokens(v);
 
   // 내 자리
@@ -246,7 +292,7 @@ function renderPlay() {
   const st = mine.nodes.map(n => n === 'goal' ? 'done' : n === 'start' ? '' : 'on');
   const by = v.last && v.players.find(p => p.id === v.last.by);
   $('myPanel').className = 'my-panel' + (mine.turn ? ' turn' : '');
-  $('myPanel').style.cssText = colorVars(mine.color);
+  $('myPanel').style.cssText = colorVars(colorOf(mine));
   $('myPanel').innerHTML = `${avHTML(skinPiece(mine.skin))}<div class="my-info"><span class="mi-label">내 말 · 대기 ${wait} · 판 위 ${st.filter(s => s === 'on').length} · 났음 ${mine.done}</span>
     <div class="my-slots">${st.map(s => `<div class="my-slot ${s}">${Art.pieceSVG(skinPiece(mine.skin), 20)}</div>`).join('')}</div></div>
     ${v.last ? `<div class="last-chip">${by ? esc(by.id === v.you ? '나' : by.name) : ''}<b>${esc(v.last.name)}</b></div>` : ''}`;
@@ -294,25 +340,26 @@ function optLabel(o) {
 
 // ---------- 말 그리기와 이동 ----------
 const pct = n => Art.XY[n] || Art.XY.start;
+// 말 이동·이펙트는 서버가 보내 주는 이동 기록(v.move)을 그대로 따름
+let lastMoveN = null;
 function placeTokens(v) {
   const layer = $('tokLayer');
   const movable = new Set(v.canMove ? v.options.map(o => o.from) : []);
-  const mover = v.last && v.last.by;
-  const before = new Map(tokNode);           // 이번 갱신 전 위치
-  const fx = [];
+  const mv = v.move;
+  const fresh = !!(mv && mv.n !== lastMoveN && lastMoveN !== null);
+  if (lastMoveN === null || (mv && mv.n !== lastMoveN)) lastMoveN = mv ? mv.n : 0;
   v.players.forEach(p => {
     const art = skinPiece(p.skin);
     const groups = {};
     p.nodes.forEach((n, i) => { if (n !== 'start' && n !== 'goal') (groups[n] = groups[n] || []).push(i); });
-    const prevCount = n => p.nodes.filter((_, j) => before.get(p.id + ':' + j) === n).length;
-    let goalFx = false;
     p.nodes.forEach((n, i) => {
       const key = p.id + ':' + i;
       let el = tokEls.get(key);
       if (!el) {
-        el = document.createElement('div'); el.className = 'tok hid';
-        el.innerHTML = Art.pieceSVG(art, 20) + '<span class="cnt" hidden></span>';
-        el.style.setProperty('--c', p.color); el.style.setProperty('--cl', Art.light(p.color, .45)); el.style.setProperty('--cd', Art.dark(p.color, .45));
+        el = document.createElement('div'); el.className = 'tok hid'; el.dataset.p = p.id; el.dataset.i = i;
+        el.innerHTML = Art.pieceSVG(art, 20) + '<span class="cnt" hidden></span><span class="xl-lab"></span>';
+        { const c = colorOf(p); el.style.setProperty('--c', c); el.style.setProperty('--cl', Art.light(c, .45)); el.style.setProperty('--cd', Art.dark(c, .45)); }
+        el.querySelector('.xl-lab').textContent = (p.name || '?').slice(0, 1);
         const [x, y] = pct(n); el.style.left = x + '%'; el.style.top = y + '%';
         layer.appendChild(el); tokEls.set(key, el); tokNode.set(key, n);
       }
@@ -325,30 +372,26 @@ function placeTokens(v) {
       if (primary && g.length > 1) { cnt.hidden = false; cnt.textContent = g.length; } else cnt.hidden = true;
       if (prev === n) { el.classList.toggle('hid', !primary); return; }
       tokNode.set(key, n);
-      // 잡힘: 남의 말이 판 위에서 출발로 돌아감
-      if (n === 'start' && prev !== 'start' && prev !== 'goal') {
-        const [x, y] = pct('start'); el.classList.add('hid'); el.style.left = x + '%'; el.style.top = y + '%';
-        fx.push({ kind: 'catch', node: prev, color: p.color, at: hopTime(guessLen(v)) }); return;
+      if (!onBoard && n === 'start') {   // 잡혀서 출발로 돌아감 (이펙트는 아래에서 이동 기록으로)
+        const [x, y] = pct('start'); el.classList.add('hid'); el.style.left = x + '%'; el.style.top = y + '%'; return;
       }
-      const path = p.id === mover && v.last ? Art.pathOf(prev, n, v.last.steps, guessRoute(prev, n, v.last.steps)) : [prev, n];
+      const path = fresh && mv.by === p.id && mv.path[0] === prev ? mv.path : [prev, n];
       el.classList.toggle('hid', onBoard && !primary);
       hopAlong(el, path, () => { if (!onBoard || !primary) el.classList.add('hid'); });
-      if (n === 'goal' && !goalFx) { goalFx = true; fx.push({ kind: 'goal', node: 'R20', color: p.color, at: hopTime(path.length - 1) }); }
       if (primary) {
         document.querySelectorAll('.tok.last').forEach(t => t !== el && t.classList.remove('last'));
         el.classList.add('last'); clearTimeout(el._lt); el._lt = setTimeout(() => el.classList.remove('last'), 2600);
-        if (p.id === mover && g.length > 1 && prevCount(n) > 0) fx.push({ kind: 'stack', node: n, color: p.color, at: hopTime(path.length - 1) });
       }
     });
   });
-  const TXT = { catch: '잡았다! 한 번 더', goal: '났다!', stack: '업었다!' };
-  fx.forEach(f => setTimeout(() => burst(f.kind, f.node, f.color, TXT[f.kind]), f.at));
+  if (fresh) {
+    const mover = v.players.find(p => p.id === mv.by);
+    const at = hopTime(mv.path.length - 1), color = mover ? mover.color : '#fff';
+    mv.captured.forEach(c => setTimeout(() => burst('catch', c.node, color, '잡았다! 한 번 더'), at));
+    if (mv.stacked) setTimeout(() => burst('stack', mv.to, color, '업었다!'), at);
+    if (mv.goal) setTimeout(() => burst('goal', 'R20', color, mv.count > 1 ? `${mv.count}동 났다!` : '났다!'), at);
+  }
 }
-function guessRoute(from, to, steps) {
-  for (const r of ['main', 'A']) { const p = Art.pathOf(from, to, steps, r); if (p.length === steps + 1 || (to === 'goal' && p[p.length - 1] === 'goal')) return r; }
-  return 'main';
-}
-const guessLen = v => Math.max(1, Math.abs(v.last ? v.last.steps : 1));
 const hopTime = n => REDUCED ? 0 : Math.max(1, n) * 230;
 function hopAlong(el, path, done) {
   const pts = path.map(pct);
@@ -405,7 +448,7 @@ function showToss(v) {
   t.className = 'toss' + (big ? ' big' : '') + (last.name === '뒷도' ? ' back' : '');
   t.innerHTML = `${big ? '<div class="rays"></div>' : ''}${spots.map((s, i) =>
       `<div class="sp" style="left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%) rotate(${s.rot}deg)">${Art.stickEl(wood, i === 0)}</div>`).join('')}
-    <div class="toss-name"><b>${esc(last.name)}</b><span>${{ '도': '한 칸', '개': '두 칸', '걸': '세 칸', '윷': '네 칸 · 한 번 더!', '모': '다섯 칸 · 한 번 더!', '뒷도': '한 칸 뒤로' }[last.name] || ''}</span></div>`;
+    <div class="toss-name"><div class="xl-bits">${last.bits.map(b => `<i>${b ? 1 : 0}</i>`).join('')}</div><b>${esc(last.name)}</b><span>${{ '도': '한 칸', '개': '두 칸', '걸': '세 칸', '윷': '네 칸 · 한 번 더!', '모': '다섯 칸 · 한 번 더!', '뒷도': '한 칸 뒤로' }[last.name] || ''}</span></div>`;
   const sps = t.querySelectorAll('.sp');
   sps.forEach((el, i) => {
     const ry = last.bits[i] ? 0 : 180;
@@ -485,7 +528,7 @@ function act(op, arg) {
     renderAll();
   });
 }
-function resetBoard() { tokEls.forEach(el => el.remove()); tokEls.clear(); tokNode.clear(); shownSeq = null; playAt = 0; renderChat.lastLen = undefined; chatSeen = 0; }
+function resetBoard() { tokEls.forEach(el => el.remove()); tokEls.clear(); tokNode.clear(); lastMoveN = null; shownSeq = null; playAt = 0; renderChat.lastLen = undefined; chatSeen = 0; }
 socket.on('me', m => { const first = !me; me = m; if (first) { act('list'); } else if (!inGame) renderLobby(); });
 socket.on('yuts', list => { lobby = list; if (!inGame) renderLobby(); });
 socket.on('yutState', v => {

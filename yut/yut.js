@@ -68,8 +68,18 @@ function labelOf(node) {
   if (node[0] === 'R') return node.slice(1) + '번';
   return node;
 }
-// 앞으로 s칸 (route: 'main' | 'A' | 'B')
-function forward(p, s, route) {
+// 방(가운데)에 멈춘 말은 출발점(참먹이) 쪽 지름길로 가도록 B 길로 바꿔 둠
+const C_A = ROUTE.A.indexOf('C'), C_B = ROUTE.B.indexOf('C');
+const norm = q => {
+  if (!q) return q;
+  if (q.r === 'A' && q.i === C_A) return { r: 'B', i: C_B };
+  if (q.r === 'A' && q.i === 0) return { r: 'main', i: 4 };   // R5
+  if (q.r === 'B' && q.i === 0) return { r: 'main', i: 9 };   // R10
+  return q;
+};
+// 앞으로 s칸 (route: 'main' | 'A' | 'B') — 멈춘 칸 기준으로 정리된 상태를 돌려줌
+function forward(p, s, route) { return norm(forwardRaw(p, s, route)); }
+function forwardRaw(p, s, route) {
   if (isDone(p)) return null;
   if (isStart(p)) return route === 'main' && s > 0 ? (s - 1 >= 20 ? { r: 'done', i: -1 } : { r: 'main', i: s - 1 }) : null;
   if (p.r === 'main' && route !== 'main') {
@@ -81,14 +91,26 @@ function forward(p, s, route) {
   const j = p.i + s;
   return j >= END[p.r] ? { r: 'done', i: -1 } : { r: p.r, i: j };
 }
-// 뒤로 1칸 (뒷도)
+// 지나간 칸 목록 (애니메이션용)
+function pathOf(p, s, route) {
+  const out = [nodeOf(p)];
+  let cur = p;
+  for (let k = 1; k <= s; k++) {
+    cur = forwardRaw(cur, 1, k === 1 ? route : cur.r);
+    if (!cur) break;
+    out.push(nodeOf(cur));
+    if (isDone(cur)) break;
+  }
+  return out;
+}
+// 뒤로 1칸 (뒷도) — 첫 칸(도 자리)에서 뒷도면 도착칸(참먹이)으로
 function backward(p) {
   if (isDone(p) || isStart(p)) return null;
   if (p.i - 1 < 0) {
-    if (p.r === 'main') return START_P();
+    if (p.r === 'main') return { r: 'main', i: 19 };
     return { r: 'main', i: p.r === 'A' ? 4 : 9 };
   }
-  return { r: p.r, i: p.i - 1 };
+  return norm({ r: p.r, i: p.i - 1 });
 }
 
 function lobbyList() {
@@ -103,20 +125,20 @@ function optionsFor(g, id) {
   const s = g.last.steps;
   ps.forEach((p, pi) => {
     if (isDone(p)) return;
-    const key = p.r + ':' + p.i;
+    const key = nodeOf(p);   // 같은 칸의 말은 업혀서 함께 움직이므로 선택지 하나
     if (seen.has(key)) return;
     seen.add(key);
     if (s < 0) {
       const to = backward(p);
-      if (to) out.push({ id: out.length, pi, route: 'back', from: nodeOf(p), to: nodeOf(to), state: to });
+      if (to) out.push({ id: out.length, pi, route: 'back', from: nodeOf(p), to: nodeOf(to), state: to, path: [nodeOf(p), nodeOf(to)] });
       return;
     }
-    const routes = ['main'];
-    if (p.r === 'main' && DIAG_AT[p.i]) routes.push(DIAG_AT[p.i]);
+    // 모서리(첫 모·둘째 모)에 멈춰 있으면 무조건 지름길
+    const routes = (p.r === 'main' && DIAG_AT[p.i]) ? [DIAG_AT[p.i]] : ['main'];
     for (const route of routes) {
       const to = forward(p, s, route);
       if (!to) continue;
-      out.push({ id: out.length, pi, route, from: nodeOf(p), to: nodeOf(to), state: to });
+      out.push({ id: out.length, pi, route, from: nodeOf(p), to: nodeOf(to), state: to, path: pathOf(p, s, route) });
     }
   });
   return out;
@@ -137,11 +159,12 @@ function view(g, uid) {
     phase: g.status === 'play' ? g.phase : null,
     canThrow: canAct && g.phase === 'throw',
     canMove: canAct && g.phase === 'move',
-    options: canAct && g.phase === 'move' ? g.options.map(o => ({ id: o.id, label: `${labelOf(o.from)} → ${labelOf(o.to)}`, from: o.from, to: o.to, route: o.route })) : [],
+    options: canAct && g.phase === 'move' ? g.options.map(o => ({ id: o.id, label: `${labelOf(o.from)} → ${labelOf(o.to)}`, from: o.from, to: o.to, route: o.route, path: o.path })) : [],
     last: g.last || null,
     chat: g.chat.slice(-60),
     seq: g.seq || 0,
     again: g.status === 'play' && !!g.repeat, bonusLeft: g.bonus || 0,
+    move: g.move || null,
   };
 }
 // 직접 행동하면 시간초과 횟수 초기화, 자리비움 해제
@@ -212,26 +235,31 @@ function applyOption(g, optId) {
   const fromNode = nodeOf(g.pos[id][o.pi]);
   const group = fromNode === 'start' ? [o.pi]
     : g.pos[id].map((q, qi) => qi).filter(qi => nodeOf(g.pos[id][qi]) === fromNode);
+  const startP = g.pos[id][o.pi];
+  const path = o.path || (o.route === 'back' ? [nodeOf(startP), nodeOf(o.state)] : pathOf(startP, g.last.steps, o.route));
   for (const qi of group) g.pos[id][qi] = { ...o.state };
   const node = nodeOf(o.state);
+  const stackedBefore = node !== 'goal' && g.pos[id].some((q, qi) => !group.includes(qi) && nodeOf(q) === node);
   if (node !== 'goal' && node !== 'start') {
     const here = g.pos[id].filter(q => nodeOf(q) === node).length;
     if (here > group.length) g.chat.push({ name: '📢', text: `${g.names[id]} 님이 말을 업었어요 (${here}동)` });
   }
-  let captured = false;
+  let captured = false; const capturedAt = [];
   if (node !== 'goal' && node !== 'start') {
     for (const other of g.players) {
       if (other === id) continue;
       g.pos[other] = g.pos[other].map(q => {
         if (!isDone(q) && !isStart(q) && nodeOf(q) === node) {
           if (!captured || captured !== other) g.chat.push({ name: '📢', text: `${g.names[id]} 님이 ${g.names[other]} 님의 말을 잡았어요 — 한 번 더!` });
-          captured = other;
+          captured = other; if (!capturedAt.some(c => c.id === other)) capturedAt.push({ id: other, node });
           return START_P();
         }
         return q;
       });
     }
   }
+  g.move = { n: (g.move ? g.move.n : 0) + 1, by: id, path, to: node, count: group.length,
+    captured: captured ? capturedAt.slice() : [], stacked: stackedBefore, goal: node === 'goal' };
   if (g.pos[id].every(isDone)) { finish(g, id); return { ok: true }; }
   endTurn(g, !!captured);
   armTimer(g);
@@ -299,7 +327,7 @@ function yutAct(u, op, arg) {
     if (g.status !== 'open') return { error: '이미 시작했어요' };
     if (g.host !== u.id) return { error: '방장만 시작할 수 있어요' };
     if (g.players.length < MIN_PLAYERS) return { error: `${MIN_PLAYERS}명 이상 모여야 시작할 수 있어요` };
-    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {}; g.bonus = 0; g.repeat = false;
+    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {}; g.bonus = 0; g.repeat = false; g.move = null;
     g.pos = {};
     for (const id of g.players) g.pos[id] = [START_P(), START_P(), START_P(), START_P()];
     g.chat.push({ name: '📢', text: '게임 시작!' });
@@ -337,4 +365,4 @@ function restore(list) {
   }
   return [...games.values()].flatMap(g => g.players);
 }
-module.exports = { dump, restore, init, skinOf, yutAct, view, lobbyList, throwYut, optionsFor, forward, backward, START_P, nodeOf, ROUTE, MIN_BET, MAX_BET, _games: games };
+module.exports = { pathOf, backward, norm, dump, restore, init, skinOf, yutAct, view, lobbyList, throwYut, optionsFor, forward, backward, START_P, nodeOf, ROUTE, MIN_BET, MAX_BET, _games: games };

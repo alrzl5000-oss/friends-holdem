@@ -471,3 +471,156 @@ svg.board .route { animation: flow 1s linear infinite; }
 .afk-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px;
   background: rgba(127,178,255,.1); border: 1px solid rgba(127,178,255,.35); font-size: 13px; color: #cfe0ff; }
 .afk-note .btn { flex: none; }
+
+/* ===== 엑셀 모드 (홀덤과 같은 틀) ===== */
+.xl-chrome, .xl-bottom { display: none; }
+body.excel {
+  --bg: #ffffff; --glass: #ffffff; --line: #e1dfdd; --line2: #c8c6c4;
+  --text: #252423; --muted: #605e5c; --gold: #217346; --gold2: #217346; --green: #217346; --red: #a4262c;
+  background: #e6e6e6;
+  font-family: "맑은 고딕", "Malgun Gothic", "Segoe UI", Calibri, Arial, sans-serif;
+}
+body.excel .app { background: #fff; box-shadow: 0 0 0 1px #c8c6c4; }
+body.excel .xl-chrome { display: block; position: absolute; top: 0; left: 0; right: 0; z-index: 30; font-size: 12px; }
+body.excel .xl-bottom { display: block; position: absolute; bottom: 0; left: 0; right: 0; z-index: 30; font-size: 11px; }
+body.excel .screen { top: 98px; bottom: 42px; }
+
+.xl-titlebar { height: 30px; background: #217346; color: #fff; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
+.xl-logo { width: 18px; height: 18px; border-radius: 3px; background: #fff; color: #217346; font-weight: 900; font-size: 12px; display: grid; place-items: center; font-family: Arial; }
+.xl-auto { font-size: 11px; opacity: .9; display: flex; align-items: center; gap: 4px; }
+.xl-auto i { width: 22px; height: 11px; border-radius: 6px; background: rgba(255,255,255,.35); position: relative; }
+.xl-auto i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+.xl-file { flex: 1; text-align: center; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.xl-ribbon { height: 24px; background: #f3f2f1; border-bottom: 1px solid #e1dfdd; display: flex; align-items: flex-end; gap: 12px; padding: 0 10px; overflow: hidden; white-space: nowrap; color: #444; }
+.xl-ribbon span { padding-bottom: 3px; }
+.xl-ribbon .on { color: #217346; font-weight: 700; border-bottom: 2px solid #217346; }
+.xl-formula { height: 24px; display: flex; align-items: center; border-bottom: 1px solid #e1dfdd; background: #fff; }
+.xl-cell { width: 56px; text-align: center; border-right: 1px solid #e1dfdd; color: #252423; }
+.xl-fx { width: 28px; text-align: center; color: #888; font-style: italic; font-family: Georgia, serif; border-right: 1px solid #e1dfdd; }
+.xl-val { flex: 1; padding: 0 8px; color: #252423; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: Consolas, monospace; font-size: 11px; }
+.xl-cols { height: 20px; display: grid; grid-template-columns: 26px repeat(8, 1fr); background: #f3f2f1; border-bottom: 1px solid #c8c6c4; color: #605e5c; font-size: 11px; }
+.xl-cols span { border-right: 1px solid #e1dfdd; text-align: center; line-height: 19px; }
+.xl-sheets { height: 22px; background: #f3f2f1; border-top: 1px solid #c8c6c4; display: flex; align-items: stretch; white-space: nowrap; overflow: hidden; color: #444; }
+.xl-sheets span { padding: 0 12px; display: flex; align-items: center; border-right: 1px solid #e1dfdd; }
+.xl-sheets .on { background: #fff; color: #217346; font-weight: 700; border-bottom: 2px solid #217346; }
+.xl-sheets .xl-nav { color: #999; letter-spacing: 4px; }
+.xl-status { height: 20px; background: #217346; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; white-space: nowrap; overflow: hidden; }
+
+/* 공통 요소 */
+body.excel .glass { backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 0; border-color: #d4d4d4; box-shadow: none; }
+body.excel .btn { background: #fff; color: #252423; border: 1px solid #c8c6c4; border-radius: 2px; box-shadow: none; font-weight: 600; }
+body.excel .btn.gold, body.excel .btn.green { background: #217346; color: #fff; border-color: #185c37; }
+body.excel .btn.red { background: #fff; color: #a4262c; border-color: #a4262c; }
+body.excel .btn.line { background: #fff; color: #217346; border-color: #217346; }
+body.excel .btn.fold, body.excel .btn.call { background: #fff; color: #252423; border-color: #c8c6c4; }
+body.excel .btn small { opacity: .7; }
+body.excel .icon-btn { border-radius: 2px; border-color: #e1dfdd; background: #fff; color: #444; width: 32px; height: 32px; font-size: 15px; }
+body.excel input { background: #fff; border: 1px solid #c8c6c4; border-radius: 2px; color: #252423; }
+body.excel input:focus { border-color: #217346; box-shadow: none; }
+body.excel .av, body.excel .me-chip .av { display: none; }
+body.excel .big-av { display: grid !important; border-radius: 0; border-color: #c8c6c4; }
+body.excel .toast { background: #fff; color: #252423; border-color: #c8c6c4; box-shadow: 0 4px 12px rgba(0,0,0,.15); border-radius: 2px; }
+body.excel .modal-bg { background: rgba(255,255,255,.6); }
+body.excel .modal-panel { background: #fff; border-radius: 2px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
+body.excel .opt-group button { border-radius: 2px; background: #fff; color: #252423; }
+body.excel .opt-group button.on { background: #e2efda; color: #217346; border-color: #217346; }
+body.excel .seg { background: #f3f2f1; border-radius: 2px; }
+body.excel .seg button.on { background: #fff; color: #217346; box-shadow: inset 0 -2px 0 #217346; border-radius: 0; }
+body.excel .badge { background: #217346; }
+
+/* 로그인/로비 */
+body.excel .auth-hero h1 b { background: none; -webkit-text-fill-color: #217346; color: #217346; }
+body.excel .suits { display: none; }
+body.excel .wallet { background: #fff; }
+body.excel .wallet-main b { background: none; -webkit-text-fill-color: #217346; color: #217346; }
+body.excel .wallet-sub div { background: #f3f2f1; border-radius: 0; }
+body.excel .tabs button.on { color: #217346; border-color: #217346; }
+body.excel .room, body.excel .rank-row { background: #fff; border-radius: 0; border-color: #e1dfdd; }
+body.excel .rank-row.me { background: #e2efda; border-color: #217346; }
+body.excel .room .tag.cash, body.excel .room .tag.tourney { background: #f3f2f1; color: #252423; border-radius: 0; }
+body.excel .watch-btn { border-radius: 2px; background: #fff; }
+body.excel .shame-mini { border-radius: 0; }
+
+/* 게임 화면: 시트처럼 */
+body.excel .g-top { padding: 4px 8px; border-bottom: 1px solid #e1dfdd; }
+body.excel .g-title b { font-size: 13px; }
+body.excel .t-hud { background: #fff; border-color: #d4d4d4; border-radius: 0; margin: 4px 8px; }
+body.excel .t-hud b { color: #252423; }
+body.excel .t-hud .closed b { color: #a4262c; }
+body.excel .table-zone {
+  background-color: #fff;
+  background-image: linear-gradient(#e1dfdd 1px, transparent 1px), linear-gradient(90deg, #e1dfdd 1px, transparent 1px);
+  background-size: 100% 22px, 12.5% 100%;
+}
+/* ===== 엑셀 모드: 윷놀이 전용 ===== */
+body.excel .hero-sticks, body.excel .fx-layer, body.excel .throw-btn::after, body.excel .toss .rays,
+body.excel .toss .sp, body.excel .toss .dust, body.excel .confetti, body.excel .banner .cup { display: none !important; }
+body.excel .me-chip .tro { color: #217346; }
+body.excel .room .tag.bet, body.excel .room .tag.live { background: #f3f2f1; color: #252423; border-radius: 0; }
+body.excel .room .pips i { border-radius: 0; background: #e1dfdd; box-shadow: none; }
+body.excel .room .pips i.on { background: #217346; }
+body.excel .shop-head b, body.excel .rank-row .amt { color: #217346; }
+body.excel .shop-item { background: #fff; border-radius: 0; border-color: #e1dfdd; }
+body.excel .shop-item.on { background: #e2efda; border-color: #217346; }
+body.excel .bet-opt { border-radius: 0; background: #fff; color: #252423; }
+body.excel .bet-opt.on { background: #e2efda; color: #217346; border-color: #217346; }
+body.excel .yut-chart div, body.excel .wallet-sub div { background: #f3f2f1; border-radius: 0; }
+body.excel .yut-chart b { color: #252423; }
+body.excel .rules { color: #252423; } body.excel .rules b { color: #217346; }
+body.excel .sheet-panel { background: #fff; color: #252423; border-radius: 0; }
+body.excel .chat-peek { background: #fff; color: #252423; border-color: #c8c6c4; border-radius: 0; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+body.excel .chat-peek b, body.excel .msg b { color: #217346; }
+body.excel .msg.mine b { color: #185c37; }
+
+/* 상대·내 자리: 표의 행처럼 */
+body.excel .opp { background: #fff; border-radius: 0; border-color: #e1dfdd; box-shadow: none; }
+body.excel .opp.turn { background: #e2efda; border: 2px solid #217346; box-shadow: none; }
+body.excel .opp.turn .who span { color: #217346; }
+body.excel .opp.empty { background: #fff; color: #a19f9d; }
+body.excel .opp .tbar { background: #217346; }
+body.excel .slots i { border-radius: 0; }
+body.excel .slots i.done { background: #217346; border-color: #217346; box-shadow: none; }
+body.excel .my-panel { border-top: 1px solid #e1dfdd; }
+body.excel .my-slot { border-radius: 0; background: var(--c); box-shadow: none; width: 24px; height: 18px; }
+body.excel .my-slot .pc { display: none; }
+body.excel .my-slot.done::after { border-radius: 0; background: #217346; color: #fff; font-size: 11px; }
+body.excel .last-chip b { color: #217346; }
+body.excel .opt-grid .num { background: #217346; border-radius: 0; }
+body.excel .afk-note { background: #fff2cc; border-color: #c8c6c4; color: #252423; border-radius: 0; }
+body.excel .turn-bar { border-radius: 0; background: #e1dfdd; }
+body.excel .turn-bar i { background: #217346; }
+
+/* 말판: 차트 개체처럼 */
+body.excel .board-rim { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.15); border: 1px solid #c8c6c4; border-radius: 0; padding: 0; }
+body.excel .board-rim::before { display: none; }
+body.excel .board-wrap { border-radius: 0; box-shadow: none; }
+body.excel .tok { width: 6.4%; height: 6.4%; border-radius: 1px; background: var(--c); box-shadow: 0 0 0 1px #fff; }
+body.excel .tok::after, body.excel .tok::before, body.excel .tok .pc { display: none; }
+body.excel .tok .xl-lab { display: block; }
+body.excel .tok.can { animation: none; outline: 1.5px dashed #217346; outline-offset: 2px; }
+body.excel .tok.last { box-shadow: 0 0 0 1px #fff, 0 0 0 3px #217346; }
+body.excel .tok .cnt { border-radius: 0; background: #fff; color: #252423; border: 1px solid #c8c6c4; box-shadow: none; }
+
+/* 윷 결과: 셀 메모(노란 메모)처럼 */
+body.excel .toss { background: none; animation: none; }
+body.excel .toss-name { bottom: auto; top: 50%; transform: translateY(-50%); }
+body.excel .toss-name b { display: inline-block; font-size: 16px; font-weight: 700; padding: 6px 14px; background: #fff; color: #252423;
+  -webkit-text-fill-color: #252423; border: 1px solid #c8c6c4; filter: none; box-shadow: 0 4px 12px rgba(0,0,0,.15); animation: none; }
+body.excel .toss-name span { display: block; width: max-content; margin: 4px auto 0; font-size: 12px; font-weight: 400; background: #fff2cc; color: #252423;
+  border: 1px solid #c8c6c4; border-radius: 0; animation: none; }
+body.excel .toss .xl-bits { display: flex; }
+body.excel .banner { background: rgba(255,255,255,.7); animation: none; }
+body.excel .banner b { -webkit-text-fill-color: #217346; color: #217346; font-size: 18px; }
+body.excel .banner span { color: #252423; font-size: 13px; }
+body.excel .banner > div { background: #fff; border: 1px solid #c8c6c4; padding: 14px 20px; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+/* 엑셀 모드에서만 보이는 것 (기본 테마에선 숨김) */
+.tok .xl-lab { display: none; position: relative; z-index: 1; color: #fff; font: 700 calc(var(--s) * .03) / 1 Arial, sans-serif; }
+.toss .xl-bits { display: none; justify-content: center; gap: 0; margin: 0 auto 6px; width: max-content; }
+.toss .xl-bits i { width: 34px; height: 20px; border: 1px solid #c8c6c4; margin-left: -1px; background: #fff; color: #252423; font: 12px/18px Arial; font-style: normal; text-align: center; }
+
+/* 설정 모달 */
+.field-label { font-size: 13px; color: var(--muted); font-weight: 700; }
+.opt-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.opt-group button { padding: 12px 8px; border-radius: 12px; border: 1px solid var(--line2); background: rgba(255,255,255,.04); font-weight: 800; }
+.opt-group button small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+.opt-group button.on { border-color: var(--gold); background: rgba(233,196,106,.12); color: var(--gold2); }

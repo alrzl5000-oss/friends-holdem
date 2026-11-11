@@ -119,7 +119,38 @@
   };
 
   // opts: { theme, options:[{id,from,to,route}], steps }
+  // 엑셀 모드: 꺾은선형 차트처럼 보이는 말판
+  function excelBoard(opts) {
+    const options = opts.options || [];
+    const blue = '#4472c4', orange = '#ed7d31', green = '#70ad47', gray = '#595959', acc = '#217346';
+    const grid = [12, 31, 50, 69, 88].map(y => `<line x1="7" y1="${y}" x2="93" y2="${y}" stroke="#e1dfdd" stroke-width=".3"/>`).join('');
+    const ylab = ['100', '75', '50', '25', '0'].map((t, i) => `<text x="5.6" y="${12 + i * 19 + .9}" font-size="2.3" text-anchor="end" fill="${gray}" font-family="Calibri, Arial">${t}</text>`).join('');
+    const sq = `M${BR} L${TR} L${TL} L${BL} Z`, dg = `M${TR} L${BL} M${TL} L${BR}`;
+    const nodes = Object.keys(XY).filter(n => n !== 'start' && n !== 'goal').map(n => {
+      const [x, y] = XY[n];
+      if (n === 'C') return `<path d="M${x} ${y - 2.4} L${x + 2.4} ${y} L${x} ${y + 2.4} L${x - 2.4} ${y}Z" fill="${green}" stroke="#fff" stroke-width=".4"/>`;
+      if (CORNER.has(n)) return `<rect x="${x - 1.9}" y="${y - 1.9}" width="3.8" height="3.8" fill="${orange}" stroke="#fff" stroke-width=".4"/>`;
+      return `<circle cx="${x}" cy="${y}" r="1.45" fill="#fff" stroke="${blue}" stroke-width=".55"/>`;
+    }).join('');
+    const paths = options.map(o => `<polyline class="route" points="${(o.path || [o.from, o.to]).map(n => XY[n].join(',')).join(' ')}" fill="none" stroke="${acc}" stroke-width=".8" stroke-dasharray="1.6 1.2"/>`).join('');
+    const seen = new Set();
+    const targets = options.map((o, i) => {
+      if (seen.has(o.to)) return ''; seen.add(o.to);
+      const [x, y] = o.to === 'goal' ? [93.5, 93.5] : XY[o.to];
+      return `<g class="tg" data-opt="${o.id}" tabindex="0" role="button"><rect x="${x - 3.4}" y="${y - 3.4}" width="6.8" height="6.8" fill="#e2efda" stroke="${acc}" stroke-width=".7"/>
+        <text x="${x}" y="${y + 1}" font-size="2.8" text-anchor="middle" fill="${acc}" font-weight="700" font-family="Calibri, Arial">${o.to === 'goal' ? '났' : i + 1}</text></g>`;
+    }).join('');
+    return `<svg class="board" viewBox="0 0 100 100" role="img" aria-label="차트"><rect width="100" height="100" fill="#fff"/>
+      <text x="50" y="5.4" font-size="3.1" text-anchor="middle" fill="${gray}" font-family="Calibri, Arial">분기별 매출 추이</text>
+      ${grid}${ylab}<g fill="none" stroke-linecap="round"><path d="${sq}" stroke="${blue}" stroke-width=".7"/><path d="${dg}" stroke="${orange}" stroke-width=".5"/></g>
+      ${nodes}<text x="${BR[0] - 6}" y="${BR[1] - 3}" font-size="2.2" fill="${gray}" font-family="Calibri, Arial">기준</text>
+      <g font-size="2.3" fill="${gray}" font-family="Calibri, Arial"><rect x="28" y="95" width="2" height="2" fill="${blue}"/><text x="31" y="96.8">매출</text>
+        <rect x="42" y="95" width="2" height="2" fill="${orange}"/><text x="45" y="96.8">목표</text><rect x="56" y="95" width="2" height="2" fill="${green}"/><text x="59" y="96.8">전년 대비</text></g>
+      <g class="routes">${paths}</g><g class="targets">${targets}</g></svg>`;
+  }
+
   function boardSVG(opts) {
+    if (opts.theme === 'excel') return excelBoard(opts);
     const tk = (opts.theme in THEMES) ? opts.theme : 'hanji';
     const T = THEMES[tk];
     const options = opts.options || [];
@@ -186,7 +217,7 @@
 
     // 내 차례: 갈 길(점선 흐름) · 옮길 말 · 갈 자리
     const paths = options.map(o => {
-      const p = pathOf(o.from, o.to, opts.steps, o.route).map(n => XY[n]);
+      const p = (o.path || pathOf(o.from, o.to, opts.steps, o.route)).map(n => XY[n]);
       return `<polyline class="route" points="${p.map(q => q.join(',')).join(' ')}" fill="none" stroke="${T.accent}" stroke-width=".9" stroke-dasharray="1.6 1.4" stroke-linecap="round" opacity=".85"/>`;
     }).join('');
     const seenTo = new Set();
