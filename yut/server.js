@@ -1,0 +1,57 @@
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const { Server } = require('socket.io');
+const db = require('./db');
+const yut = require('./yut');
+
+const app = express();
+app.use(express.static(path.join(__dirname, 'public')));
+const server = http.createServer(app);
+const io = new Server(server);
+const PORT = process.env.PORT || 3000;
+const userSocket = new Map(); // uid -> socket.id
+
+function pushMe(uid) {
+  const u = db.byId.get(uid);
+  const sid = userSocket.get(uid);
+  if (u && sid) io.to(sid).emit('me', { id: u.id, username: u.username, assets: u.assets, yutHold: u.yutHold, yut: u.yut || {} });
+}
+yut.init({
+  getUser: id => db.byId.get(id),
+  save: () => db.save(),
+  notify: (uid, ev, payload) => {
+    if (ev === 'me') return pushMe(uid);
+    if (!uid) return io.emit(ev, payload);
+    const sid = userSocket.get(uid);
+    if (sid) io.to(sid).emit(ev, payload);
+  },
+});
+
+io.on('connection', socket => {
+  let user = null;
+  const enter = u => { user = u; userSocket.set(u.id, socket.id); pushMe(u.id); };
+  socket.on('register', ({ username, password } = {}, cb = () => {}) => {
+    const r = db.register(username, password);
+    if (r.error) return cb(r);
+    enter(r.user); cb({ ok: true });
+  });
+  socket.on('login', ({ username, password } = {}, cb = () => {}) => {
+    const r = db.login(username, password);
+    if (r.error) return cb(r);
+    enter(r.user); cb({ ok: true });
+  });
+  const guard = fn => (...args) => {
+    const cb = typeof args[args.length - 1] === 'function' ? args.pop() : () => {};
+    if (!user) return cb({ error: '로그인이 필요해요' });
+    try { fn(cb, ...args); } catch (e) { console.error(e); cb({ error: '서버 오류가 났어요' }); }
+  };
+  socket.on('yut', guard((cb, { op, arg } = {}) => {
+    const r = yut.yutAct(user, String(op), arg);
+    if (r.ok && ['create', 'join', 'leave', 'cancel', 'start'].includes(op)) pushMe(user.id);
+    cb(r);
+  }));
+  socket.on('disconnect', () => { if (user && userSocket.get(user.id) === socket.id) userSocket.delete(user.id); });
+});
+
+server.listen(PORT, () => console.log(`윷놀이 서버 실행 중: http://localhost:${PORT}`));

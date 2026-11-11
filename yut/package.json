@@ -1,0 +1,9 @@
+{
+  "name": "friends-yut",
+  "version": "1.0.0",
+  "description": "친구들끼리 하는 윷놀이 (3~4인, 판돈 내기, 전통 룰)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "express": "^4.21.2", "socket.io": "^4.8.1" }
+}
