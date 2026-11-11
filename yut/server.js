@@ -34,19 +34,35 @@ yut.init({
   },
 });
 
+// 저장해 둔 판 되살리기 → 되살리지 못한 판돈은 환불
+const alive = yut.restore(db.storedGames());
+db.refundOrphans(alive);
+db.setDump(yut.dump);
+db.save();
+if (alive.length) console.log(`저장된 판 복원: 참가자 ${alive.length}명`);
+// 재배포 때 꺼지기 직전 상태 저장
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { try { db.save(); } catch (e) {} process.exit(0); });
+
 io.on('connection', socket => {
   let user = null;
   const enter = u => { user = u; userSocket.set(u.id, socket.id); pushMe(u.id); };
   socket.on('register', ({ username, password } = {}, cb = () => {}) => {
     const r = db.register(username, password);
     if (r.error) return cb(r);
-    enter(r.user); cb({ ok: true });
+    enter(r.user); cb({ ok: true, token: r.token });
   });
   socket.on('login', ({ username, password } = {}, cb = () => {}) => {
     const r = db.login(username, password);
     if (r.error) return cb(r);
-    enter(r.user); cb({ ok: true });
+    enter(r.user); cb({ ok: true, token: r.token });
   });
+  // 새로고침·재접속: 저장된 토큰으로 자동 로그인
+  socket.on('auth', ({ token } = {}, cb = () => {}) => {
+    const u = db.byToken(token);
+    if (!u) return cb({ error: '다시 로그인해 주세요' });
+    enter(u); cb({ ok: true });
+  });
+  socket.on('logout', ({ token } = {}, cb = () => {}) => { db.logout(token); cb({ ok: true }); });
   const guard = fn => (...args) => {
     const cb = typeof args[args.length - 1] === 'function' ? args.pop() : () => {};
     if (!user) return cb({ error: '로그인이 필요해요' });

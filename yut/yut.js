@@ -141,6 +141,7 @@ function view(g, uid) {
     last: g.last || null,
     chat: g.chat.slice(-60),
     seq: g.seq || 0,
+    again: g.status === 'play' && !!g.repeat, bonusLeft: g.bonus || 0,
   };
 }
 // 직접 행동하면 시간초과 횟수 초기화, 자리비움 해제
@@ -156,7 +157,7 @@ function backFromAfk(g, id) {
   push(g);
   return { ok: true };
 }
-function push(g) { for (const id of g.players) notifyFn(id, 'yutState', view(g, id)); }
+function push(g) { for (const id of g.players) notifyFn(id, 'yutState', view(g, id)); saveFn(); }
 function pushList() { notifyFn(null, 'yuts', lobbyList()); }
 function clearT(g) { clearTimeout(g.timer); g.timer = null; }
 function armTimer(g) {
@@ -195,8 +196,11 @@ function finish(g, winner) {
   setTimeout(() => games.delete(g.code), 60000);
   push(g); pushList();
 }
-function endTurn(g) {
-  if (!(g.last && g.last.extra)) g.turn = (g.turn + 1) % g.players.length;
+// 추가로 던질 횟수: 윷·모 +1, 잡으면 +1 (윷·모로 잡으면 두 번 더)
+function endTurn(g, captured = false) {
+  g.bonus = (g.bonus || 0) + (g.last && g.last.extra ? 1 : 0) + (captured ? 1 : 0);
+  if (g.bonus > 0) { g.bonus--; g.repeat = true; }
+  else { g.turn = (g.turn + 1) % g.players.length; g.repeat = false; }
   g.phase = 'throw';
   g.options = [];
 }
@@ -214,12 +218,14 @@ function applyOption(g, optId) {
     const here = g.pos[id].filter(q => nodeOf(q) === node).length;
     if (here > group.length) g.chat.push({ name: '📢', text: `${g.names[id]} 님이 말을 업었어요 (${here}동)` });
   }
+  let captured = false;
   if (node !== 'goal' && node !== 'start') {
     for (const other of g.players) {
       if (other === id) continue;
       g.pos[other] = g.pos[other].map(q => {
         if (!isDone(q) && !isStart(q) && nodeOf(q) === node) {
-          g.chat.push({ name: '📢', text: `${g.names[id]} 님이 ${g.names[other]} 님의 말을 잡았어요` });
+          if (!captured || captured !== other) g.chat.push({ name: '📢', text: `${g.names[id]} 님이 ${g.names[other]} 님의 말을 잡았어요 — 한 번 더!` });
+          captured = other;
           return START_P();
         }
         return q;
@@ -227,7 +233,7 @@ function applyOption(g, optId) {
     }
   }
   if (g.pos[id].every(isDone)) { finish(g, id); return { ok: true }; }
-  endTurn(g);
+  endTurn(g, !!captured);
   armTimer(g);
   push(g);
   return { ok: true };
@@ -293,7 +299,7 @@ function yutAct(u, op, arg) {
     if (g.status !== 'open') return { error: '이미 시작했어요' };
     if (g.host !== u.id) return { error: '방장만 시작할 수 있어요' };
     if (g.players.length < MIN_PLAYERS) return { error: `${MIN_PLAYERS}명 이상 모여야 시작할 수 있어요` };
-    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {};
+    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {}; g.bonus = 0; g.repeat = false;
     g.pos = {};
     for (const id of g.players) g.pos[id] = [START_P(), START_P(), START_P(), START_P()];
     g.chat.push({ name: '📢', text: '게임 시작!' });
@@ -317,4 +323,18 @@ function yutAct(u, op, arg) {
   return { error: '알 수 없는 행동이에요' };
 }
 
-module.exports = { init, skinOf, yutAct, view, lobbyList, throwYut, optionsFor, forward, backward, START_P, nodeOf, ROUTE, MIN_BET, MAX_BET, _games: games };
+// 서버가 다시 켜져도 판이 이어지도록 저장·복원
+function dump() {
+  return [...games.values()].filter(g => g.status !== 'done').map(g => { const { timer, ...rest } = g; return rest; });
+}
+function restore(list) {
+  for (const g of list || []) {
+    if (!g || !g.code || games.has(g.code)) continue;
+    g.timer = null;
+    games.set(g.code, g);
+    for (const id of g.players) userGame.set(id, g.code);
+    if (g.status === 'play') armTimer(g);   // 차례 시간은 처음부터 다시
+  }
+  return [...games.values()].flatMap(g => g.players);
+}
+module.exports = { dump, restore, init, skinOf, yutAct, view, lobbyList, throwYut, optionsFor, forward, backward, START_P, nodeOf, ROUTE, MIN_BET, MAX_BET, _games: games };

@@ -11,12 +11,28 @@ const START = 1e9; // 처음 가입하면 10억
 let data;
 try { data = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (e) { data = { users: {} }; }
 data.users = data.users || {};
+data.sessions = data.sessions || {};
 const byId = new Map();
 for (const u of Object.values(data.users)) byId.set(u.id, u);
-// 서버가 판 도중 꺼졌으면 판돈을 돌려줌
-for (const u of Object.values(data.users)) if (u.yutHold) { u.assets += u.yutHold; u.yutHold = 0; }
+// 서버가 다시 켜졌을 때 되살리지 못한 판의 판돈은 돌려줌 (activeIds: 복원된 판의 참가자)
+function refundOrphans(activeIds) {
+  const keep = new Set(activeIds || []);
+  for (const u of Object.values(data.users)) if (u.yutHold && !keep.has(u.id)) { u.assets += u.yutHold; u.yutHold = 0; }
+}
+let dumpFn = null;
+const setDump = fn => { dumpFn = fn; };
+const storedGames = () => data.yutGames || [];
+// 로그인 유지용 세션 (브라우저에 토큰 저장)
+function newSession(u) {
+  const token = crypto.randomBytes(24).toString('hex');
+  data.sessions[token] = u.id;
+  return token;
+}
+function logout(token) { delete data.sessions[String(token || '')]; save(); }
+function byToken(token) { const id = data.sessions[String(token || '')]; return id ? byId.get(id) || null : null; }
 
 function save() {
+  if (dumpFn) data.yutGames = dumpFn();
   fs.mkdirSync(DIR, { recursive: true });
   const tmp = FILE + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(data));
@@ -33,14 +49,17 @@ function register(name, pw) {
   const salt = crypto.randomBytes(8).toString('hex');
   const u = { id: crypto.randomUUID(), username: name, salt, pw: hash(pw, salt), assets: START, yutHold: 0, yut: { games: 0, win: 0, net: 0 }, owned: SHOP.DEFAULT_OWNED.slice(), equip: Object.assign({}, SHOP.DEFAULT_EQUIP) };
   data.users[key] = u; byId.set(u.id, u);
+  const token = newSession(u);
   save();
-  return { user: u };
+  return { user: u, token };
 }
 function login(name, pw) {
   const u = data.users[String(name || '').trim().toLowerCase()];
   if (!u) return { error: '없는 닉네임이에요 (처음이면 비밀번호를 정하고 가입해 주세요)' };
   if (hash(String(pw || ''), u.salt) !== u.pw) return { error: '비밀번호가 달라요' };
-  return { user: u };
+  const token = newSession(u);
+  save();
+  return { user: u, token };
 }
 // 상점: 구매(우승 트로피로) · 장착(보유한 것만)
 function buy(u, id) {
@@ -73,4 +92,4 @@ function rank() {
     .sort((a, b) => b.win - a.win || b.trophy - a.trophy || (b.win / b.games) - (a.win / a.games))
     .slice(0, 50);
 }
-module.exports = { byId, save, register, login, buy, equip, rank, START };
+module.exports = { byId, save, register, login, buy, equip, rank, START, refundOrphans, setDump, storedGames, byToken, logout };

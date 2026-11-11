@@ -6,6 +6,7 @@ const TURN_MS = 20000;
 const MIN_START = 2;
 const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+let token = null; try { token = localStorage.getItem('fy_token'); } catch (e) {}
 let me = null, room = null, lobby = [], ITEMS = [], tab = 'rooms', authMode = 'login', bet = 1e7;
 let inGame = false;               // 판 화면을 보고 있는지 (진행 중에 로비로 나갈 수 있음)
 let shownSeq = null, playTimer = null, playAt = 0, bannerFor = null, chatSeen = 0, peekTimer = null;
@@ -55,6 +56,7 @@ $('authSeg').onclick = e => {
 function doAuth() {
   socket.emit(authMode, { username: $('authName').value, password: $('authPw').value }, res => {
     if (res.error) { $('authErr').textContent = res.error; return; }
+    if (res.token) { token = res.token; try { localStorage.setItem('fy_token', token); } catch (e) {} }
     if (authMode === 'register') toast('가입 완료! 10억원이 지급됐어요', true);
   });
 }
@@ -70,7 +72,9 @@ $('lobbyTabs').onclick = e => {
   if (tab === 'rank') loadRank();
   renderLobby();
 };
-$('logoutBtn').onclick = () => location.reload();
+$('logoutBtn').onclick = () => {
+  socket.emit('logout', { token }, () => { try { localStorage.removeItem('fy_token'); } catch (e) {} location.reload(); });
+};
 $('rulesBtn').onclick = $('gRulesBtn').onclick = showRules;
 $('newRoomBtn').onclick = () => {
   const draw = () => modal(`<h3>판 만들기</h3>
@@ -256,7 +260,8 @@ function renderPlay() {
         <div class="row"><button class="btn" id="cancelBtn">판 닫기</button><button class="btn green" id="startBtn" ${v.players.length < MIN_START ? 'disabled' : ''}>시작하기</button></div></div>`
       : `<div class="wait">방장이 시작하길 기다리는 중…<div class="row"><button class="btn" id="leaveBtn">나가기</button></div></div>`;
   } else if (v.status === 'play') {
-    if (v.canThrow) h = `<button class="btn gold big throw-btn" id="throwBtn">윷 던지기</button>`;
+    if (v.canThrow) h = (v.again ? `<p class="hint"><b>한 번 더!</b>${v.bonusLeft ? ` 이번 다음에도 ${v.bonusLeft}번 더 던져요` : ''}</p>` : '')
+      + `<button class="btn gold big throw-btn" id="throwBtn">${v.again ? '한 번 더 던지기' : '윷 던지기'}</button>`;
     else if (v.canMove) h = `<p class="hint">판에서 빛나는 자리를 누르거나 아래에서 고르세요</p><div class="opt-grid">${v.options.map((o, i) =>
       `<button class="btn" data-opt="${o.id}">${v.options.length > 1 ? `<span class="num">${o.to === 'goal' ? '났' : i + 1}</span>` : ''}${optLabel(o)}</button>`).join('')}</div>`;
     else h = `<div class="wait">${esc(turn ? turn.name : '')}님 차례예요</div>`;
@@ -336,7 +341,7 @@ function placeTokens(v) {
       }
     });
   });
-  const TXT = { catch: '잡았다!', goal: '났다!', stack: '업었다!' };
+  const TXT = { catch: '잡았다! 한 번 더', goal: '났다!', stack: '업었다!' };
   fx.forEach(f => setTimeout(() => burst(f.kind, f.node, f.color, TXT[f.kind]), f.at));
 }
 function guessRoute(from, to, steps) {
@@ -463,7 +468,7 @@ function renderChat() {
 
 // ---------- 서버 ----------
 function renderAll() {
-  if (!me) return show('auth');
+  if (!me) { if (!token) show('auth'); return; }
   if (room && inGame) { show('game'); renderGame(); }
   else { show('lobby'); renderLobby(); }
 }
@@ -488,8 +493,15 @@ socket.on('yutState', v => {
   room = v;
   if (inGame) renderGame(); else renderLobby();
 });
-socket.on('disconnect', () => toast('연결이 끊겼어요. 새로고침해 주세요'));
-socket.on('connect', () => { if (me) act('list'); });
+socket.on('disconnect', () => toast('연결이 끊겼어요. 다시 연결하는 중…'));
+// 접속(새로고침·재접속 포함)할 때 저장된 토큰으로 자동 로그인 → 하던 판으로 복귀
+socket.on('connect', () => {
+  if (!token) { if (!me) show('auth'); return; }
+  socket.emit('auth', { token }, res => {
+    if (res && res.error) { token = null; try { localStorage.removeItem('fy_token'); } catch (e) {} me = null; show('auth'); return; }
+    if (me) act('list');   // 처음 접속이면 'me' 가 오면서 list 를 부름
+  });
+});
 
 fetch('/api/shop').then(r => r.json()).then(list => { ITEMS = list; renderAll(); });
-show('auth');
+if (!token) show('auth');
