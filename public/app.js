@@ -236,13 +236,15 @@ function renderWallet() {
   renderTitles();
   const hs = me.history || {}, h1 = hs.s1, h2 = hs.s2;
   const rate = h => h.played ? Math.round(h.wins / h.played * 1000) / 10 + '%' : '-';
-  $('myHistory').innerHTML = (h2 ? `<div class="hist-head">📜 시즌2 기록${h2.scoreRank ? ` <i class="s1b">시즌2 ${h2.scoreRank}위</i>` : ''}</div>
-    <div class="hist-grid"><div><span>우승</span><b>${h2.wins}회</b></div><div><span>참가</span><b>${h2.played}회</b></div><div><span>우승률</span><b>${rate(h2)}</b></div><div><span>토너 점수</span><b>${h2.score != null ? h2.score.toFixed(2) : '-'}</b></div></div>
-    <div class="hist-grid"><div><span>최종 자산</span><b>${short(h2.total)}</b></div><div><span>자산 순위</span><b>${h2.assetRank ? h2.assetRank + '위' : '-'}</b></div></div>
-    ${h2.awards && h2.awards.length ? `<p class="hint">🎁 받은 보상: ${h2.awards.map(esc).join(' · ')}</p>` : ''}` : '')
+  const histBlock = (h, n) => h ? `<div class="hist-head">📜 시즌${n} 기록${h.scoreRank ? ` <i class="s1b">시즌${n} ${h.scoreRank}위</i>` : ''}</div>
+    <div class="hist-grid"><div><span>우승</span><b>${h.wins}회</b></div><div><span>참가</span><b>${h.played}회</b></div><div><span>우승률</span><b>${rate(h)}</b></div><div><span>토너 점수</span><b>${h.score != null ? h.score.toFixed(2) : '-'}</b></div></div>
+    <div class="hist-grid"><div><span>최종 자산</span><b>${short(h.total)}</b></div><div><span>자산 순위</span><b>${h.assetRank ? h.assetRank + '위' : '-'}</b></div></div>
+    ${h.awards && h.awards.length ? `<p class="hint">🎁 받은 보상: ${h.awards.map(esc).join(' · ')}</p>` : ''}` : '';
+  const h3 = hs.s3;
+  $('myHistory').innerHTML = histBlock(h3, 3) + histBlock(h2, 2)
     + (h1 ? `<div class="hist-head">📜 시즌1 기록${h1.place ? ` <i class="s1b">시즌1 ${h1.place}위</i>` : ''}</div>
     <div class="hist-grid"><div><span>우승</span><b>${h1.wins}회</b></div><div><span>참가</span><b>${h1.played}회</b></div><div><span>우승률</span><b>${rate(h1)}</b></div><div><span>평균 등수</span><b>${h1.avg != null ? h1.avg.toFixed(2) + '위' : '-'}</b></div></div>` : '');
-  $('myHistory').classList.toggle('hidden', !h1 && !h2);
+  $('myHistory').classList.toggle('hidden', !h1 && !h2 && !h3);
 }
 // 칭호 고르기 (최대 2개) + 시즌 보상 아이템 장착
 function renderTitles() {

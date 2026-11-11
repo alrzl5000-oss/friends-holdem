@@ -77,6 +77,8 @@
   const SEASON_ITEMS = [
     { id: 's2_champ', cat: 'frame', name: '시즌2 챔피언 테두리', desc: '시즌2 토너 점수 1위' },
     { id: 's2_gold', cat: 'back', name: '시즌2 순금 카드', desc: '시즌2 총 자산 1위' },
+    { id: 's3_champ', cat: 'frame', name: '시즌3 챔피언 테두리', desc: '시즌3 토너 점수 1위' },
+    { id: 's3_gold', cat: 'back', name: '시즌3 순금 카드', desc: '시즌3 총 자산 1위' },
   ];
   // 장착 슬롯 전체 (상점 + 업적 전용)
   const SLOTS = Object.assign({}, CATS, { aura: '프로필 이펙트', sdfx: '쇼다운 이펙트', enter: '입장 이펙트' });

@@ -1366,3 +1366,10 @@ body.excel .bj-rules { color: #252423; } body.excel .bj-rules em { color: #21734
 .pe-live { display: flex; justify-content: center; align-items: center; min-height: 120px; }
 .pe-live .av { width: 120px; height: 120px; }
 .pe-live img { image-rendering: pixelated; }
+
+/* 시즌3 보상: 시즌2와 같은 모양 */
+.card.back.bk-s3_gold { background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.75) 45%, transparent 55%) 0 0 / 250% 100%, repeating-linear-gradient(45deg, #c99a2e 0 4px, #e9c46a 4px 8px); box-shadow: 0 0 10px rgba(255,215,0,.7), inset 0 0 0 2px #fff3c4, inset 0 0 0 4px #8a6412; animation: s2shine 2.4s linear infinite; }
+.card.back.bk-s3_gold::after { content: "S3"; position: absolute; inset: 0; display: grid; place-items: center; color: #5a3d00; font-weight: 900; font-size: 60%; text-shadow: 0 1px 0 #fff3c4; }
+.card.fc-s3_gold:not(.back) { background: linear-gradient(160deg, #fffbe8, #f6dd9a); box-shadow: 0 0 8px rgba(255,215,0,.6), inset 0 0 0 2px #c99a2e; }
+.av.fr-s3_champ::before, .av.fr-s3_champ::after { animation: pfa 1.2s steps(6, jump-none) infinite; }
+.av.fr-s3_champ::before { animation: pfa 1.2s steps(6, jump-none) infinite, glowRainbow 2.4s linear infinite; }

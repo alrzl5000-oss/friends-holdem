@@ -384,6 +384,7 @@ const PIXEL_FRAMES = {
     PF.spr(g, 14, 28, ['.KK.', 'KPPK', '.KK.'], { K: '#141414', P: '#ff6fae' });
     return [g];
   },
+  s3_champ: () => PIXEL_FRAMES.s2_champ(), // 시즌3 챔피언: 시즌2 그림 재사용
 };
 const pfCache = new Map();
 function pixelFrame(id) {

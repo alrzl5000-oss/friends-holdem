@@ -348,6 +348,64 @@ if (!data.migrations.includes('season3')) {
   save();
 }
 
+// ===== 시즌 3 종료 정산 → 시즌 4 시작 (한 번만) =====
+if (!data.migrations.includes('season4')) {
+  data.season = 4; // 먼저 올려야 시즌2 칭호가 빠지고 새 시즌3 칭호가 빈 자리에 달림
+  const users = Object.values(data.users);
+  const tp = u => u.stats.tPlayed || 0;
+  // 랭킹 자격: 전체 평균 토너 참가 수의 70% (소수점 버림) — 랭킹 화면과 같은 기준
+  const minT = users.length ? Math.floor(users.reduce((n, u) => n + tp(u), 0) / users.length * RANK_MIN_RATIO) : 0;
+  const elig = users.filter(u => tp(u) >= minT);
+  const score = u => u.stats.scoreSum / u.stats.scored;
+  const rate = (a, b) => (b ? (a || 0) / b : 0);
+  const s2 = new Map(users.map(u => [u, { wins: u.stats.tWins || 0, played: tp(u), score: u.stats.scored ? score(u) : null, total: total(u), awards: [] }]));
+  const log = [];
+  function give(u, label, { title, item, trophies = 0 }) {
+    if (title) { u.awards = u.awards || []; if (!u.awards.includes(title)) u.awards.push(title); autoTitle(u, 'aw:' + title); }
+    if (item) { u.owned = u.owned || []; if (!u.owned.includes(item)) u.owned.push(item); }
+    u.trophies = (u.trophies || 0) + trophies;
+    s2.get(u).awards.push(label);
+    log.push(`${label}: ${u.username}${title ? ` [${title}]` : ''}${item ? ` +${item}` : ''}${trophies ? ` 🏆+${trophies}` : ''}`);
+  }
+  // 1) 토너 점수 1~3위
+  const byScore = elig.filter(u => u.stats.scored > 0).sort((a, b) => score(a) - score(b) || tp(b) - tp(a)).slice(0, 3);
+  const SR = [{ title: '시즌3 1위', item: 's3_champ', trophies: 10 }, { title: '시즌3 2위', trophies: 6 }, { title: '시즌3 3위', trophies: 3 }];
+  byScore.forEach((u, i) => { s2.get(u).scoreRank = i + 1; give(u, `토너 점수 ${i + 1}위`, SR[i]); });
+  // 2) 총 자산 1~3위
+  const byAssets = elig.slice().sort((a, b) => total(b) - total(a)).slice(0, 3);
+  const AR = [{ title: '시즌3 재벌', item: 's3_gold' }, { trophies: 3 }, { trophies: 2 }];
+  byAssets.forEach((u, i) => { s2.get(u).assetRank = i + 1; give(u, `총 자산 ${i + 1}위`, AR[i]); });
+  // 3) 부문상 1~3위 (1위 칭호 + 🏆3, 2위 🏆2, 3위 🏆1)
+  const AWARDS = [
+    { title: '우승 머신', ok: u => (u.stats.tWins || 0) > 0, val: u => (u.stats.tWins || 0) - tp(u) / 1e6 },
+    { title: '올인왕', ok: u => (u.play || {}).hands >= 10 && u.play.allin > 0, val: u => rate(u.play.allin, u.play.hands) },
+    { title: '쫄보왕', ok: u => (u.play || {}).fr >= 5 && u.play.ffr > 0, val: u => rate(u.play.ffr, u.play.fr) },
+    { title: '블러핑왕', ok: u => (u.play || {}).sdb >= 3 && u.play.bluff > 0, val: u => rate(u.play.bluff, u.play.sdb) },
+    { title: '기부천사', ok: u => (u.stats.bailouts || 0) > 0, val: u => u.stats.bailouts },
+  ];
+  for (const a of AWARDS) {
+    users.filter(a.ok).sort((x, y) => a.val(y) - a.val(x)).slice(0, 3)
+      .forEach((u, i) => give(u, `${a.title} ${i + 1}위`, i === 0 ? { title: a.title, trophies: 3 } : { trophies: 3 - i }));
+  }
+  // 4) 참가 보상: 랭킹 자격 채운 사람 전원
+  for (const u of elig) if (tp(u) >= Math.max(1, minT)) give(u, '시즌3 참가', { title: '시즌3 참가', trophies: 1 });
+  log.forEach(x => console.log('시즌3 보상 · ' + x));
+
+  data.season3 = { minTourneys: minT, score: byScore.map(u => u.username), assets: byAssets.map(u => u.username) };
+  for (const u of users) {
+    u.history = u.history || {};
+    u.history.s3 = s2.get(u);
+    u.stats = { tWins: 0, tPlayed: 0, placeSum: 0, scoreSum: 0, scored: 0, bailouts: 0 };
+    u.play = {};               // 플레이 성향도 시즌4부터 새로
+    u.bailoutLog = [];
+    u.assets = START_ASSETS; u.inPlay = 0; u.tourneyHold = 0;
+  }
+  data.season = 4;
+  data.migrations.push('season4');
+  console.log(`시즌 4 시작: 전원 ${START_ASSETS / 1e8}억으로 초기화 (${users.length}명, 랭킹 자격 ${minT}회)`);
+  save();
+}
+
 function pub(u) {
   return {
     id: u.id,
