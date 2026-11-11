@@ -50,18 +50,6 @@ bj.init({
   },
 });
 
-// 윷놀이: 알림 방식은 블랙잭과 같음
-const yut = require('./yut');
-yut.init({
-  db,
-  notify: (uid, ev, payload) => {
-    if (ev === 'me') return ctx.pushMe(uid);
-    if (!uid) return io.emit(ev, payload);
-    const sid = userSocket.get(uid);
-    if (sid) io.to(sid).emit(ev, payload);
-  },
-});
-
 // 업적 달성 알림: 본인에게 배너 + 같은 방에 채팅 공지
 ach.init({
   save: () => db.save(),
@@ -326,13 +314,6 @@ io.on('connection', socket => {
   socket.on('duel', guard((cb, { op, arg } = {}) => {
     const r = bj.duelAct(user, String(op), arg);
     if (r.ok && ['create', 'join', 'cancel'].includes(op)) ctx.pushMe(user.id);
-    cb(r);
-  }));
-
-  // 윷놀이: op = list | create(bet) | join(code) | leave | cancel | start | throw | move(칸) | chat(text)
-  socket.on('yut', guard((cb, { op, arg } = {}) => {
-    const r = yut.yutAct(user, String(op), arg);
-    if (r.ok && ['create', 'join', 'leave', 'cancel', 'start'].includes(op)) ctx.pushMe(user.id);
     cb(r);
   }));
 

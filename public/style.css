@@ -1373,23 +1373,3 @@ body.excel .bj-rules { color: #252423; } body.excel .bj-rules em { color: #21734
 .card.fc-s3_gold:not(.back) { background: linear-gradient(160deg, #fffbe8, #f6dd9a); box-shadow: 0 0 8px rgba(255,215,0,.6), inset 0 0 0 2px #c99a2e; }
 .av.fr-s3_champ::before, .av.fr-s3_champ::after { animation: pfa 1.2s steps(6, jump-none) infinite; }
 .av.fr-s3_champ::before { animation: pfa 1.2s steps(6, jump-none) infinite, glowRainbow 2.4s linear infinite; }
-
-/* ===== 윷놀이 ===== */
-.yt-body { display: flex; flex-direction: column; gap: 10px; }
-.yt-head { font-size: 14px; } .yt-head small { color: var(--mut, #9aa); }
-.yt-status { font-weight: 700; text-align: center; }
-.yt-tray { display: flex; gap: 6px; flex-wrap: wrap; }
-.yt-pl { flex: 1 1 130px; border: 2px solid var(--pc); border-radius: 10px; padding: 6px 8px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
-.yt-pl.turn { box-shadow: 0 0 10px var(--pc); }
-.yt-board { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
-.yt-cell { position: relative; aspect-ratio: 1; border-radius: 8px; border: 1px solid #2c4037; background: #15231d; color: #cfd8d3; font-size: 11px; padding: 2px; display: flex; flex-direction: column; justify-content: space-between; }
-.yt-cell.goal { background: #2a2410; }
-.yt-cell.opt { border-color: #ffd43b; box-shadow: 0 0 8px rgba(255,212,59,.7); cursor: pointer; }
-.yt-cell:disabled { opacity: 1; }
-.yt-cell span { display: flex; flex-wrap: wrap; gap: 2px; }
-.yt-tok { width: 16px; height: 16px; border-radius: 50%; color: #111; font-style: normal; font-size: 10px; font-weight: 800; display: inline-grid; place-items: center; }
-.yt-throw { align-self: center; }
-.yt-join { display: flex; gap: 6px; } .yt-join input { flex: 1; text-transform: uppercase; }
-.yt-list { display: flex; flex-direction: column; gap: 6px; }
-.yt-room { text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid #2c4037; background: #15231d; color: inherit; }
-.yt-actions { display: flex; gap: 6px; justify-content: center; }
