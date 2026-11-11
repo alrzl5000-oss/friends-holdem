@@ -157,13 +157,14 @@ $('joinCode').onkeydown = e => { if (e.key === 'Enter') $('joinCodeBtn').click()
 
 function showRules() {
   modal(`<h3>윷놀이 규칙</h3>
-    <div class="yut-chart"><div><b>도</b>한 칸</div><div><b>개</b>두 칸</div><div><b>걸</b>세 칸</div><div><b>윷</b>네 칸 · 한 번 더</div><div><b>모</b>다섯 칸 · 한 번 더</div><div><b>뒷도</b>한 칸 뒤로</div></div>
+    <div class="yut-chart"><div><b>도</b>한 칸</div><div><b>개</b>두 칸</div><div><b>걸</b>세 칸</div><div><b>윷</b>네 칸 · 한 번 더</div><div><b>모</b>다섯 칸 · 한 번 더</div><div><b>뒷도</b>한 칸 뒤로</div><div><b>낙</b>판 밖 · 무효</div><div><b>&nbsp;</b>&nbsp;</div><div><b>&nbsp;</b>&nbsp;</div></div>
     <ul class="rules">
       <li>오른쪽 아래 <b>출발</b>에서 시작해 판을 한 바퀴 돌아 다시 나가면 <b>났다</b>.</li>
       <li>모서리(첫 모·둘째 모)나 가운데(방)에 멈추면 <b>지름길</b>로 갈 수 있어요.</li>
       <li>상대 말이 있는 칸에 서면 <b>잡아서</b> 출발로 돌려보내요.</li>
       <li>내 말끼리 같은 칸에 서면 <b>업혀서</b> 함께 움직여요.</li>
       <li>말 네 개를 먼저 다 내보낸 사람이 <b>판돈 전부 + 🏆 1개</b>.</li>
+      <li><b>낙</b>(윷이 판 밖으로, 3%)이면 그 던지기는 무효고 차례가 넘어가요. 그리고 다 같이 놀려요.</li>
       <li>한 차례는 20초. 시간이 지나면 자동으로 던지고 움직여요.</li>
     </ul><div class="row2"><button class="btn" id="tallyBtn">📊 던지기 기록</button><button class="btn gold" data-close>알겠어요</button></div>`);
   $('tallyBtn').onclick = showTally;
@@ -171,8 +172,8 @@ function showRules() {
 }
 
 // 던지기 기록 (이번 판 · 내 누적 · 전체 누적) — 이론 확률과 나란히
-const NAMES = ['뒷도', '도', '개', '걸', '윷', '모'];
-const THEORY = { '뒷도': 3.8, '도': 11.5, '개': 34.6, '걸': 34.6, '윷': 13, '모': 2.6 };  // 배가 60%로 나올 때
+const NAMES = ['낙', '뒷도', '도', '개', '걸', '윷', '모'];
+const THEORY = { '낙': 3, '뒷도': 3.7, '도': 11.2, '개': 33.5, '걸': 33.5, '윷': 12.6, '모': 2.5 };  // 낙 3%, 배가 60%로 나올 때
 function tallyRow(label, t) {
   const tot = NAMES.reduce((a, k) => a + (t[k] || 0), 0);
   return `<tr><th>${esc(label)}</th>${NAMES.map(k => `<td>${t[k] || 0}<small>${tot ? Math.round((t[k] || 0) / tot * 1000) / 10 + '%' : '-'}</small></td>`).join('')}<td>${tot}</td></tr>`;
@@ -278,7 +279,7 @@ $('exitBtn').onclick = () => {
   } else if (room.status === 'play') { inGame = false; renderAll(); toast('판은 계속 진행돼요. 로비에서 돌아올 수 있어요', true); }
   else { room = null; inGame = false; act('list'); }
 };
-$('chatBtn').onclick = () => { $('chatSheet').classList.remove('hidden'); chatSeen = room ? room.chat.length : 0; $('chatBadge').classList.add('hidden'); renderChat(); setTimeout(() => $('chatInput').focus(), 50); };
+$('chatBtn').onclick = () => { $('chatSheet').classList.remove('hidden'); seenN = chatN; $('chatBadge').classList.add('hidden'); renderChat(); setTimeout(() => $('chatInput').focus(), 50); };
 document.querySelectorAll('#chatSheet [data-close]').forEach(el => el.onclick = () => $('chatSheet').classList.add('hidden'));
 $('chatForm').onsubmit = e => { e.preventDefault(); const t = $('chatInput').value; $('chatInput').value = ''; if (t.trim()) act('chat', t); };
 $('boardSvg').onclick = e => { const g = e.target.closest('.tg'); if (g) act('move', +g.dataset.opt); };
@@ -496,11 +497,14 @@ function showToss(v) {
     }
     spots.push({ ...best, rot: (r() < .5 ? 0 : 90) + (r() - .5) * 70 });
   }
+  const nak = !!last.nak;
+  if (nak) { const k = Math.floor(r() * 4); spots[k] = { x: r() < .5 ? -18 : 118, y: 20 + r() * 50, rot: r() * 180, out: true }; }
   const big = last.name === '윷' || last.name === '모';
-  t.className = 'toss' + (big ? ' big' : '') + (last.name === '뒷도' ? ' back' : '');
+  t.className = 'toss' + (big ? ' big' : '') + (last.name === '뒷도' ? ' back' : '') + (nak ? ' nak' : '');
   t.innerHTML = `${big ? '<div class="rays"></div>' : ''}${spots.map((s, i) =>
       `<div class="sp" style="left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%) rotate(${s.rot}deg)">${Art.stickEl(wood, i === 0)}</div>`).join('')}
-    <div class="toss-name"><div class="xl-bits">${last.bits.map(b => `<i>${b ? 1 : 0}</i>`).join('')}</div><b>${esc(last.name)}</b><span>${{ '도': '한 칸', '개': '두 칸', '걸': '세 칸', '윷': '네 칸 · 한 번 더!', '모': '다섯 칸 · 한 번 더!', '뒷도': '한 칸 뒤로' }[last.name] || ''}</span></div>`;
+    <div class="toss-name"><div class="xl-bits">${last.bits.map(b => `<i>${b ? 1 : 0}</i>`).join('')}</div><b>${nak ? '낙!' : esc(last.name)}</b><span>${nak ? esc(last.taunt || '판 밖으로 날아갔어요') : ({ '도': '한 칸', '개': '두 칸', '걸': '세 칸', '윷': '네 칸 · 한 번 더!', '모': '다섯 칸 · 한 번 더!', '뒷도': '한 칸 뒤로' }[last.name] || '')}</span></div>
+    ${nak ? Array.from({ length: 22 }, (_, i) => `<i class="lol" style="left:${(i * 47) % 96}%;animation-delay:${.9 + (i % 8) * .09}s;animation-duration:${1.1 + (i % 5) * .15}s">${['🤣', '😂', '🫵', '🤡', '👎', '😆'][i % 6]}</i>`).join('') : ''}`;
   const sps = t.querySelectorAll('.sp');
   sps.forEach((el, i) => {
     const ry = last.bits[i] ? 0 : 180;
@@ -517,12 +521,15 @@ function showToss(v) {
     ], { duration: 900, delay, easing: 'cubic-bezier(.3,.55,.4,1)', fill: 'backwards' });
     st.animate([{ transform: `rotateY(${ry + spin}deg) rotateX(35deg)` }, { transform: `rotateY(${ry + 30}deg) rotateX(8deg)`, offset: .75 }, { transform: `rotateY(${ry}deg)` }],
       { duration: 900, delay, easing: 'cubic-bezier(.2,.6,.3,1)', fill: 'backwards' });
+    if (s.out) return;   // 낙: 판 밖으로 날아간 가락은 먼지 없음
     setTimeout(() => { const d = document.createElement('i'); d.className = 'dust'; d.style.left = s.x + '%'; d.style.top = (s.y + 4) + '%'; t.appendChild(d); }, delay + 700);
   });
   t.style.setProperty('--nd', REDUCED ? '0s' : '.95s');
+  if (nak && !REDUCED) { const bw = $('boardWrap'); bw.classList.remove('shake'); void bw.offsetWidth; setTimeout(() => bw.classList.add('shake'), 850); }
   clearTimeout(showToss.t1); clearTimeout(showToss.t2);
-  showToss.t1 = setTimeout(() => t.classList.add('out'), REDUCED ? 1200 : 1750);
-  showToss.t2 = setTimeout(() => { t.classList.add('hidden'); t.innerHTML = ''; }, REDUCED ? 1600 : 2200);
+  const stay = nak ? 1400 : 0;   // 낙은 놀리는 시간 조금 더
+  showToss.t1 = setTimeout(() => t.classList.add('out'), (REDUCED ? 1200 : 1750) + stay);
+  showToss.t2 = setTimeout(() => { t.classList.add('hidden'); t.innerHTML = ''; }, (REDUCED ? 1600 : 2200) + stay);
 }
 
 function showBanner(v) {
@@ -541,63 +548,79 @@ function tickTimer() {
   const left = Math.max(0, room.deadline - Date.now()), pctLeft = Math.min(100, left / (cur && cur.afk ? 2600 : TURN_MS) * 100);
   document.querySelectorAll('.opp .tbar, #myBar').forEach(el => { el.style.width = pctLeft + '%'; el.classList.toggle('low', left < 6000); });
 }
+// 채팅: 메시지 번호(n)로 새 것만 덧붙임 → 깜빡임 없음
+let chatN = 0, seenN = 0, chatCode = null;
+const msgHTML = m => (m.name === '📢' || m.name === '🎲')
+  ? `<div class="msg sys">${m.name === '🎲' ? '🎲 ' : ''}${esc(m.text)}</div>`
+  : `<div class="msg${m.name === me.username ? ' mine' : ''}"><b>${m.watcher ? '👀 ' : ''}${esc(m.name)}</b>${esc(m.text)}</div>`;
 function renderChat() {
   if (!room) return;
-  const log = $('chatLog');
-  log.innerHTML = room.chat.map(m => (m.name === '📢' || m.name === '🎲')
-    ? `<div class="msg sys">${m.name === '🎲' ? '🎲 ' : ''}${esc(m.text)}</div>`
-    : `<div class="msg${m.name === me.username ? ' mine' : ''}"><b>${m.watcher ? '👀 ' : ''}${esc(m.name)}</b>${esc(m.text)}</div>`).join('');
-  $('chatInput').maxLength = room.spectating ? 30 : 100;
-  $('chatInput').placeholder = room.spectating ? '관전자는 30자까지 (3초에 한 번)' : '메시지 입력…';
-  log.scrollTop = log.scrollHeight;
-  const open = !$('chatSheet').classList.contains('hidden');
-  if (open) chatSeen = room.chat.length;
-  const unread = room.chat.slice(chatSeen).filter(m => m.name !== '🎲').length;
+  const log = $('chatLog'), open = !$('chatSheet').classList.contains('hidden');
+  const first = chatCode !== room.code;
+  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
+  const fresh = first ? [] : room.chat.filter(m => (m.n || 0) > chatN);
+  if (first) {
+    chatCode = room.code; log.innerHTML = room.chat.map(msgHTML).join('');
+    chatN = seenN = room.chat.reduce((a, m) => Math.max(a, m.n || 0), 0);
+    log.scrollTop = log.scrollHeight;
+    $('chatInput').maxLength = room.spectating ? 30 : 100;
+    $('chatInput').placeholder = room.spectating ? '관전자는 30자까지 (3초에 한 번)' : '메시지 입력…';
+  } else if (fresh.length) {
+    log.insertAdjacentHTML('beforeend', fresh.map(msgHTML).join(''));
+    while (log.children.length > 120) log.firstChild.remove();
+    chatN = fresh[fresh.length - 1].n;
+    if (nearBottom || fresh.some(m => m.name === me.username)) log.scrollTop = log.scrollHeight;
+    for (const m of fresh) if (m.name !== '📢' && m.name !== '🎲') addBubble(m);
+    const sysNew = fresh.filter(m => m.name === '📢').pop();
+    if (!open && sysNew) {
+      $('chatPeek').textContent = sysNew.text;
+      $('chatPeek').classList.remove('hidden'); clearTimeout(peekTimer); peekTimer = setTimeout(() => $('chatPeek').classList.add('hidden'), 2800);
+    }
+  }
+  if (open) seenN = chatN;
+  const unread = room.chat.filter(m => (m.n || 0) > seenN && m.name !== '🎲').length;
   $('chatBadge').textContent = unread; $('chatBadge').classList.toggle('hidden', open || !unread);
-  // 새 대화는 잠깐 위에 띄워 줌
-  // 새로 온 말: 사람 말은 그 사람 자리에 말풍선, 알림(📢)은 위쪽 한 줄
-  if (renderChat.lastLen !== undefined && room.chat.length > renderChat.lastLen) {
-    for (const m of room.chat.slice(renderChat.lastLen)) if (m.name !== '📢' && m.name !== '🎲') addBubble(m);
-  }
-  const lastMsg = room.chat[room.chat.length - 1];
-  if (!open && lastMsg && renderChat.lastLen !== undefined && room.chat.length > renderChat.lastLen && lastMsg.name === '📢') {
-    $('chatPeek').innerHTML = lastMsg.name === '📢' ? esc(lastMsg.text) : `<b>${esc(lastMsg.name)}</b>${esc(lastMsg.text)}`;
-    $('chatPeek').classList.remove('hidden'); clearTimeout(peekTimer); peekTimer = setTimeout(() => $('chatPeek').classList.add('hidden'), 2600);
-  }
-  renderChat.lastLen = room.chat.length;
 }
 
-// ---------- 말풍선 ----------
-const bubbles = new Map();   // 이름 → { text, watcher, until }
+// ---------- 말풍선: 한 번 만든 말풍선은 위치만 갱신 (다시 만들지 않음) ----------
+const bubbles = new Map();   // 키 → { name, text, watcher, until, el }
 let bubbleT = null;
 function addBubble(m) {
-  bubbles.set(m.watcher ? '👀' : m.name, { name: m.name, text: m.text, watcher: !!m.watcher, until: Date.now() + 4000 });
+  const key = m.watcher ? '👀' : m.name;
+  const old = bubbles.get(key); if (old && old.el) old.el.remove();
+  bubbles.set(key, { name: m.name, text: m.text, watcher: !!m.watcher, until: Date.now() + 4000, el: null });
   drawBubbles();
 }
 function drawBubbles() {
   const layer = $('bubLayer'); if (!layer) return;
-  layer.innerHTML = '';
-  if (!room || !inGame) return;
+  if (!room || !inGame) { layer.innerHTML = ''; bubbles.clear(); return; }
   const base = $('game').getBoundingClientRect(), now = Date.now();
   for (const [key, b] of bubbles) {
-    if (b.until < now) { bubbles.delete(key); continue; }
-    const el = document.createElement('div');
-    if (b.watcher) {   // 관전자: 판 위쪽 한 줄
-      const bd = $('boardWrap').getBoundingClientRect();
-      el.className = 'bubble watcher'; el.style.left = (bd.left + bd.width / 2 - base.left) + 'px'; el.style.top = (bd.top - base.top + 8) + 'px';
-      el.innerHTML = `<b>👀 ${esc(b.name)}</b> ${esc(b.text)}`;
-    } else {
-      const meName = me && b.name === me.username && !room.spectating;
-      // 프로필이 보이면 프로필에, 엑셀 모드처럼 숨겨져 있으면 자리 상자에 붙임
-      const box = meName ? $('myPanel') : document.querySelector(`.opp[data-name="${CSS.escape(b.name)}"]`);
-      if (!box) continue;
-      const av = box.querySelector('.av'), ar = av && av.getBoundingClientRect();
-      const r = ar && ar.width ? ar : box.getBoundingClientRect();
-      if (meName) { el.className = 'bubble up l'; el.style.left = (r.left - base.left + (ar && ar.width ? 0 : 12)) + 'px'; el.style.top = (r.top - base.top - 6) + 'px'; }
-      else { const x = r.left + r.width / 2 - base.left; el.className = 'bubble down' + (x < 70 ? ' l' : x > base.width - 70 ? ' r' : ''); el.style.left = (x < 70 ? r.left - base.left : x > base.width - 70 ? r.right - base.left : x) + 'px'; el.style.top = (r.bottom - base.top + 10) + 'px'; }
-      el.textContent = b.text;
+    if (b.until < now) { if (b.el) b.el.remove(); bubbles.delete(key); continue; }
+    if (!b.el) {
+      b.el = document.createElement('div');
+      if (b.watcher) { b.el.className = 'bubble watcher'; b.el.innerHTML = `<b>👀 ${esc(b.name)}</b> ${esc(b.text)}`; }
+      else b.el.textContent = b.text;
+      layer.appendChild(b.el);
     }
-    layer.appendChild(el);
+    const el = b.el;
+    if (b.watcher) {
+      const bd = $('boardWrap').getBoundingClientRect();
+      el.style.left = (bd.left + bd.width / 2 - base.left) + 'px'; el.style.top = (bd.top - base.top + 8) + 'px';
+      continue;
+    }
+    const meName = me && b.name === me.username && !room.spectating;
+    const box = meName ? $('myPanel') : document.querySelector(`.opp[data-name="${CSS.escape(b.name)}"]`);
+    if (!box) { el.style.display = 'none'; continue; }
+    el.style.display = '';
+    const av = box.querySelector('.av'), ar = av && av.getBoundingClientRect();
+    const r = ar && ar.width ? ar : box.getBoundingClientRect();
+    if (meName) { el.className = 'bubble up l'; el.style.left = (r.left - base.left + (ar && ar.width ? 0 : 12)) + 'px'; el.style.top = (r.top - base.top - 6) + 'px'; }
+    else {
+      const x = r.left + r.width / 2 - base.left, side = x < 70 ? ' l' : x > base.width - 70 ? ' r' : '';
+      el.className = 'bubble down' + side;
+      el.style.left = (side === ' l' ? r.left - base.left : side === ' r' ? r.right - base.left : x) + 'px'; el.style.top = (r.bottom - base.top + 10) + 'px';
+    }
   }
   clearTimeout(bubbleT);
   if (bubbles.size) bubbleT = setTimeout(drawBubbles, 500);
@@ -622,7 +645,7 @@ function act(op, arg) {
     renderAll();
   });
 }
-function resetBoard() { tokEls.forEach(el => el.remove()); tokEls.clear(); tokNode.clear(); lastMoveN = null; shownSeq = null; playAt = 0; renderChat.lastLen = undefined; chatSeen = 0; }
+function resetBoard() { tokEls.forEach(el => el.remove()); tokEls.clear(); tokNode.clear(); lastMoveN = null; shownSeq = null; playAt = 0; chatCode = null; bubbles.forEach(b => b.el && b.el.remove()); bubbles.clear(); }
 socket.on('me', m => { const first = !me; me = m; if (first) { act('list'); } else if (!inGame) renderLobby(); });
 socket.on('yuts', list => { lobby = list; if (!inGame) renderLobby(); });
 socket.on('yutState', v => {

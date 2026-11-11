@@ -681,3 +681,16 @@ body.excel .bubble.watcher { background: #ffffe1; color: #000; }
 body.excel .bubble.watcher b { color: #217346; }
 /* 채팅 시트 바깥(어두운 곳)을 눌러도 닫히도록 시트를 화면 전체로 */
 #chatSheet { top: 0; }
+
+/* 낙: 판 흔들림 + 비웃음 이모지 비 */
+.toss.nak { background: radial-gradient(70% 60% at 50% 50%, rgba(60,10,10,.45), rgba(10,2,2,.85)); }
+.toss.nak .toss-name b { background: linear-gradient(180deg, #fff, #ffb3b3 40%, #ff4d5a 70%, #a3121f); -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 3px 0 rgba(0,0,0,.6)) drop-shadow(0 0 18px rgba(255,60,70,.7)); }
+.toss.nak .toss-name span { max-width: 88%; white-space: normal; line-height: 1.35; font-size: calc(var(--s) * .042); border-color: rgba(255,90,100,.6); }
+.toss .lol { position: absolute; top: -12%; font-style: normal; font-size: calc(var(--s) * .07); animation-name: lolfall; animation-timing-function: ease-in; animation-fill-mode: both; pointer-events: none; }
+@keyframes lolfall { from { transform: translateY(0) rotate(-20deg); opacity: 0; } 10% { opacity: 1; } to { transform: translateY(calc(var(--s) * 1.15)) rotate(25deg); opacity: .9; } }
+.board-wrap.shake { animation: shake .5s cubic-bezier(.36,.07,.19,.97); }
+@keyframes shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-7px) rotate(-.6deg); } 40%, 60% { transform: translateX(7px) rotate(.6deg); } }
+body.excel .toss .lol { display: none; }
+body.excel .board-wrap.shake { animation: none; }
+@media (prefers-reduced-motion: reduce) { .toss .lol { display: none; } .board-wrap.shake { animation: none; } }

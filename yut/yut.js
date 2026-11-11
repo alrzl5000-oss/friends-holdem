@@ -45,10 +45,30 @@ function release(u, amt, pay) { u.yutHold = Math.max(0, (u.yutHold || 0) - amt);
 function stats(u) { return (u.yut = u.yut || { games: 0, win: 0, net: 0 }); }
 
 // 윷: 막대 4개 중 앞면(flat) 개수로 결정. 뒷도는 첫 번째 막대만 앞면일 때.
+const NAK_PCT = Number(process.env.YUT_NAK_PCT || 3);   // 테스트할 때만 환경변수로 바꿈
+// 낙 나왔을 때 놀리는 말 ({n} = 던진 사람)
+const NAK_TAUNTS = [
+  '{n} 님, 윷을 판 밖으로 던지는 재능 있으시네요 🤦',
+  '손에 참기름 바르고 오셨어요? {n} 님?',
+  '{n} 님의 윷은 지금 옆 동네로 여행 중 ✈️',
+  '국가대표급 헛손질, {n} 님 축하드려요 🏅',
+  '멍석이 이렇게 넓은데 그걸 못 맞히네 ㅋㅋㅋ',
+  '윷도 {n} 님이랑 놀기 싫대요',
+  '{n} 님, 차례 하나 기부 감사합니다 🙏',
+  '역사에 남을 낙. 박물관에 기증해야 함 🏛️',
+  '{n} 님 던지기 전에 기도라도 하세요 🙏🙏',
+  '방금 그거 연습이죠? 아 실전이었어요? ㅋㅋ',
+  '{n} 님 팔에 힘 조절 기능 고장남 🔧',
+  '윷이 {n} 님 손을 탈출했습니다 🏃‍♂️💨',
+  '이 정도면 일부러 한 거 아님? {n} 님?',
+  '{n} 님 오늘 운세: 낙 🔮',
+  '다들 박수 👏👏 {n} 님이 해냈어요 (낙을)',
+];   // 낙: 윷가락이 판 밖으로 떨어짐 → 무효, 차례 넘어감
 function throwYut() {
   // 실제 나무 윷처럼 평평한 면(배)이 60% 확률로 위로 → 개·걸이 많고 모·뒷도는 드묾
   const FLAT_PCT = 60;
   const bits = [0, 0, 0, 0].map(() => (crypto.randomInt(100) < FLAT_PCT ? 1 : 0)); // 1 = 배(평평한 면)
+  if (crypto.randomInt(100) < NAK_PCT) return { bits, steps: 0, name: '낙', extra: false, nak: true, taunt: NAK_TAUNTS[crypto.randomInt(NAK_TAUNTS.length)] };
   const flat = bits.reduce((a, b) => a + b, 0);
   if (flat === 0) return { bits, steps: 5, name: '모', extra: true };
   if (flat === 1) return bits[0] ? { bits, steps: -1, name: '뒷도', extra: false } : { bits, steps: 1, name: '도', extra: false };
@@ -186,7 +206,7 @@ function backFromAfk(g, id) {
   push(g);
   return { ok: true };
 }
-function push(g) { for (const id of g.players) notifyFn(id, 'yutState', view(g, id)); for (const id of watchersOf(g)) notifyFn(id, 'yutState', view(g, id)); saveFn(); }
+function push(g) { for (const m of g.chat) if (m.n == null) m.n = (g.chatN = (g.chatN || 0) + 1); for (const id of g.players) notifyFn(id, 'yutState', view(g, id)); for (const id of watchersOf(g)) notifyFn(id, 'yutState', view(g, id)); saveFn(); }
 function pushList() { notifyFn(null, 'yuts', lobbyList()); }
 function clearT(g) { clearTimeout(g.timer); g.timer = null; }
 function armTimer(g) {
@@ -281,6 +301,12 @@ function throwAct(g) {
   const tu = getUser(id); if (tu) { tu.throws = tu.throws || {}; tu.throws[g.last.name] = (tu.throws[g.last.name] || 0) + 1; }
   g.seq = (g.seq || 0) + 1;
   g.chat.push({ name: '🎲', text: `${g.names[id]} : ${g.last.name}` });
+  if (g.last.nak) {   // 낙: 움직이지 않고 이번 던지기는 무효
+    g.options = []; g.move = null;
+    g.last.taunt = (g.last.taunt || '{n} 님 낙!').replace(/\{n\}/g, g.names[id]);
+    g.chat.push({ name: '📢', text: `🤣 낙! ${g.last.taunt}` });
+    endTurn(g); armTimer(g); push(g); return { ok: true };
+  }
   g.options = optionsFor(g, id);
   if (g.options.length === 0) { // 뒷도인데 움직일 말이 없음 → 턴 넘김
     endTurn(g); armTimer(g); push(g); return { ok: true };
@@ -378,6 +404,9 @@ function yutAct(u, op, arg) {
     if (g.status !== 'open') return { error: '이미 시작했어요' };
     if (g.host !== u.id) return { error: '방장만 시작할 수 있어요' };
     if (g.players.length < MIN_PLAYERS) return { error: `${MIN_PLAYERS}명 이상 모여야 시작할 수 있어요` };
+    // 순서는 무작위로 섞음 (Fisher–Yates)
+    for (let i = g.players.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [g.players[i], g.players[j]] = [g.players[j], g.players[i]]; }
+    g.chat.push({ name: '📢', text: `순서 추첨: ${g.players.map((id, i) => `${i + 1}. ${g.names[id]}`).join('  ')}` });
     g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {}; g.bonus = 0; g.repeat = false; g.move = null; g.tally = {};
     g.pos = {};
     for (const id of g.players) g.pos[id] = [START_P(), START_P(), START_P(), START_P()];
