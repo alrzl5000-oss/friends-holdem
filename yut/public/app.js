@@ -148,7 +148,7 @@ $('newRoomBtn').onclick = () => {
   bind();
 };
 $('quickBtn').onclick = () => {
-  const r = lobby.find(x => x.n < 4 && me.assets >= x.bet);
+  const r = lobby.find(x => x.status === 'open' && x.n < 4 && me.assets >= x.bet);
   if (!r) return toast('들어갈 수 있는 판이 없어요. 직접 만들어 보세요');
   act('join', r.code);
 };
@@ -213,15 +213,20 @@ function renderLobby() {
   $('wTrophy').textContent = '🏆 ' + (me.trophy || 0);
 
   if (tab === 'rooms') {
-    $('backToRoom').innerHTML = room && !inGame ? `<button class="btn gold big back-room" id="backBtn">진행 중인 판으로 돌아가기</button>` : '';
+    $('backToRoom').innerHTML = room && !inGame ? `<button class="btn gold big back-room" id="backBtn">${room.spectating ? '관전하던 판으로 돌아가기' : '진행 중인 판으로 돌아가기'}</button>` : '';
     if ($('backBtn')) $('backBtn').onclick = () => { inGame = true; renderAll(); };
-    $('roomList').innerHTML = lobby.length ? lobby.map(r => `<button class="room" data-join="${r.code}">
-        <span class="tag bet">${won(r.bet).replace('원', '')}</span>
-        <div class="info"><b>${esc(r.host)}님의 판</b><span>코드 ${r.code} · 판돈 합계 ${won(r.bet * r.n)}</span></div>
-        <div class="pips">${[0, 1, 2, 3].map(i => `<i class="${i < r.n ? 'on' : ''}"></i>`).join('')}</div>
-        <span class="cnt">${r.n}/4</span></button>`).join('')
-      : '<p class="empty-note">열린 판이 없어요.<br>판을 만들고 친구를 불러 보세요!</p>';
+    const list = lobby.slice().sort((a, b) => (a.status === 'open' ? 0 : 1) - (b.status === 'open' ? 0 : 1));
+    $('roomList').innerHTML = list.length ? list.map(r => {
+      const open = r.status === 'open', canJoin = open && r.n < 4;
+      return `<div class="room">
+        <span class="tag ${open ? 'bet' : 'live'}">${open ? won(r.bet).replace('원', '') : '진행 중'}</span>
+        <div class="info"><b>${esc(r.host)}님의 판</b><span>${open ? `코드 ${r.code} · ` : `판돈 ${won(r.bet).replace('원', '')} · `}합계 ${won(r.bet * r.n)}${r.watchers ? ` · 👀 ${r.watchers}` : ''}</span></div>
+        <span class="cnt">${r.n}/4</span>
+        ${canJoin ? `<button class="btn small green" data-join="${r.code}">입장</button>` : ''}
+        <button class="watch-btn" data-watch="${r.code}">관전</button></div>`;
+    }).join('') : '<p class="empty-note">열린 판이 없어요.<br>판을 만들고 친구를 불러 보세요!</p>';
     document.querySelectorAll('[data-join]').forEach(b => b.onclick = () => act('join', b.dataset.join));
+    document.querySelectorAll('[data-watch]').forEach(b => b.onclick = () => act('watch', b.dataset.watch));
   }
   if (tab === 'shop') renderShop();
   if (tab === 'profile') renderProfile();
@@ -263,6 +268,7 @@ function renderProfile() {
 // ---------- 게임 ----------
 $('exitBtn').onclick = () => {
   if (!room) return;
+  if (room.spectating) { act('unwatch'); return; }
   if (room.status === 'open') {
     const host = room.host === me.username;
     modal(`<h3>${host ? '판을 닫을까요?' : '판에서 나갈까요?'}</h3><p class="hint" style="text-align:left">${host ? '모든 사람에게 판돈을 돌려주고 판이 사라져요.' : '낸 판돈은 돌려받아요.'}</p>
@@ -301,7 +307,7 @@ function renderGame() {
     const wait = p.nodes.filter(n => n === 'start').length;
     const slots = [...Array(p.done).fill('done'), ...Array(Math.max(0, 4 - p.done - wait)).fill('on'), ...Array(wait).fill('')];
     const stTxt = p.afk ? '💤 자리비움' : p.turn ? '던지는 중' : v.status === 'open' ? '준비 완료' : `${p.done}개 났음`;
-    return `<div class="opp${p.turn ? ' turn' : ''}${p.afk ? ' afk' : ''}" style="${colorVars(colorOf(p))}">${avHTML(skinPiece(p.skin))}
+    return `<div class="opp${p.turn ? ' turn' : ''}${p.afk ? ' afk' : ''}" data-name="${esc(p.name)}" style="${colorVars(colorOf(p))}">${avHTML(skinPiece(p.skin))}
       <div class="who"><b>${esc(p.name)}${p.host ? ' 👑' : ''}</b><span>${stTxt}</span>
         <div class="slots">${slots.map(k => `<i class="${k}"></i>`).join('')}</div></div>${p.turn ? '<i class="tbar"></i>' : ''}</div>`;
   }).join('') + Array(empties).fill('<div class="opp empty">빈 자리</div>').join('');
@@ -316,6 +322,7 @@ function renderGame() {
 
   renderChat();
   sizeTable();
+  drawBubbles();
 }
 
 function renderPlay() {
@@ -335,10 +342,15 @@ function renderPlay() {
     <div class="my-slots">${st.map(s => `<div class="my-slot ${s}">${Art.pieceSVG(skinPiece(mine.skin), 20)}</div>`).join('')}</div></div>
     ${v.last ? `<div class="last-chip" id="lastChip" title="던지기 기록">${by ? esc(by.id === v.you ? '나' : by.name) : ''}<b>${esc(v.last.name)}</b></div>` : ''}`;
 
+  if (v.spectating) $('myPanel').innerHTML = `<div class="my-info"><span class="mi-label">관전 모드</span><span class="mi-name">👀 ${v.watchers}명 관전 중</span><span class="mi-label">관전자 채팅은 30자, 3초에 한 번</span></div>
+    ${v.last ? `<div class="last-chip" id="lastChip">${(() => { const b = v.players.find(p => p.id === v.last.by); return b ? esc(b.name) : ''; })()}<b>${esc(v.last.name)}</b></div>` : ''}`;
   // 컨트롤
   const turn = v.players.find(p => p.turn);
   let h = '';
-  if (v.status === 'open') {
+  if (v.spectating && v.status !== 'done') {
+    h = `<div class="wait">👀 관전 중 · ${v.status === 'open' ? '시작 전이에요' : `${esc(turn ? turn.name : '')}님 차례`}<div class="row"><button class="btn" id="unwatchBtn">관전 그만하기</button></div></div>`
+      + (v.status === 'play' ? `<div class="turn-bar"><i id="myBar"></i></div>` : '');
+  } else if (v.status === 'open') {
     const host = v.host === me.username;
     h = host ? `<div class="wait">${v.players.length < MIN_START ? `친구가 들어오면 시작할 수 있어요 · 코드 <b>${v.code}</b>` : `${v.players.length}명 모였어요 (최대 4명)`}
         <div class="row"><button class="btn" id="cancelBtn">판 닫기</button><button class="btn green" id="startBtn" ${v.players.length < MIN_START ? 'disabled' : ''}>시작하기</button></div></div>`
@@ -360,7 +372,8 @@ function renderPlay() {
   on('backAfk', () => act('back'));
   on('throwBtn', () => { $('throwBtn').disabled = true; act('throw'); });
   on('startBtn', () => act('start')); on('cancelBtn', () => $('exitBtn').click()); on('leaveBtn', () => act('leave'));
-  on('toLobby', () => { room = null; inGame = false; act('list'); });
+  on('toLobby', () => { if (room && room.spectating) act('unwatch'); room = null; inGame = false; act('list'); });
+  on('unwatchBtn', () => act('unwatch'));
   { const lc = $('lastChip'); if (lc) lc.onclick = showTally; }
   document.querySelectorAll('#controls [data-opt]').forEach(b => b.onclick = () => act('move', +b.dataset.opt));
 
@@ -533,19 +546,61 @@ function renderChat() {
   const log = $('chatLog');
   log.innerHTML = room.chat.map(m => (m.name === '📢' || m.name === '🎲')
     ? `<div class="msg sys">${m.name === '🎲' ? '🎲 ' : ''}${esc(m.text)}</div>`
-    : `<div class="msg${m.name === me.username ? ' mine' : ''}"><b>${esc(m.name)}</b>${esc(m.text)}</div>`).join('');
+    : `<div class="msg${m.name === me.username ? ' mine' : ''}"><b>${m.watcher ? '👀 ' : ''}${esc(m.name)}</b>${esc(m.text)}</div>`).join('');
+  $('chatInput').maxLength = room.spectating ? 30 : 100;
+  $('chatInput').placeholder = room.spectating ? '관전자는 30자까지 (3초에 한 번)' : '메시지 입력…';
   log.scrollTop = log.scrollHeight;
   const open = !$('chatSheet').classList.contains('hidden');
   if (open) chatSeen = room.chat.length;
   const unread = room.chat.slice(chatSeen).filter(m => m.name !== '🎲').length;
   $('chatBadge').textContent = unread; $('chatBadge').classList.toggle('hidden', open || !unread);
   // 새 대화는 잠깐 위에 띄워 줌
+  // 새로 온 말: 사람 말은 그 사람 자리에 말풍선, 알림(📢)은 위쪽 한 줄
+  if (renderChat.lastLen !== undefined && room.chat.length > renderChat.lastLen) {
+    for (const m of room.chat.slice(renderChat.lastLen)) if (m.name !== '📢' && m.name !== '🎲') addBubble(m);
+  }
   const lastMsg = room.chat[room.chat.length - 1];
-  if (!open && lastMsg && renderChat.lastLen !== undefined && room.chat.length > renderChat.lastLen && lastMsg.name !== '🎲') {
+  if (!open && lastMsg && renderChat.lastLen !== undefined && room.chat.length > renderChat.lastLen && lastMsg.name === '📢') {
     $('chatPeek').innerHTML = lastMsg.name === '📢' ? esc(lastMsg.text) : `<b>${esc(lastMsg.name)}</b>${esc(lastMsg.text)}`;
     $('chatPeek').classList.remove('hidden'); clearTimeout(peekTimer); peekTimer = setTimeout(() => $('chatPeek').classList.add('hidden'), 2600);
   }
   renderChat.lastLen = room.chat.length;
+}
+
+// ---------- 말풍선 ----------
+const bubbles = new Map();   // 이름 → { text, watcher, until }
+let bubbleT = null;
+function addBubble(m) {
+  bubbles.set(m.watcher ? '👀' : m.name, { name: m.name, text: m.text, watcher: !!m.watcher, until: Date.now() + 4000 });
+  drawBubbles();
+}
+function drawBubbles() {
+  const layer = $('bubLayer'); if (!layer) return;
+  layer.innerHTML = '';
+  if (!room || !inGame) return;
+  const base = $('game').getBoundingClientRect(), now = Date.now();
+  for (const [key, b] of bubbles) {
+    if (b.until < now) { bubbles.delete(key); continue; }
+    const el = document.createElement('div');
+    if (b.watcher) {   // 관전자: 판 위쪽 한 줄
+      const bd = $('boardWrap').getBoundingClientRect();
+      el.className = 'bubble watcher'; el.style.left = (bd.left + bd.width / 2 - base.left) + 'px'; el.style.top = (bd.top - base.top + 8) + 'px';
+      el.innerHTML = `<b>👀 ${esc(b.name)}</b> ${esc(b.text)}`;
+    } else {
+      const meName = me && b.name === me.username && !room.spectating;
+      // 프로필이 보이면 프로필에, 엑셀 모드처럼 숨겨져 있으면 자리 상자에 붙임
+      const box = meName ? $('myPanel') : document.querySelector(`.opp[data-name="${CSS.escape(b.name)}"]`);
+      if (!box) continue;
+      const av = box.querySelector('.av'), ar = av && av.getBoundingClientRect();
+      const r = ar && ar.width ? ar : box.getBoundingClientRect();
+      if (meName) { el.className = 'bubble up l'; el.style.left = (r.left - base.left + (ar && ar.width ? 0 : 12)) + 'px'; el.style.top = (r.top - base.top - 6) + 'px'; }
+      else { const x = r.left + r.width / 2 - base.left; el.className = 'bubble down' + (x < 70 ? ' l' : x > base.width - 70 ? ' r' : ''); el.style.left = (x < 70 ? r.left - base.left : x > base.width - 70 ? r.right - base.left : x) + 'px'; el.style.top = (r.bottom - base.top + 10) + 'px'; }
+      el.textContent = b.text;
+    }
+    layer.appendChild(el);
+  }
+  clearTimeout(bubbleT);
+  if (bubbles.size) bubbleT = setTimeout(drawBubbles, 500);
 }
 
 // ---------- 서버 ----------
@@ -562,8 +617,8 @@ function act(op, arg) {
       if (res.mine) { if (!room || room.code !== res.mine.code) { resetBoard(); inGame = true; } room = res.mine; }
     }
     if (res.state) room = res.state;
-    if (op === 'create' || op === 'join') { inGame = true; resetBoard(); $('joinCode').value = ''; }
-    if (op === 'leave' || op === 'cancel') { room = null; inGame = false; }
+    if (op === 'create' || op === 'join' || op === 'watch') { inGame = true; resetBoard(); $('joinCode').value = ''; }
+    if (op === 'leave' || op === 'cancel' || op === 'unwatch') { room = null; inGame = false; }
     renderAll();
   });
 }
@@ -574,6 +629,11 @@ socket.on('yutState', v => {
   if (!room || room.code !== v.code) return;
   room = v;
   if (inGame) renderGame(); else renderLobby();
+});
+socket.on('yutGone', code => {
+  if (!room || room.code !== code) return;
+  room = null; inGame = false; closeModal(); $('chatSheet').classList.add('hidden');
+  toast('방장이 판을 닫았어요. 판돈은 돌려받았어요'); act('list');
 });
 socket.on('disconnect', () => toast('연결이 끊겼어요. 다시 연결하는 중…'));
 // 접속(새로고침·재접속 포함)할 때 저장된 토큰으로 자동 로그인 → 하던 판으로 복귀

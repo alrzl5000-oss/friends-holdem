@@ -32,6 +32,8 @@ const skinOf = id => { const u = getUser(id); const e = (u && u.equip) || SHOP.D
 
 const games = new Map();
 const userGame = new Map();
+const userWatch = new Map();   // 관전 중인 판: uid → code
+const watchersOf = g => (g.watchers = g.watchers || []);
 function newCode() {
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let c;
@@ -116,8 +118,8 @@ function backward(p) {
 }
 
 function lobbyList() {
-  return [...games.values()].filter(g => g.status === 'open')
-    .map(g => ({ code: g.code, host: g.names[g.host], bet: g.bet, n: g.players.length }));
+  return [...games.values()].filter(g => g.status === 'open' || g.status === 'play')
+    .map(g => ({ code: g.code, host: g.names[g.host], bet: g.bet, n: g.players.length, status: g.status, watchers: watchersOf(g).length }));
 }
 // 현재 차례 선택지: 말 종류별로 한 개씩
 function optionsFor(g, id) {
@@ -167,6 +169,7 @@ function view(g, uid) {
     seq: g.seq || 0,
     again: g.status === 'play' && !!g.repeat, bonusLeft: g.bonus || 0,
     move: g.move || null,
+    spectating: !g.players.includes(uid), watchers: watchersOf(g).length,
     tally: g.tally || {},
   };
 }
@@ -183,7 +186,7 @@ function backFromAfk(g, id) {
   push(g);
   return { ok: true };
 }
-function push(g) { for (const id of g.players) notifyFn(id, 'yutState', view(g, id)); saveFn(); }
+function push(g) { for (const id of g.players) notifyFn(id, 'yutState', view(g, id)); for (const id of watchersOf(g)) notifyFn(id, 'yutState', view(g, id)); saveFn(); }
 function pushList() { notifyFn(null, 'yuts', lobbyList()); }
 function clearT(g) { clearTimeout(g.timer); g.timer = null; }
 function armTimer(g) {
@@ -219,7 +222,7 @@ function finish(g, winner) {
   g.chat.push({ name: '📢', text: `${g.names[winner]} 님 우승! 판돈 ${pot.toLocaleString('ko-KR')}원과 🏆 1개 획득` });
   saveFn();
   for (const id of g.players) { userGame.delete(id); notifyFn(id, 'me'); }
-  setTimeout(() => games.delete(g.code), 60000);
+  setTimeout(() => closeGame(g, false), 60000);
   push(g); pushList();
 }
 // 추가로 던질 횟수: 윷·모 +1, 잡으면 +1 (윷·모로 잡으면 두 번 더)
@@ -289,10 +292,46 @@ function throwAct(g) {
   return { ok: true };
 }
 
+// 판 없애기: 남은 사람·관전자에게 알림 (notify=true 면 'yutGone' 이벤트)
+function closeGame(g, notify) {
+  if (games.get(g.code) !== g) return;
+  clearT(g);
+  games.delete(g.code);
+  for (const id of g.players) if (userGame.get(id) === g.code) userGame.delete(id);
+  for (const id of watchersOf(g)) { if (userWatch.get(id) === g.code) userWatch.delete(id); if (notify) notifyFn(id, 'yutGone', g.code); }
+  pushList();
+}
+function unwatch(uid) {
+  const wc = userWatch.get(uid); if (!wc) return;
+  userWatch.delete(uid);
+  const w = games.get(wc); if (w) { w.watchers = watchersOf(w).filter(x => x !== uid); push(w); pushList(); }
+}
 function yutAct(u, op, arg) {
   const code = userGame.get(u.id);
   const g = code && games.get(code);
-  if (op === 'list') return { ok: true, list: lobbyList(), mine: g ? view(g, u.id) : null };
+  const wg = !g && userWatch.get(u.id) ? games.get(userWatch.get(u.id)) : null;
+  if (op === 'list') return { ok: true, list: lobbyList(), mine: g ? view(g, u.id) : wg ? view(wg, u.id) : null };
+  if (op === 'watch') {
+    if (g) return { error: '참여 중인 판이 있어요' };
+    const w = games.get(String(arg || '').toUpperCase());
+    if (!w || w.status === 'done') return { error: '관전할 수 없는 판이에요' };
+    unwatch(u.id);
+    watchersOf(w).push(u.id); userWatch.set(u.id, w.code);
+    push(w); pushList();
+    return { ok: true, state: view(w, u.id) };
+  }
+  if (op === 'unwatch') { unwatch(u.id); return { ok: true }; }
+  if (wg && op === 'chat') {   // 관전자 채팅: 30자, 3초에 1번
+    const now = Date.now();
+    if (now - (u._wchat || 0) < 3000) return { error: '관전자는 3초에 한 번만 말할 수 있어요' };
+    const text = String(arg || '').replace(/\s+/g, ' ').trim().slice(0, 30);
+    if (!text) return { ok: true };
+    u._wchat = now;
+    wg.chat.push({ name: u.username, text, watcher: true }); wg.chat = wg.chat.slice(-100);
+    push(wg);
+    return { ok: true };
+  }
+  if ((op === 'create' || op === 'join') && !g) unwatch(u.id);
   if (op === 'create') {
     if (g) return { error: '참여 중인 판이 있어요' };
     const bet = Math.floor(Number(arg));
@@ -320,13 +359,19 @@ function yutAct(u, op, arg) {
   if (op === 'leave' || op === 'cancel') {
     if (g.status !== 'open') return { error: '이미 시작했어요' };
     if (op === 'cancel' && g.host !== u.id) return { error: '방장만 닫을 수 있어요' };
-    for (const id of g.players) {
-      const p = getUser(id); if (!p) continue;
-      release(p, g.bet, g.bet);
-      userGame.delete(id); notifyFn(id, 'me');
+    if (op === 'leave' && g.host !== u.id) {   // 손님이 나감: 그 사람 판돈만 돌려주고 판은 유지
+      release(u, g.bet, g.bet);
+      g.players = g.players.filter(id => id !== u.id); userGame.delete(u.id);
+      g.chat.push({ name: '📢', text: `${u.username} 님이 나갔어요` });
+      notifyFn(u.id, 'me'); push(g); pushList();
+      return { ok: true };
     }
-    games.delete(g.code);
-    saveFn(); pushList();
+    // 방장이 닫거나 나감: 모두에게 판돈 돌려주고 판 없애기
+    const others = g.players.filter(id => id !== u.id);
+    for (const id of g.players) { const p = getUser(id); if (!p) continue; release(p, g.bet, g.bet); notifyFn(id, 'me'); }
+    closeGame(g, true);
+    for (const id of others) notifyFn(id, 'yutGone', g.code);
+    saveFn();
     return { ok: true };
   }
   if (op === 'start') {
@@ -367,6 +412,7 @@ function restore(list) {
     g.timer = null;
     games.set(g.code, g);
     for (const id of g.players) userGame.set(id, g.code);
+    for (const id of watchersOf(g)) userWatch.set(id, g.code);
     if (g.status === 'play') armTimer(g);   // 차례 시간은 처음부터 다시
   }
   return [...games.values()].flatMap(g => g.players);

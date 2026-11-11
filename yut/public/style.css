@@ -650,3 +650,34 @@ body.excel .op-row .field-label b { color: #217346; }
 .last-chip { cursor: pointer; }
 #profTally { width: 100%; }
 body.excel .tally tr:first-child th, body.excel .tally .theory td, body.excel .tally .theory th { color: #217346; }
+
+/* 관전 (홀덤과 같은 단추) */
+.watch-btn { flex: none; border: 1px solid var(--line2); background: rgba(255,255,255,.05); border-radius: 9px; padding: 7px 10px; font-size: 12px; font-weight: 700; color: var(--text); }
+.room .btn.small { flex: none; padding: 7px 10px; }
+
+/* 채팅 말풍선 (홀덤과 같은 모양) */
+.bub-layer { position: absolute; inset: 0; pointer-events: none; z-index: 12; }
+.bubble {
+  position: absolute; z-index: 8; transform: translate(-50%, -100%);
+  max-width: 150px; padding: 6px 10px; border-radius: 12px;
+  background: #fff; color: #142019; font-size: 12px; font-weight: 600; line-height: 1.35;
+  box-shadow: 0 4px 12px rgba(0,0,0,.45); word-break: break-word; pointer-events: none;
+  animation: bub .2s ease-out;
+}
+@keyframes bub { from { opacity: 0; margin-top: 6px; } }
+.bubble.down { transform: translate(-50%, 0); }
+.bubble.up::after, .bubble.down::before { content: ""; position: absolute; left: 50%; margin-left: -6px; border: 6px solid transparent; }
+.bubble.up::after { top: 100%; border-top-color: #fff; }
+.bubble.down::before { bottom: 100%; border-bottom-color: #fff; }
+.bubble.l { transform: translate(0, -100%); } .bubble.r { transform: translate(-100%, -100%); }
+.bubble.down.l { transform: translate(0, 0); } .bubble.down.r { transform: translate(-100%, 0); }
+.bubble.l::after, .bubble.l::before { left: 22px; } .bubble.r::after, .bubble.r::before { left: auto; right: 16px; }
+.bubble.watcher { transform: translate(-50%, 0); background: rgba(0,0,0,.72); color: #e8efe9; max-width: 86%; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bubble.watcher b { color: var(--gold2); }
+body.excel .bubble { background: #ffffe1; color: #000; border: 1px solid #a0a0a0; border-radius: 0; box-shadow: 2px 2px 4px rgba(0,0,0,.15); font-weight: 400; }
+body.excel .bubble.up::after { border-top-color: #a0a0a0; }
+body.excel .bubble.down::before { border-bottom-color: #a0a0a0; }
+body.excel .bubble.watcher { background: #ffffe1; color: #000; }
+body.excel .bubble.watcher b { color: #217346; }
+/* 채팅 시트 바깥(어두운 곳)을 눌러도 닫히도록 시트를 화면 전체로 */
+#chatSheet { top: 0; }
