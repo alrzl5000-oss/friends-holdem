@@ -32,12 +32,18 @@ const themeOf = skin => ((artOf((skin && skin.board) || 'b_hanji') || {}).theme)
 const colorVars = c => `--c:${c};--cl:${Art.light(c, .45)};--cd:${Art.dark(c, .45)}`;
 
 // ---------- 설정 (테마: 기본 / 엑셀) ----------
-const settings = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem('fy_settings') || '{}'); } catch (e) {} return Object.assign({ theme: 'default' }, v); })();
+const settings = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem('fy_settings') || '{}'); } catch (e) {} return Object.assign({ theme: 'default', uiOp: 100, boardOp: 100 }, v); })();
+const saveSettings = () => { try { localStorage.setItem('fy_settings', JSON.stringify(settings)); } catch (e) {} };
 const isExcel = () => settings.theme === 'excel';
 const XL_COLORS = ['#4472c4', '#ed7d31', '#a5a5a5', '#ffc000'];
 // 엑셀 모드에선 차트 계열 색으로
 const colorOf = p => { if (!isExcel() || !room) return p.color; const i = room.players.findIndex(x => x.id === p.id); return XL_COLORS[(i < 0 ? 0 : i) % 4]; };
+function applyOpacity() {
+  document.body.style.setProperty('--ui-op', Math.max(20, Math.min(100, +settings.uiOp || 100)) / 100);
+  document.body.style.setProperty('--bd-op', Math.max(10, Math.min(100, +settings.boardOp || 100)) / 100);
+}
 function applyTheme() {
+  applyOpacity();
   document.body.classList.toggle('excel', isExcel());
   document.title = isExcel() ? '2026_4분기_매출분석.xlsx - Excel' : 'FRIENDS 윷놀이';
   let icon = document.querySelector('link[rel=icon]');
@@ -52,9 +58,17 @@ function openSettings() {
   const opt = (val, label, sub) => `<button data-v="${val}" class="${settings.theme === val ? 'on' : ''}">${label}<small>${sub}</small></button>`;
   modal(`<h3>설정</h3><div class="field-label">화면 테마</div>
     <div class="opt-group theme-opts">${opt('default', '🎴 기본', '전통 윷판')}${opt('excel', '📊 엑셀', '회사에서 몰래')}</div>
+    <div class="op-row"><div class="field-label">화면 투명도 <b id="uiOpV">${settings.uiOp}%</b></div>
+      <input type="range" class="op-range" id="uiOp" min="20" max="100" step="5" value="${settings.uiOp}" /><span class="hint">로비·게임 화면 전체가 흐려져요</span></div>
+    <div class="op-row"><div class="field-label">말판·말 투명도 <b id="bdOpV">${settings.boardOp}%</b></div>
+      <input type="range" class="op-range" id="bdOp" min="10" max="100" step="5" value="${settings.boardOp}" /><span class="hint">윷판(엑셀에선 차트)과 말만 흐려져요</span></div>
+    <button class="btn" id="opReset">투명도 원래대로</button>
     <button class="btn gold" data-close>닫기</button>`);
+  const bindRange = (id, key, lab) => { const r = $(id); r.oninput = () => { settings[key] = +r.value; $(lab).textContent = r.value + '%'; applyOpacity(); saveSettings(); }; };
+  bindRange('uiOp', 'uiOp', 'uiOpV'); bindRange('bdOp', 'boardOp', 'bdOpV');
+  $('opReset').onclick = () => { settings.uiOp = 100; settings.boardOp = 100; saveSettings(); applyOpacity(); openSettings(); };
   document.querySelectorAll('.theme-opts button').forEach(b => b.onclick = () => {
-    settings.theme = b.dataset.v; try { localStorage.setItem('fy_settings', JSON.stringify(settings)); } catch (e) {}
+    settings.theme = b.dataset.v; saveSettings();
     applyTheme(); resetBoard(); renderAll(); openSettings();
   });
   document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
