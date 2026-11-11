@@ -34,6 +34,12 @@ const games = new Map();
 const userGame = new Map();
 const userWatch = new Map();   // 관전 중인 판: uid → code
 const watchersOf = g => (g.watchers = g.watchers || []);
+// 색은 들어온 순간 사람마다 고정 (순서를 섞어도 안 바뀜). 예전 판은 그때 순서대로 채움
+function colorOf(g, id) {
+  g.colors = g.colors || {};
+  if (!g.colors[id]) { const used = new Set(Object.values(g.colors)); g.colors[id] = COLORS.find(c => !used.has(c)) || COLORS[0]; }
+  return g.colors[id];
+}
 function newCode() {
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let c;
@@ -174,7 +180,7 @@ function view(g, uid) {
     code: g.code, bet: g.bet, status: g.status, host: g.names[g.host], pot: g.bet * g.players.length,
     deadline: g.deadline || 0, winner: g.winner ? g.names[g.winner] : null, you: uid,
     players: g.players.map((id, i) => ({
-      id, name: g.names[id], color: COLORS[i], skin: skinOf(id),
+      id, name: g.names[id], color: colorOf(g, id), skin: skinOf(id),
       nodes: g.pos ? g.pos[id].map(nodeOf) : ['start', 'start', 'start', 'start'],
       done: g.pos ? g.pos[id].filter(isDone).length : 0,
       turn: g.status === 'play' && id === turnId, host: id === g.host,
@@ -365,6 +371,7 @@ function yutAct(u, op, arg) {
     if (u.assets < bet) return { error: '보유 현금이 부족해요' };
     const ng = { code: newCode(), host: u.id, players: [u.id], names: { [u.id]: u.username }, bet, status: 'open', chat: [], pos: null, turn: 0, phase: 'throw', last: null, options: [], winner: null, deadline: 0 };
     hold(u, bet);
+    colorOf(ng, u.id);
     games.set(ng.code, ng); userGame.set(u.id, ng.code);
     saveFn(); pushList(); notifyFn(u.id, 'me');
     return { ok: true, state: view(ng, u.id) };
@@ -376,7 +383,7 @@ function yutAct(u, op, arg) {
     if (j.players.length >= MAX_PLAYERS) return { error: '자리가 다 찼어요' };
     if (u.assets < j.bet) return { error: '보유 현금이 부족해요' };
     hold(u, j.bet);
-    j.players.push(u.id); j.names[u.id] = u.username; userGame.set(u.id, j.code);
+    j.players.push(u.id); j.names[u.id] = u.username; userGame.set(u.id, j.code); colorOf(j, u.id);
     j.chat.push({ name: '📢', text: `${u.username} 님이 들어왔어요` });
     saveFn(); pushList(); notifyFn(u.id, 'me'); push(j);
     return { ok: true, state: view(j, u.id) };
@@ -387,7 +394,7 @@ function yutAct(u, op, arg) {
     if (op === 'cancel' && g.host !== u.id) return { error: '방장만 닫을 수 있어요' };
     if (op === 'leave' && g.host !== u.id) {   // 손님이 나감: 그 사람 판돈만 돌려주고 판은 유지
       release(u, g.bet, g.bet);
-      g.players = g.players.filter(id => id !== u.id); userGame.delete(u.id);
+      g.players = g.players.filter(id => id !== u.id); userGame.delete(u.id); if (g.colors) delete g.colors[u.id];
       g.chat.push({ name: '📢', text: `${u.username} 님이 나갔어요` });
       notifyFn(u.id, 'me'); push(g); pushList();
       return { ok: true };

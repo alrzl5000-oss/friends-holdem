@@ -37,7 +37,9 @@ const saveSettings = () => { try { localStorage.setItem('fy_settings', JSON.stri
 const isExcel = () => settings.theme === 'excel';
 const XL_COLORS = ['#4472c4', '#ed7d31', '#a5a5a5', '#ffc000'];
 // 엑셀 모드에선 차트 계열 색으로
-const colorOf = p => { if (!isExcel() || !room) return p.color; const i = room.players.findIndex(x => x.id === p.id); return XL_COLORS[(i < 0 ? 0 : i) % 4]; };
+const SERVER_COLORS = ['#c43a4a', '#3f6fb8', '#d9a21f', '#2f8f78'];
+// 엑셀 모드에선 서버 색과 1:1로 짝지은 차트 계열 색 (순서가 바뀌어도 그대로)
+const colorOf = p => { if (!isExcel()) return p.color; const i = SERVER_COLORS.indexOf(p.color); return XL_COLORS[(i < 0 ? 0 : i) % 4]; };
 function applyOpacity() {
   document.body.style.setProperty('--ui-op', Math.max(20, Math.min(100, +settings.uiOp || 100)) / 100);
   document.body.style.setProperty('--bd-op', Math.max(10, Math.min(100, +settings.boardOp || 100)) / 100);
@@ -416,6 +418,7 @@ function placeTokens(v) {
         const [x, y] = pct(n); el.style.left = x + '%'; el.style.top = y + '%';
         layer.appendChild(el); tokEls.set(key, el); tokNode.set(key, n);
       }
+      { const c = colorOf(p); if (el.dataset.c !== c) { el.dataset.c = c; el.style.setProperty('--c', c); el.style.setProperty('--cl', Art.light(c, .45)); el.style.setProperty('--cd', Art.dark(c, .45)); } }
       const prev = tokNode.get(key);
       const onBoard = n !== 'start' && n !== 'goal';
       const g = onBoard ? groups[n] : null;
