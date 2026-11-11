@@ -83,6 +83,7 @@
         <button class="btn gold" id="newTourBtn"><small>토너먼트</small>대회 열기</button>
       </div>
       <button class="btn line bj-entry" id="bjBtn">🃏 블랙잭 <small>혼자 딜러전 · 친구와 1대1</small></button>
+      <button class="btn line bj-entry" id="yutBtn">🎲 윷놀이 <small>3~4인 · 판돈 내기</small></button>
       <div class="code-row">
         <input id="joinCode" maxlength="4" placeholder="방 코드" />
         <button class="btn" id="joinCodeBtn">입장</button>
@@ -212,6 +213,15 @@
     </div>
   </div>
 
+  <!-- 윷놀이 (전체화면) -->
+  <div class="bj-overlay hidden" id="yutOverlay">
+    <header class="pe-bar">
+      <button class="icon-btn" id="yutClose" title="닫기">✕</button>
+      <b>🎲 윷놀이</b>
+    </header>
+    <div class="bj-body yt-body" id="yutBody"></div>
+  </div>
+
   <!-- 공용 모달 -->
   <div class="modal hidden" id="modal">
     <div class="modal-bg" data-close></div>
@@ -233,5 +243,6 @@
 <script src="/pixel.js"></script>
 <script src="/app.js"></script>
 <script src="/bj.js"></script>
+<script src="/yut.js"></script>
 </body>
 </html>

@@ -36,6 +36,7 @@ for (const u of Object.values(data.users)) byIdMap.set(u.id, u);
 for (const u of Object.values(data.users)) {
   if (u.inPlay) { u.assets += u.inPlay; u.inPlay = 0; }
   if (u.bjHold) { u.assets += u.bjHold; u.bjHold = 0; } // 블랙잭 하던 판 베팅금 환불
+  if (u.yutHold) { u.assets += u.yutHold; u.yutHold = 0; } // 윷놀이 판돈 환불
   // 이전 버전 티켓은 돈으로 환불
   if (u.tickets) { u.assets += u.tickets * ENTRY_FEE; u.tickets = 0; }
   if (u.tourneyHold) { u.assets += u.tourneyHold < 1e6 ? u.tourneyHold * ENTRY_FEE : u.tourneyHold; u.tourneyHold = 0; }
