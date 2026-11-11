@@ -44,7 +44,9 @@ function stats(u) { return (u.yut = u.yut || { games: 0, win: 0, net: 0 }); }
 
 // 윷: 막대 4개 중 앞면(flat) 개수로 결정. 뒷도는 첫 번째 막대만 앞면일 때.
 function throwYut() {
-  const bits = [0, 0, 0, 0].map(() => crypto.randomInt(2)); // 1 = 앞면(평평한 면)
+  // 실제 나무 윷처럼 평평한 면(배)이 60% 확률로 위로 → 개·걸이 많고 모·뒷도는 드묾
+  const FLAT_PCT = 60;
+  const bits = [0, 0, 0, 0].map(() => (crypto.randomInt(100) < FLAT_PCT ? 1 : 0)); // 1 = 배(평평한 면)
   const flat = bits.reduce((a, b) => a + b, 0);
   if (flat === 0) return { bits, steps: 5, name: '모', extra: true };
   if (flat === 1) return bits[0] ? { bits, steps: -1, name: '뒷도', extra: false } : { bits, steps: 1, name: '도', extra: false };
@@ -165,6 +167,7 @@ function view(g, uid) {
     seq: g.seq || 0,
     again: g.status === 'play' && !!g.repeat, bonusLeft: g.bonus || 0,
     move: g.move || null,
+    tally: g.tally || {},
   };
 }
 // 직접 행동하면 시간초과 횟수 초기화, 자리비움 해제
@@ -270,6 +273,9 @@ function throwAct(g) {
   if (g.phase !== 'throw') return { error: '던질 차례가 아니에요' };
   const id = g.players[g.turn];
   g.last = { ...throwYut(), by: id };
+  // 던지기 기록: 이번 판 + 계정 누적 (확률 확인용)
+  g.tally = g.tally || {}; const t = (g.tally[id] = g.tally[id] || {}); t[g.last.name] = (t[g.last.name] || 0) + 1;
+  const tu = getUser(id); if (tu) { tu.throws = tu.throws || {}; tu.throws[g.last.name] = (tu.throws[g.last.name] || 0) + 1; }
   g.seq = (g.seq || 0) + 1;
   g.chat.push({ name: '🎲', text: `${g.names[id]} : ${g.last.name}` });
   g.options = optionsFor(g, id);
@@ -327,7 +333,7 @@ function yutAct(u, op, arg) {
     if (g.status !== 'open') return { error: '이미 시작했어요' };
     if (g.host !== u.id) return { error: '방장만 시작할 수 있어요' };
     if (g.players.length < MIN_PLAYERS) return { error: `${MIN_PLAYERS}명 이상 모여야 시작할 수 있어요` };
-    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {}; g.bonus = 0; g.repeat = false; g.move = null;
+    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {}; g.bonus = 0; g.repeat = false; g.move = null; g.tally = {};
     g.pos = {};
     for (const id of g.players) g.pos[id] = [START_P(), START_P(), START_P(), START_P()];
     g.chat.push({ name: '📢', text: '게임 시작!' });

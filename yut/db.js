@@ -103,4 +103,10 @@ function rank() {
     .sort((a, b) => b.win - a.win || b.trophy - a.trophy || (b.win / b.games) - (a.win / a.games))
     .slice(0, 50);
 }
-module.exports = { byId, save, register, login, buy, equip, rank, START, refundOrphans, setDump, storedGames, byToken, logout };
+// 전체 던지기 통계 (모든 계정 합계)
+function throwStats() {
+  const tot = {};
+  for (const u of Object.values(data.users)) for (const [k, n] of Object.entries(u.throws || {})) tot[k] = (tot[k] || 0) + n;
+  return tot;
+}
+module.exports = { throwStats, byId, save, register, login, buy, equip, rank, START, refundOrphans, setDump, storedGames, byToken, logout };

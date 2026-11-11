@@ -165,8 +165,30 @@ function showRules() {
       <li>내 말끼리 같은 칸에 서면 <b>업혀서</b> 함께 움직여요.</li>
       <li>말 네 개를 먼저 다 내보낸 사람이 <b>판돈 전부 + 🏆 1개</b>.</li>
       <li>한 차례는 20초. 시간이 지나면 자동으로 던지고 움직여요.</li>
-    </ul><button class="btn gold" data-close>알겠어요</button>`);
+    </ul><div class="row2"><button class="btn" id="tallyBtn">📊 던지기 기록</button><button class="btn gold" data-close>알겠어요</button></div>`);
+  $('tallyBtn').onclick = showTally;
   document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
+}
+
+// 던지기 기록 (이번 판 · 내 누적 · 전체 누적) — 이론 확률과 나란히
+const NAMES = ['뒷도', '도', '개', '걸', '윷', '모'];
+const THEORY = { '뒷도': 3.8, '도': 11.5, '개': 34.6, '걸': 34.6, '윷': 13, '모': 2.6 };  // 배가 60%로 나올 때
+function tallyRow(label, t) {
+  const tot = NAMES.reduce((a, k) => a + (t[k] || 0), 0);
+  return `<tr><th>${esc(label)}</th>${NAMES.map(k => `<td>${t[k] || 0}<small>${tot ? Math.round((t[k] || 0) / tot * 1000) / 10 + '%' : '-'}</small></td>`).join('')}<td>${tot}</td></tr>`;
+}
+function showTally() {
+  socket.emit('throwStats', res => {
+    const rows = [];
+    if (room && room.tally) for (const p of room.players) rows.push(tallyRow(p.id === room.you ? `나 (이번 판)` : `${p.name} (이번 판)`, room.tally[p.id] || {}));
+    rows.push(tallyRow('내 전체 기록', (res && res.mine) || {}));
+    rows.push(tallyRow('모든 사람 합계', (res && res.all) || {}));
+    modal(`<h3>던지기 기록</h3><p class="hint" style="text-align:left">서버가 실제로 던진 결과를 그대로 센 기록이에요.</p>
+      <div class="tally-wrap"><table class="tally"><tr><th></th>${NAMES.map(k => `<th>${k}</th>`).join('')}<th>합계</th></tr>${rows.join('')}
+      <tr class="theory"><th>이론 확률</th>${NAMES.map(k => `<td>${THEORY[k]}%</td>`).join('')}<td></td></tr></table></div>
+      <button class="btn gold" data-close>닫기</button>`);
+    document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
+  });
 }
 
 function loadRank() {
@@ -229,11 +251,13 @@ function renderProfile() {
   const it = id => ITEM(id) || {};
   $('tab-profile').innerHTML = `<div class="profile-card glass"><div class="av big-av">${Art.pieceSVG(pieceArt(eq.piece), 96)}</div>
       <b>${esc(me.username)}</b><span class="hint">칭호 <b>${title}</b></span></div>
+    <button class="btn line" id="profTally">📊 내 던지기 기록 보기</button>
     <div class="stats glass"><div><span>판수</span><b>${y.games || 0}판</b></div><div><span>우승</span><b>${y.win || 0}회</b></div>
       <div><span>승률</span><b>${rate}%</b></div><div><span>손익</span><b style="color:${(y.net || 0) >= 0 ? '#6ee7a8' : '#ff8f8f'}">${(y.net || 0) > 0 ? '+' : ''}${won(y.net || 0)}</b></div></div>
     <div class="equip-row glass"><div><div class="pv">${Art.pieceSVG(pieceArt(eq.piece), 44)}</div><span>${esc(it(eq.piece).name || '')}</span></div>
       <div><div class="pv">${fan(woodOf(eq))}</div><span>${esc(it(eq.stick).name || '')}</span></div>
       <div><div class="pv"><div class="pv-bd" style="width:56px;height:56px;border-radius:6px;overflow:hidden">${Art.boardSVG({ theme: themeOf(eq) })}</div></div><span>${esc(it(eq.board).name || '')}</span></div></div>`;
+  $('profTally').onclick = showTally;
 }
 
 // ---------- 게임 ----------
@@ -309,7 +333,7 @@ function renderPlay() {
   $('myPanel').style.cssText = colorVars(colorOf(mine));
   $('myPanel').innerHTML = `${avHTML(skinPiece(mine.skin))}<div class="my-info"><span class="mi-label">내 말 · 대기 ${wait} · 판 위 ${st.filter(s => s === 'on').length} · 났음 ${mine.done}</span>
     <div class="my-slots">${st.map(s => `<div class="my-slot ${s}">${Art.pieceSVG(skinPiece(mine.skin), 20)}</div>`).join('')}</div></div>
-    ${v.last ? `<div class="last-chip">${by ? esc(by.id === v.you ? '나' : by.name) : ''}<b>${esc(v.last.name)}</b></div>` : ''}`;
+    ${v.last ? `<div class="last-chip" id="lastChip" title="던지기 기록">${by ? esc(by.id === v.you ? '나' : by.name) : ''}<b>${esc(v.last.name)}</b></div>` : ''}`;
 
   // 컨트롤
   const turn = v.players.find(p => p.turn);
@@ -337,6 +361,7 @@ function renderPlay() {
   on('throwBtn', () => { $('throwBtn').disabled = true; act('throw'); });
   on('startBtn', () => act('start')); on('cancelBtn', () => $('exitBtn').click()); on('leaveBtn', () => act('leave'));
   on('toLobby', () => { room = null; inGame = false; act('list'); });
+  { const lc = $('lastChip'); if (lc) lc.onclick = showTally; }
   document.querySelectorAll('#controls [data-opt]').forEach(b => b.onclick = () => act('move', +b.dataset.opt));
 
   if (v.status === 'done' && bannerFor !== v.code + v.seq) { bannerFor = v.code + v.seq; showBanner(v); }

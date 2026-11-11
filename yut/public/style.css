@@ -638,3 +638,15 @@ body.excel .banner > div { background: #fff; border: 1px solid #c8c6c4; padding:
 body.excel .op-range { background: #e1dfdd; border-radius: 0; }
 body.excel .op-range::-webkit-slider-thumb { border-color: #217346; border-radius: 2px; }
 body.excel .op-row .field-label b { color: #217346; }
+
+/* 던지기 기록 표 */
+.tally-wrap { overflow-x: auto; }
+.tally { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }
+.tally th, .tally td { padding: 6px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tally th:first-child { text-align: left; font-weight: 700; color: var(--muted); }
+.tally tr:first-child th { color: var(--gold2); }
+.tally td small { display: block; font-size: 10px; color: var(--muted); }
+.tally .theory td, .tally .theory th { color: var(--gold2); font-weight: 700; border-bottom: 0; }
+.last-chip { cursor: pointer; }
+#profTally { width: 100%; }
+body.excel .tally tr:first-child th, body.excel .tally .theory td, body.excel .tally .theory th { color: #217346; }
