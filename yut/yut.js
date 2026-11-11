@@ -12,6 +12,8 @@ const MAX_BET = 1e8;
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
 const TURN_MS = 20000;
+const AFK_MS = 2600;      // 자리비움이면 이만큼만 기다렸다 자동 진행 (윷 연출이 보이도록)
+const AFK_AFTER = 3;      // 시간초과 자동 진행이 연속 3번이면 자리비움
 const COLORS = ['#c43a4a', '#3f6fb8', '#d9a21f', '#2f8f78'];
 
 // 길 정의 (노드 이름은 칸 이름)
@@ -130,6 +132,7 @@ function view(g, uid) {
       nodes: g.pos ? g.pos[id].map(nodeOf) : ['start', 'start', 'start', 'start'],
       done: g.pos ? g.pos[id].filter(isDone).length : 0,
       turn: g.status === 'play' && id === turnId, host: id === g.host,
+      afk: !!(g.afk && g.afk[id]), miss: (g.miss && g.miss[id]) || 0,
     })),
     phase: g.status === 'play' ? g.phase : null,
     canThrow: canAct && g.phase === 'throw',
@@ -140,17 +143,41 @@ function view(g, uid) {
     seq: g.seq || 0,
   };
 }
+// 직접 행동하면 시간초과 횟수 초기화, 자리비움 해제
+function markActive(g, id) {
+  g.miss = g.miss || {}; g.afk = g.afk || {};
+  g.miss[id] = 0;
+  if (g.afk[id]) { g.afk[id] = false; g.chat.push({ name: '📢', text: `${g.names[id]} 님이 돌아왔어요` }); }
+}
+function backFromAfk(g, id) {
+  const was = g.afk && g.afk[id];
+  markActive(g, id);
+  if (was && g.players[g.turn] === id) armTimer(g);   // 내 차례면 다시 20초
+  push(g);
+  return { ok: true };
+}
 function push(g) { for (const id of g.players) notifyFn(id, 'yutState', view(g, id)); }
 function pushList() { notifyFn(null, 'yuts', lobbyList()); }
 function clearT(g) { clearTimeout(g.timer); g.timer = null; }
 function armTimer(g) {
   clearT(g);
-  g.deadline = Date.now() + TURN_MS;
+  g.afk = g.afk || {}; g.miss = g.miss || {};
+  const cur = g.players[g.turn];
+  const wait = g.afk[cur] ? AFK_MS : TURN_MS;
+  g.deadline = Date.now() + wait;
   g.timer = setTimeout(() => {
     if (g.status !== 'play') return;
+    const id = g.players[g.turn];
+    if (!g.afk[id]) {
+      g.miss[id] = (g.miss[id] || 0) + 1;
+      if (g.miss[id] >= AFK_AFTER) {
+        g.afk[id] = true;
+        g.chat.push({ name: '📢', text: `${g.names[id]} 님이 자리비움 상태가 됐어요 (자동으로 진행해요)` });
+      }
+    }
     if (g.phase === 'throw') throwAct(g);
     else if (g.options.length) applyOption(g, g.options[0].id);
-  }, TURN_MS);
+  }, wait);
 }
 function finish(g, winner) {
   clearT(g);
@@ -266,7 +293,7 @@ function yutAct(u, op, arg) {
     if (g.status !== 'open') return { error: '이미 시작했어요' };
     if (g.host !== u.id) return { error: '방장만 시작할 수 있어요' };
     if (g.players.length < MIN_PLAYERS) return { error: `${MIN_PLAYERS}명 이상 모여야 시작할 수 있어요` };
-    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null;
+    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {};
     g.pos = {};
     for (const id of g.players) g.pos[id] = [START_P(), START_P(), START_P(), START_P()];
     g.chat.push({ name: '📢', text: '게임 시작!' });
@@ -282,7 +309,9 @@ function yutAct(u, op, arg) {
     return { ok: true };
   }
   if (g.status !== 'play') return { error: '아직 시작 전이에요' };
+  if (op === 'back') return backFromAfk(g, u.id);
   if (g.players[g.turn] !== u.id) return { error: '내 차례가 아니에요' };
+  if (g.players[g.turn] === u.id) markActive(g, u.id);
   if (op === 'throw') return throwAct(g);
   if (op === 'move') return applyOption(g, Number(arg));
   return { error: '알 수 없는 행동이에요' };

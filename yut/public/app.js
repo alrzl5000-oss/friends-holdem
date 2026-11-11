@@ -212,8 +212,9 @@ function renderGame() {
   $('oppRow').innerHTML = others.map(p => {
     const wait = p.nodes.filter(n => n === 'start').length;
     const slots = [...Array(p.done).fill('done'), ...Array(Math.max(0, 4 - p.done - wait)).fill('on'), ...Array(wait).fill('')];
-    return `<div class="opp${p.turn ? ' turn' : ''}" style="${colorVars(p.color)}">${avHTML(skinPiece(p.skin))}
-      <div class="who"><b>${esc(p.name)}${p.host ? ' 👑' : ''}</b><span>${p.turn ? '던지는 중' : v.status === 'open' ? '준비 완료' : `${p.done}개 났음`}</span>
+    const stTxt = p.afk ? '💤 자리비움' : p.turn ? '던지는 중' : v.status === 'open' ? '준비 완료' : `${p.done}개 났음`;
+    return `<div class="opp${p.turn ? ' turn' : ''}${p.afk ? ' afk' : ''}" style="${colorVars(p.color)}">${avHTML(skinPiece(p.skin))}
+      <div class="who"><b>${esc(p.name)}${p.host ? ' 👑' : ''}</b><span>${stTxt}</span>
         <div class="slots">${slots.map(k => `<i class="${k}"></i>`).join('')}</div></div>${p.turn ? '<i class="tbar"></i>' : ''}</div>`;
   }).join('') + Array(empties).fill('<div class="opp empty">빈 자리</div>').join('');
 
@@ -263,8 +264,11 @@ function renderPlay() {
   } else {
     h = `<button class="btn gold big" id="toLobby">로비로</button>`;
   }
+  if (v.status === 'play' && mine.afk) h = `<div class="afk-note"><span>💤 자리비움 중이라 자동으로 진행돼요</span><button class="btn gold small" id="backAfk">돌아왔어요</button></div>` + h;
+  else if (v.status === 'play' && mine.turn && mine.miss > 0) h = `<p class="hint">시간초과 ${mine.miss}/3 · 3번이면 자리비움으로 바뀌어요</p>` + h;
   $('controls').innerHTML = h;
   const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
+  on('backAfk', () => act('back'));
   on('throwBtn', () => { $('throwBtn').disabled = true; act('throw'); });
   on('startBtn', () => act('start')); on('cancelBtn', () => $('exitBtn').click()); on('leaveBtn', () => act('leave'));
   on('toLobby', () => { room = null; inGame = false; act('list'); });
@@ -433,7 +437,8 @@ function showBanner(v) {
 let tick = setInterval(tickTimer, 250);
 function tickTimer() {
   if (!room || room.status !== 'play' || !room.deadline) return;
-  const left = Math.max(0, room.deadline - Date.now()), pctLeft = left / TURN_MS * 100;
+  const cur = room.players.find(p => p.turn);
+  const left = Math.max(0, room.deadline - Date.now()), pctLeft = Math.min(100, left / (cur && cur.afk ? 2600 : TURN_MS) * 100);
   document.querySelectorAll('.opp .tbar, #myBar').forEach(el => { el.style.width = pctLeft + '%'; el.classList.toggle('low', left < 6000); });
 }
 function renderChat() {

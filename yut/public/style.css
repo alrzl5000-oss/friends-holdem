@@ -464,3 +464,10 @@ svg.board .route { animation: flow 1s linear infinite; }
 @media (prefers-reduced-motion: reduce) {
   .tok.can, .tok.can::before, svg.board .tg-ring, svg.board .route, .throw-btn::after, .toss .rays, .hero-sticks .sp { animation: none !important; }
 }
+
+/* 자리비움 */
+.opp.afk .av { filter: grayscale(.8) brightness(.7); }
+.opp.afk .who span { color: #9fb4ea; font-weight: 700; }
+.afk-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px;
+  background: rgba(127,178,255,.1); border: 1px solid rgba(127,178,255,.35); font-size: 13px; color: #cfe0ff; }
+.afk-note .btn { flex: none; }
