@@ -12,7 +12,7 @@ const MAX_BET = 1e8;
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
 const TURN_MS = 20000;
-const COLORS = ['#ff6b6b', '#4dabf7', '#51cf66', '#ffd43b'];
+const COLORS = ['#c43a4a', '#3f6fb8', '#d9a21f', '#2f8f78'];
 
 // 길 정의 (노드 이름은 칸 이름)
 const MAIN = Array.from({ length: 20 }, (_, k) => 'R' + (k + 1));
@@ -200,7 +200,7 @@ function applyOption(g, optId) {
 function throwAct(g) {
   if (g.phase !== 'throw') return { error: '던질 차례가 아니에요' };
   const id = g.players[g.turn];
-  g.last = throwYut();
+  g.last = { ...throwYut(), by: id };
   g.seq = (g.seq || 0) + 1;
   g.chat.push({ name: '🎲', text: `${g.names[id]} : ${g.last.name}` });
   g.options = optionsFor(g, id);
