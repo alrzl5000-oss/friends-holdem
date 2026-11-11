@@ -42,14 +42,14 @@ function login(name, pw) {
   if (hash(String(pw || ''), u.salt) !== u.pw) return { error: '비밀번호가 달라요' };
   return { user: u };
 }
-// 상점: 구매(현금에서 차감) · 장착(보유한 것만)
+// 상점: 구매(우승 트로피로) · 장착(보유한 것만)
 function buy(u, id) {
   const it = SHOP.byId(id);
   if (!it) return { error: '없는 상품이에요' };
   u.owned = u.owned || SHOP.DEFAULT_OWNED.slice();
   if (u.owned.includes(id)) return { error: '이미 가지고 있어요' };
-  if (u.assets < it.price) return { error: '현금이 부족해요' };
-  u.assets -= it.price; u.owned.push(id);
+  if ((u.trophy || 0) < it.price) return { error: `트로피가 부족해요 (🏆 ${it.price}개 필요)` };
+  u.trophy = (u.trophy || 0) - it.price; u.owned.push(id);
   save();
   return { ok: true };
 }
@@ -63,4 +63,14 @@ function equip(u, id) {
   save();
   return { ok: true };
 }
-module.exports = { byId, save, register, login, buy, equip, START };
+// 랭킹: 우승 횟수 → 트로피 → 승률 순
+function rank() {
+  return Object.values(data.users).map(u => {
+    const y = u.yut || {};
+    return { name: u.username, win: y.win || 0, games: y.games || 0, net: y.net || 0, trophy: u.trophy || 0,
+      piece: (u.equip && u.equip.piece) || SHOP.DEFAULT_EQUIP.piece };
+  }).filter(r => r.games > 0)
+    .sort((a, b) => b.win - a.win || b.trophy - a.trophy || (b.win / b.games) - (a.win / a.games))
+    .slice(0, 50);
+}
+module.exports = { byId, save, register, login, buy, equip, rank, START };

@@ -2,18 +2,128 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#1c2a4a" />
-<title>윷놀이</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Song+Myung&family=Gowun+Dodum&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/style.css?v=20261111b" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#07100c" />
+<title>FRIENDS 윷놀이</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" href="/style.css?v=20261111c" />
 </head>
 <body>
-<div id="app"></div>
+<div class="app">
+
+  <!-- ========== 로그인 ========== -->
+  <section id="auth" class="screen hidden">
+    <div class="auth-hero">
+      <div class="hero-sticks" id="heroSticks"></div>
+      <h1>FRIENDS<br><b>윷놀이</b></h1>
+      <p>친구들과 판돈 걸고 던지는 전통 윷놀이</p>
+    </div>
+    <div class="auth-card glass">
+      <div class="seg" id="authSeg">
+        <button data-m="login" class="on">로그인</button>
+        <button data-m="register">회원가입</button>
+      </div>
+      <input id="authName" maxlength="12" placeholder="닉네임" autocomplete="username" />
+      <input id="authPw" type="password" maxlength="30" placeholder="비밀번호 (4자 이상)" autocomplete="current-password" />
+      <button id="authBtn" class="btn gold big">로그인</button>
+      <p class="hint" id="authHint">가입하면 초기 자산 <b>10억원</b>이 지급돼요</p>
+      <p class="err" id="authErr"></p>
+    </div>
+  </section>
+
+  <!-- ========== 로비 ========== -->
+  <section id="lobby" class="screen hidden">
+    <header class="lobby-top">
+      <div class="me-chip" id="meChip"></div>
+      <button class="icon-btn" id="rulesBtn" title="규칙">?</button>
+      <button class="icon-btn" id="logoutBtn" title="로그아웃">⎋</button>
+    </header>
+
+    <div class="wallet glass">
+      <div class="wallet-main"><span>총 자산</span><b id="wTotal">-</b></div>
+      <div class="wallet-sub">
+        <div><span>보유 현금</span><b id="wCash">-</b></div>
+        <div><span>판돈에 묶임</span><b id="wHold">-</b></div>
+        <div><span>우승 트로피</span><b id="wTrophy">-</b></div>
+      </div>
+    </div>
+
+    <div class="tabs" id="lobbyTabs">
+      <button data-t="rooms" class="on">게임</button>
+      <button data-t="rank">랭킹</button>
+      <button data-t="shop">상점</button>
+      <button data-t="profile">프로필</button>
+    </div>
+
+    <div class="tab-body" id="tab-rooms">
+      <div class="create-row">
+        <button class="btn green" id="newRoomBtn"><small>2~4인 · 판돈 내기</small>판 만들기</button>
+        <button class="btn gold" id="quickBtn"><small>열린 판 아무 데나</small>빠른 입장</button>
+      </div>
+      <div class="code-row">
+        <input id="joinCode" maxlength="4" placeholder="판 코드" />
+        <button class="btn" id="joinCodeBtn">입장</button>
+      </div>
+      <div id="backToRoom"></div>
+      <div class="room-list" id="roomList"></div>
+    </div>
+    <div class="tab-body hidden" id="tab-rank"><div class="rank-list" id="rankList"></div></div>
+    <div class="tab-body hidden" id="tab-shop"></div>
+    <div class="tab-body hidden" id="tab-profile"></div>
+  </section>
+
+  <!-- ========== 게임 ========== -->
+  <section id="game" class="screen hidden">
+    <header class="g-top">
+      <button class="icon-btn" id="exitBtn" title="로비로">‹</button>
+      <div class="g-title"><b id="gName">-</b><span id="gSub">-</span></div>
+      <button class="icon-btn" id="gRulesBtn" title="규칙">?</button>
+      <button class="icon-btn" id="chatBtn" title="채팅">💬<i id="chatBadge" class="badge hidden">0</i></button>
+    </header>
+
+    <div class="opp-row" id="oppRow"></div>
+
+    <div class="table-zone">
+      <div class="yut-table" id="yutTable">
+        <div class="board-rim"><div class="board-wrap" id="boardWrap">
+          <div class="board-svg" id="boardSvg"></div>
+          <div class="tok-layer" id="tokLayer"></div>
+          <div class="fx-layer" id="fxLayer"></div>
+          <div class="toss hidden" id="toss"></div>
+          <div class="banner hidden" id="banner"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="my-panel" id="myPanel"></div>
+    <div class="controls" id="controls"></div>
+  </section>
+
+  <!-- 채팅 시트 -->
+  <div class="sheet hidden" id="chatSheet">
+    <div class="sheet-bg" data-close></div>
+    <div class="sheet-panel">
+      <div class="sheet-head"><b>채팅</b><button class="icon-btn" data-close>✕</button></div>
+      <div class="chat-log" id="chatLog"></div>
+      <form class="chat-form" id="chatForm">
+        <input id="chatInput" maxlength="100" placeholder="메시지 입력…" autocomplete="off" />
+        <button class="btn gold small" type="submit">전송</button>
+      </form>
+    </div>
+  </div>
+  <div class="chat-peek hidden" id="chatPeek"></div>
+
+  <!-- 공용 모달 -->
+  <div class="modal hidden" id="modal">
+    <div class="modal-bg" data-close></div>
+    <div class="modal-panel glass" id="modalPanel"></div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
-<script src="/art.js?v=20261111b"></script>
-<script src="/app.js?v=20261111b"></script>
+<script src="/art.js?v=20261111c"></script>
+<script src="/app.js?v=20261111c"></script>
 </body>
 </html>

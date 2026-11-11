@@ -21,7 +21,7 @@ const userSocket = new Map(); // uid -> socket.id
 function pushMe(uid) {
   const u = db.byId.get(uid);
   const sid = userSocket.get(uid);
-  if (u && sid) io.to(sid).emit('me', { id: u.id, username: u.username, assets: u.assets, yutHold: u.yutHold, yut: u.yut || {}, owned: u.owned || SHOP.DEFAULT_OWNED, equip: Object.assign({}, SHOP.DEFAULT_EQUIP, u.equip || {}) });
+  if (u && sid) io.to(sid).emit('me', { id: u.id, username: u.username, assets: u.assets, yutHold: u.yutHold, trophy: u.trophy || 0, yut: u.yut || {}, owned: u.owned || SHOP.DEFAULT_OWNED, equip: Object.assign({}, SHOP.DEFAULT_EQUIP, u.equip || {}) });
 }
 yut.init({
   getUser: id => db.byId.get(id),
@@ -62,6 +62,7 @@ io.on('connection', socket => {
     if (r.ok) pushMe(user.id);
     cb(r);
   }));
+  socket.on('rank', guard(cb => cb({ ok: true, list: db.rank() })));
   socket.on('disconnect', () => { if (user && userSocket.get(user.id) === socket.id) userSocket.delete(user.id); });
 });
 

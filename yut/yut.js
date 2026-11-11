@@ -160,9 +160,9 @@ function finish(g, winner) {
     const u = getUser(id); if (!u) continue;
     const pay = id === winner ? pot : 0;
     release(u, g.bet, pay);
-    const st = stats(u); st.games++; st.net += pay - g.bet; if (id === winner) st.win++;
+    const st = stats(u); st.games++; st.net += pay - g.bet; if (id === winner) { st.win++; u.trophy = (u.trophy || 0) + 1; }
   }
-  g.chat.push({ name: '📢', text: `${g.names[winner]} 님 우승! 판돈 ${pot.toLocaleString('ko-KR')}원 획득` });
+  g.chat.push({ name: '📢', text: `${g.names[winner]} 님 우승! 판돈 ${pot.toLocaleString('ko-KR')}원과 🏆 1개 획득` });
   saveFn();
   for (const id of g.players) { userGame.delete(id); notifyFn(id, 'me'); }
   setTimeout(() => games.delete(g.code), 60000);
