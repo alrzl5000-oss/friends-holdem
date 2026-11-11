@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const SHOP = require('./shop');
 
 const DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const FILE = path.join(DIR, 'db.json');
@@ -30,7 +31,7 @@ function register(name, pw) {
   const key = name.toLowerCase();
   if (data.users[key]) return { error: '이미 있는 닉네임이에요' };
   const salt = crypto.randomBytes(8).toString('hex');
-  const u = { id: crypto.randomUUID(), username: name, salt, pw: hash(pw, salt), assets: START, yutHold: 0, yut: { games: 0, win: 0, net: 0 } };
+  const u = { id: crypto.randomUUID(), username: name, salt, pw: hash(pw, salt), assets: START, yutHold: 0, yut: { games: 0, win: 0, net: 0 }, owned: SHOP.DEFAULT_OWNED.slice(), equip: Object.assign({}, SHOP.DEFAULT_EQUIP) };
   data.users[key] = u; byId.set(u.id, u);
   save();
   return { user: u };
@@ -41,4 +42,25 @@ function login(name, pw) {
   if (hash(String(pw || ''), u.salt) !== u.pw) return { error: '비밀번호가 달라요' };
   return { user: u };
 }
-module.exports = { byId, save, register, login, START };
+// 상점: 구매(현금에서 차감) · 장착(보유한 것만)
+function buy(u, id) {
+  const it = SHOP.byId(id);
+  if (!it) return { error: '없는 상품이에요' };
+  u.owned = u.owned || SHOP.DEFAULT_OWNED.slice();
+  if (u.owned.includes(id)) return { error: '이미 가지고 있어요' };
+  if (u.assets < it.price) return { error: '현금이 부족해요' };
+  u.assets -= it.price; u.owned.push(id);
+  save();
+  return { ok: true };
+}
+function equip(u, id) {
+  const it = SHOP.byId(id);
+  if (!it) return { error: '없는 상품이에요' };
+  u.owned = u.owned || SHOP.DEFAULT_OWNED.slice();
+  if (!u.owned.includes(id)) return { error: '먼저 구매해 주세요' };
+  u.equip = Object.assign({}, SHOP.DEFAULT_EQUIP, u.equip || {});
+  u.equip[it.cat] = id;
+  save();
+  return { ok: true };
+}
+module.exports = { byId, save, register, login, buy, equip, START };

@@ -1,13 +1,15 @@
 // 윷놀이 (3~4인 · 판돈 내기) — 전통 룰
+// - 2~4인 (2인부터 시작 가능)
 // - 바깥길 20칸, 5번·10번 칸에서 대각선 지름길 (5→중앙→15, 10→중앙→20)
 // - 윷 던지기: 도1 · 개2 · 걸3 · 윷4 · 모5 · 뒷도(-1), 윷·모는 한 번 더
 // - 상대 말이 있는 칸에 도착하면 잡혀서 출발점으로
 // - 말 4개를 모두 골인시킨 사람이 판돈 전부를 가져감 (게임 쪽 몫 없음)
 const crypto = require('crypto');
+const SHOP = require('./shop');
 
 const MIN_BET = 1e6;
 const MAX_BET = 1e8;
-const MIN_PLAYERS = 3;
+const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
 const TURN_MS = 20000;
 const COLORS = ['#ff6b6b', '#4dabf7', '#51cf66', '#ffd43b'];
@@ -24,6 +26,7 @@ const DIAG_AT = { 4: 'A', 9: 'B' }; // main 인덱스 4(R5), 9(R10) 에서 대�
 
 let getUser, notifyFn, saveFn;
 function init(opts) { getUser = opts.getUser; notifyFn = opts.notify; saveFn = opts.save; }
+const skinOf = id => { const u = getUser(id); const e = (u && u.equip) || SHOP.DEFAULT_EQUIP; return { piece: e.piece || 'p_basic', stick: e.stick || 's_basic', board: e.board || 'b_hanji' }; };
 
 const games = new Map();
 const userGame = new Map();
@@ -39,13 +42,13 @@ function stats(u) { return (u.yut = u.yut || { games: 0, win: 0, net: 0 }); }
 
 // 윷: 막대 4개 중 앞면(flat) 개수로 결정. 뒷도는 첫 번째 막대만 앞면일 때.
 function throwYut() {
-  const bits = [0, 0, 0, 0].map(() => crypto.randomInt(2));
+  const bits = [0, 0, 0, 0].map(() => crypto.randomInt(2)); // 1 = 앞면(평평한 면)
   const flat = bits.reduce((a, b) => a + b, 0);
-  if (flat === 0) return { steps: 5, name: '모', extra: true };
-  if (flat === 1) return bits[0] ? { steps: -1, name: '뒷도', extra: false } : { steps: 1, name: '도', extra: false };
-  if (flat === 2) return { steps: 2, name: '개', extra: false };
-  if (flat === 3) return { steps: 3, name: '걸', extra: false };
-  return { steps: 4, name: '윷', extra: true };
+  if (flat === 0) return { bits, steps: 5, name: '모', extra: true };
+  if (flat === 1) return bits[0] ? { bits, steps: -1, name: '뒷도', extra: false } : { bits, steps: 1, name: '도', extra: false };
+  if (flat === 2) return { bits, steps: 2, name: '개', extra: false };
+  if (flat === 3) return { bits, steps: 3, name: '걸', extra: false };
+  return { bits, steps: 4, name: '윷', extra: true };
 }
 
 // 말 상태: { r: 'main'|'A'|'B'|'done', i } — i=-1 은 출발 전
@@ -123,7 +126,7 @@ function view(g, uid) {
     code: g.code, bet: g.bet, status: g.status, host: g.names[g.host], pot: g.bet * g.players.length,
     deadline: g.deadline || 0, winner: g.winner ? g.names[g.winner] : null, you: uid,
     players: g.players.map((id, i) => ({
-      id, name: g.names[id], color: COLORS[i],
+      id, name: g.names[id], color: COLORS[i], skin: skinOf(id),
       nodes: g.pos ? g.pos[id].map(nodeOf) : ['start', 'start', 'start', 'start'],
       done: g.pos ? g.pos[id].filter(isDone).length : 0,
       turn: g.status === 'play' && id === turnId, host: id === g.host,
@@ -134,6 +137,7 @@ function view(g, uid) {
     options: canAct && g.phase === 'move' ? g.options.map(o => ({ id: o.id, label: `${labelOf(o.from)} → ${labelOf(o.to)}`, from: o.from, to: o.to, route: o.route })) : [],
     last: g.last || null,
     chat: g.chat.slice(-60),
+    seq: g.seq || 0,
   };
 }
 function push(g) { for (const id of g.players) notifyFn(id, 'yutState', view(g, id)); }
@@ -197,6 +201,7 @@ function throwAct(g) {
   if (g.phase !== 'throw') return { error: '던질 차례가 아니에요' };
   const id = g.players[g.turn];
   g.last = throwYut();
+  g.seq = (g.seq || 0) + 1;
   g.chat.push({ name: '🎲', text: `${g.names[id]} : ${g.last.name}` });
   g.options = optionsFor(g, id);
   if (g.options.length === 0) { // 뒷도인데 움직일 말이 없음 → 턴 넘김
@@ -275,4 +280,4 @@ function yutAct(u, op, arg) {
   return { error: '알 수 없는 행동이에요' };
 }
 
-module.exports = { init, yutAct, view, lobbyList, throwYut, optionsFor, forward, backward, START_P, nodeOf, ROUTE, MIN_BET, MAX_BET, _games: games };
+module.exports = { init, skinOf, yutAct, view, lobbyList, throwYut, optionsFor, forward, backward, START_P, nodeOf, ROUTE, MIN_BET, MAX_BET, _games: games };
