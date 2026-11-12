@@ -193,7 +193,7 @@ function showRules() {
 
 // 던지기 기록 (이번 판 · 내 누적 · 전체 누적) — 이론 확률과 나란히
 const NAMES = ['낙', '뒷도', '도', '개', '걸', '윷', '모'];
-const THEORY = { '낙': 3, '뒷도': 4.9, '도': 17.5, '개': 34, '걸': 29.1, '윷': 7.8, '모': 3.9 };  // 낙 3% + 서버 ODDS 표
+const THEORY = { '낙': 3, '뒷도': 4.2, '도': 12.6, '개': 34.6, '걸': 31.7, '윷': 10.9, '모': 3 };  // 낙 3% 먼저, 나머지 97%를 실측 기반 표로
 function tallyRow(label, t) {
   const tot = NAMES.reduce((a, k) => a + (t[k] || 0), 0);
   return `<tr><th>${esc(label)}</th>${NAMES.map(k => `<td>${t[k] || 0}<small>${tot ? Math.round((t[k] || 0) / tot * 1000) / 10 + '%' : '-'}</small></td>`).join('')}<td>${tot}</td></tr>`;

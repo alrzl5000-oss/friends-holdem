@@ -78,8 +78,9 @@ const NAK_TAUNTS = [
   '{n} 님 오늘 운세: 낙 🔮',
   '다들 박수 👏👏 {n} 님이 해냈어요 (낙을)',
 ];   // 낙: 윷가락이 판 밖으로 떨어짐 → 무효, 차례 넘어감
-// 결과별 확률(낙 제외 100 기준): 도 > 윷 > 모 순서가 되도록 직접 정함
-const ODDS = [['도', 18], ['뒷도', 5], ['개', 35], ['걸', 30], ['윷', 8], ['모', 4]];
+// 1단계: 낙 3% / 나머지 97%
+// 2단계: 도개걸윷모 (1000 기준) — 실측 배 확률 57.9%(김미경·허명회 1995, 4개 동시 1,120회)로 계산
+const ODDS = [['도', 130], ['뒷도', 43], ['개', 357], ['걸', 327], ['윷', 112], ['모', 31]];
 const STEPS = { '도': 1, '뒷도': -1, '개': 2, '걸': 3, '윷': 4, '모': 5 };
 function bitsFor(name) {   // 화면에 보일 윷가락 앞뒷면 (1 = 배·평평한 면)
   const flat = { '도': 1, '뒷도': 1, '개': 2, '걸': 3, '윷': 4, '모': 0 }[name];
@@ -90,7 +91,7 @@ function bitsFor(name) {   // 화면에 보일 윷가락 앞뒷면 (1 = 배·평
 }
 function throwYut() {
   if (crypto.randomInt(100) < NAK_PCT) return { bits: bitsFor(['도', '개', '걸'][crypto.randomInt(3)]), steps: 0, name: '낙', extra: false, nak: true, taunt: NAK_TAUNTS[crypto.randomInt(NAK_TAUNTS.length)] };
-  let r = crypto.randomInt(100), name = '개';
+  let r = crypto.randomInt(1000), name = '개';
   for (const [n, w] of ODDS) { if (r < w) { name = n; break; } r -= w; }
   return { bits: bitsFor(name), steps: STEPS[name], name, extra: name === '윷' || name === '모' };
 }
