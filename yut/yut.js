@@ -27,7 +27,9 @@ const END = { main: 20, A: 12, B: 7 };
 const DIAG_AT = { 4: 'A', 9: 'B' }; // main 인덱스 4(R5), 9(R10) 에서 대각선 선택 가능
 
 let getUser, notifyFn, saveFn;
-function init(opts) { getUser = opts.getUser; notifyFn = opts.notify; saveFn = opts.save; }
+let shameFn = () => 0, otherBusyFn = () => false;
+function init(opts) { getUser = opts.getUser; notifyFn = opts.notify; saveFn = opts.save; if (opts.shameOf) shameFn = opts.shameOf; if (opts.otherBusy) otherBusyFn = opts.otherBusy; }
+const shameOfId = id => { const u = getUser(id); return u ? shameFn(u) : 0; };
 const skinOf = id => { const u = getUser(id); const e = (u && u.equip) || SHOP.DEFAULT_EQUIP; return { piece: e.piece || 'p_basic', stick: e.stick || 's_basic', board: e.board || 'b_hanji' }; };
 
 const games = new Map();
@@ -180,7 +182,7 @@ function view(g, uid) {
     code: g.code, bet: g.bet, status: g.status, host: g.names[g.host], pot: g.bet * g.players.length,
     deadline: g.deadline || 0, winner: g.winner ? g.names[g.winner] : null, you: uid,
     players: g.players.map((id, i) => ({
-      id, name: g.names[id], color: colorOf(g, id), skin: skinOf(id),
+      id, name: g.names[id], color: colorOf(g, id), skin: skinOf(id), shame: shameOfId(id),
       nodes: g.pos ? g.pos[id].map(nodeOf) : ['start', 'start', 'start', 'start'],
       done: g.pos ? g.pos[id].filter(isDone).length : 0,
       turn: g.status === 'play' && id === turnId, host: id === g.host,
@@ -364,6 +366,7 @@ function yutAct(u, op, arg) {
     return { ok: true };
   }
   if ((op === 'create' || op === 'join') && !g) unwatch(u.id);
+  if ((op === 'create' || op === 'join') && !g && otherBusyFn(u.id)) return { error: '미니게임 판에 참여 중이에요' };
   if (op === 'create') {
     if (g) return { error: '참여 중인 판이 있어요' };
     const bet = Math.floor(Number(arg));
@@ -453,4 +456,8 @@ function restore(list) {
   }
   return [...games.values()].flatMap(g => g.players);
 }
-module.exports = { pathOf, backward, norm, dump, restore, init, skinOf, yutAct, view, lobbyList, throwYut, optionsFor, forward, backward, START_P, nodeOf, ROUTE, MIN_BET, MAX_BET, _games: games };
+// 충전 등으로 딱지가 바뀌면 그 사람 판을 다시 보냄
+function refreshFor(uid) { const c = userGame.get(uid); const g = c && games.get(c); if (g) push(g); }
+const busy = uid => userGame.has(uid) && games.has(userGame.get(uid));
+const hasCode = c => games.has(c);
+module.exports = { busy, hasCode, refreshFor, pathOf, backward, norm, dump, restore, init, skinOf, yutAct, view, lobbyList, throwYut, optionsFor, forward, backward, START_P, nodeOf, ROUTE, MIN_BET, MAX_BET, _games: games };

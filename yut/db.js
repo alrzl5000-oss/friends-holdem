@@ -33,6 +33,9 @@ function refundOrphans(activeIds) {
 let dumpFn = null;
 const setDump = fn => { dumpFn = fn; };
 const storedGames = () => data.yutGames || [];
+let miniDumpFn = null;
+const setMiniDump = fn => { miniDumpFn = fn; };
+const storedMini = () => data.miniGames || [];
 // 로그인 유지용 세션 (브라우저에 토큰 저장)
 function newSession(u) {
   const token = crypto.randomBytes(24).toString('hex');
@@ -44,6 +47,7 @@ function byToken(token) { const id = data.sessions[String(token || '')]; return 
 
 function save() {
   if (dumpFn) data.yutGames = dumpFn();
+  if (miniDumpFn) data.miniGames = miniDumpFn();
   fs.mkdirSync(DIR, { recursive: true });
   const tmp = FILE + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(data));
@@ -98,15 +102,32 @@ function rank() {
   return Object.values(data.users).map(u => {
     const y = u.yut || {};
     return { name: u.username, win: y.win || 0, games: y.games || 0, net: y.net || 0, trophy: u.trophy || 0,
-      piece: (u.equip && u.equip.piece) || SHOP.DEFAULT_EQUIP.piece };
+      piece: (u.equip && u.equip.piece) || SHOP.DEFAULT_EQUIP.piece, shame: shameLevel(u) };
   }).filter(r => r.games > 0)
     .sort((a, b) => b.win - a.win || b.trophy - a.trophy || (b.win / b.games) - (a.win / a.games))
     .slice(0, 50);
 }
+// 충전(구제금): 현금(판돈 포함) 1억 미만이면 3억 · 하루(한국 날짜) 3번 · 24시간 딱지
+const BAILOUT_AMOUNT = 3e8, DAILY_BAILOUTS = 3, SHAME_MS = 24 * 60 * 60 * 1000;
+const kstDay = t => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const bailoutsToday = u => (u.bailoutLog || []).filter(t => kstDay(t) === kstDay(Date.now())).length;
+// 최근 24시간 충전 횟수 → 1 좃밥 / 2 좃좃밥 / 3 걍접으셈
+const shameLevel = u => Math.min(3, (u.bailoutLog || []).filter(t => Date.now() - t < SHAME_MS).length);
+const shameUntil = u => { const l = (u.bailoutLog || []).filter(t => Date.now() - t < SHAME_MS); return l.length ? Math.max(...l) + SHAME_MS : 0; };
+function bailout(u) {
+  if (u.assets + (u.yutHold || 0) >= 1e8) return { error: '현금이 1억 미만일 때만 충전할 수 있어요' };
+  if (bailoutsToday(u) >= DAILY_BAILOUTS) return { error: `오늘은 더 충전할 수 없어요 (하루 ${DAILY_BAILOUTS}번)` };
+  u.bailoutLog = (u.bailoutLog || []).filter(t => Date.now() - t < 7 * SHAME_MS);
+  u.bailoutLog.push(Date.now());
+  u.assets += BAILOUT_AMOUNT;
+  save();
+  return { ok: true, amount: BAILOUT_AMOUNT, level: shameLevel(u) };
+}
+
 // 전체 던지기 통계 (모든 계정 합계)
 function throwStats() {
   const tot = {};
   for (const u of Object.values(data.users)) for (const [k, n] of Object.entries(u.throws || {})) tot[k] = (tot[k] || 0) + n;
   return tot;
 }
-module.exports = { throwStats, byId, save, register, login, buy, equip, rank, START, refundOrphans, setDump, storedGames, byToken, logout };
+module.exports = { bailout, bailoutsToday, shameLevel, shameUntil, BAILOUT_AMOUNT, DAILY_BAILOUTS, throwStats, byId, save, register, login, buy, equip, rank, START, refundOrphans, setDump, storedGames, setMiniDump, storedMini, byToken, logout };

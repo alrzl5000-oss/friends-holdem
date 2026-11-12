@@ -119,6 +119,18 @@
   };
 
   // opts: { theme, options:[{id,from,to,route}], steps }
+  // 선택지 색 (번호·길·단추가 같은 색) — 1 빨강, 2 파랑, 3 초록, 4 보라
+  const OPT_COLORS = ['#e5484d', '#2f7cf6', '#14a25a', '#9b51e0', '#e08a00'];
+  const optColor = i => OPT_COLORS[i % OPT_COLORS.length];
+  // 도착 칸별로 선택지 묶기: [{ to, idx: [i,...], ids: [id,...] }]
+  function targetGroups(options) {
+    const m = new Map();
+    options.forEach((o, i) => { const g = m.get(o.to) || { to: o.to, idx: [], ids: [] }; g.idx.push(i); g.ids.push(o.id); m.set(o.to, g); });
+    return [...m.values()];
+  }
+  const tgAttrs = g => g.ids.length === 1 ? `data-opt="${g.ids[0]}"` : `data-multi="${g.ids.join(',')}"`;
+  const tgLabel = (g, options) => g.idx.map(i => options[i].to === 'goal' && g.idx.length === 1 ? '났' : i + 1).join('·');
+
   // 엑셀 모드: 꺾은선형 차트처럼 보이는 말판
   function excelBoard(opts) {
     const options = opts.options || [];
@@ -132,13 +144,12 @@
       if (CORNER.has(n)) return `<rect x="${x - 1.9}" y="${y - 1.9}" width="3.8" height="3.8" fill="${orange}" stroke="#fff" stroke-width=".4"/>`;
       return `<circle cx="${x}" cy="${y}" r="1.45" fill="#fff" stroke="${blue}" stroke-width=".55"/>`;
     }).join('');
-    const paths = options.map(o => `<polyline class="route" points="${(o.path || [o.from, o.to]).map(n => XY[n].join(',')).join(' ')}" fill="none" stroke="${acc}" stroke-width=".8" stroke-dasharray="1.6 1.2"/>`).join('');
-    const seen = new Set();
-    const targets = options.map((o, i) => {
-      if (seen.has(o.to)) return ''; seen.add(o.to);
-      const [x, y] = o.to === 'goal' ? [93.5, 93.5] : XY[o.to];
-      return `<g class="tg" data-opt="${o.id}" tabindex="0" role="button"><rect x="${x - 3.4}" y="${y - 3.4}" width="6.8" height="6.8" fill="#e2efda" stroke="${acc}" stroke-width=".7"/>
-        <text x="${x}" y="${y + 1}" font-size="2.8" text-anchor="middle" fill="${acc}" font-weight="700" font-family="Calibri, Arial">${o.to === 'goal' ? '났' : i + 1}</text></g>`;
+    const paths = options.map((o, i) => `<polyline class="route" data-i="${i}" points="${(o.path || [o.from, o.to]).map(n => XY[n].join(',')).join(' ')}" fill="none" stroke="${optColor(i)}" stroke-width=".8" stroke-dasharray="1.6 1.2"/>`).join('');
+    const targets = targetGroups(options).map(g => {
+      const [x, y] = g.to === 'goal' ? [93.5, 93.5] : XY[g.to];
+      const lab = tgLabel(g, options), w = 4.2 + lab.length * 1.6, c = g.idx.length === 1 ? optColor(g.idx[0]) : acc;
+      return `<g class="tg" ${tgAttrs(g)} data-i="${g.idx.join(',')}" tabindex="0" role="button"><rect x="${x - w / 2}" y="${y - 3.4}" width="${w}" height="6.8" fill="#fff" stroke="${c}" stroke-width=".8"/>
+        <text x="${x}" y="${y + 1}" font-size="2.8" text-anchor="middle" fill="${c}" font-weight="700" font-family="Calibri, Arial">${lab}</text></g>`;
     }).join('');
     return `<svg class="board" viewBox="0 0 100 100" role="img" aria-label="차트"><rect width="100" height="100" fill="#fff"/>
       <text x="50" y="5.4" font-size="3.1" text-anchor="middle" fill="${gray}" font-family="Calibri, Arial">분기별 매출 추이</text>
@@ -216,25 +227,23 @@
       <text x="2.7" y="3.45" font-size="2" text-anchor="middle" fill="#fff3e2" font-family="Pretendard, sans-serif" font-weight="800">출발</text></g>`;
 
     // 내 차례: 갈 길(점선 흐름) · 옮길 말 · 갈 자리
-    const paths = options.map(o => {
+    const paths = options.map((o, i) => {
       const p = (o.path || pathOf(o.from, o.to, opts.steps, o.route)).map(n => XY[n]);
-      return `<polyline class="route" points="${p.map(q => q.join(',')).join(' ')}" fill="none" stroke="${T.accent}" stroke-width=".9" stroke-dasharray="1.6 1.4" stroke-linecap="round" opacity=".85"/>`;
+      return `<polyline class="route" data-i="${i}" points="${p.map(q => q.join(',')).join(' ')}" fill="none" stroke="${optColor(i)}" stroke-width="1" stroke-dasharray="1.6 1.4" stroke-linecap="round" opacity=".9"/>`;
     }).join('');
-    const seenTo = new Set();
-    const targets = options.map((o, i) => {
-      const key = o.to;
-      if (seenTo.has(key)) return '';
-      seenTo.add(key);
-      const [x, y] = o.to === 'goal' ? [93.5, 93.5] : XY[o.to];
-      return `<g class="tg" data-opt="${o.id}" tabindex="0" role="button" aria-label="${i + 1}번으로 옮기기">
-        <circle cx="${x}" cy="${y}" r="6.4" fill="${T.accent}" opacity=".18" filter="url(#glow-${tk})"/>
-        <circle class="tg-ring" cx="${x}" cy="${y}" r="4.6" fill="none" stroke="${T.accent}" stroke-width=".9"/>
-        <circle cx="${x}" cy="${y}" r="2.3" fill="${T.accent}"/>
-        <text x="${x}" y="${y + .95}" font-size="2.7" text-anchor="middle" fill="#fff" font-weight="800" font-family="Pretendard, sans-serif">${o.to === 'goal' ? '났' : i + 1}</text></g>`;
+    const targets = targetGroups(options).map(g => {
+      const [x, y] = g.to === 'goal' ? [93.5, 93.5] : XY[g.to];
+      const one = g.idx.length === 1, c = one ? optColor(g.idx[0]) : '#ffffff', lab = tgLabel(g, options);
+      const half = one ? 2.4 : 1.1 + lab.length * .95;
+      return `<g class="tg" ${tgAttrs(g)} data-i="${g.idx.join(',')}" tabindex="0" role="button" aria-label="${lab}번 자리">
+        <circle cx="${x}" cy="${y}" r="6.4" fill="${one ? c : T.accent}" opacity=".2" filter="url(#glow-${tk})"/>
+        <circle class="tg-ring" cx="${x}" cy="${y}" r="4.6" fill="none" stroke="${one ? c : T.accent}" stroke-width=".9"/>
+        <rect x="${x - half}" y="${y - 2.4}" width="${half * 2}" height="4.8" rx="2.4" fill="${one ? c : '#1d1d1d'}" stroke="#fff" stroke-width=".35"/>
+        <text x="${x}" y="${y + .95}" font-size="2.7" text-anchor="middle" fill="#fff" font-weight="800" font-family="Pretendard, sans-serif">${lab}</text></g>`;
     }).join('');
 
     return `<svg class="board" viewBox="0 0 100 100" role="img" aria-label="윷판"><defs>${defs}</defs>${frame}${lines}${nodes}${seal}<g class="routes">${paths}</g><g class="targets">${targets}</g></svg>`;
   }
 
-  window.Art = { pieceSVG, pieceCells, stickEl, stickFace, boardSVG, pathOf, THEMES, XY, mix, dark, light };
+  window.Art = { optColor, pieceSVG, pieceCells, stickEl, stickFace, boardSVG, pathOf, THEMES, XY, mix, dark, light };
 })();

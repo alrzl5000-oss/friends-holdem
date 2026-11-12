@@ -24,6 +24,9 @@ function won(n) {
   return (neg ? '-' : '') + s + '원';
 }
 const ITEM = id => ITEMS.find(x => x.id === id);
+// 충전 딱지 (최근 24시간 충전 횟수)
+const SHAME = ['', '좃밥', '좃좃밥', '걍접으셈'];
+const shameTag = lv => lv > 0 ? ` <i class="shame lv${lv}">${SHAME[lv]}</i>` : '';
 const artOf = id => { const it = ITEM(id); return it ? it.art : null; };
 const pieceArt = id => artOf(id || 'p_basic') || { pat: 'dot', c1: '#5c3b1e', c2: '#e9d3a1', c3: '#8a5a2b' };
 const skinPiece = skin => pieceArt(skin && skin.piece);
@@ -97,7 +100,7 @@ function fan(wood) {
     `<div class="sp" style="left:calc(50% + ${dx}%);top:50%;transform:translate(-50%,-50%) rotate(${rot}deg)">${Art.stickEl(wood, i === 0).replace('class="stick"', `class="stick" style="transform:rotateY(${flat ? 0 : 180}deg)"`)}</div>`).join('')}</div>`;
 }
 function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function show(id) { ['auth', 'lobby', 'game'].forEach(s => $(s).classList.toggle('hidden', s !== id)); }
+function show(id) { ['auth', 'lobby', 'game', 'mini'].forEach(s => $(s).classList.toggle('hidden', s !== id)); }
 let toastT;
 function toast(msg, ok) { const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (ok ? ' ok' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast' + (ok ? ' ok' : ''), 2200); }
 function modal(html) { $('modalPanel').innerHTML = html; $('modal').classList.remove('hidden'); }
@@ -154,7 +157,14 @@ $('quickBtn').onclick = () => {
   if (!r) return toast('들어갈 수 있는 판이 없어요. 직접 만들어 보세요');
   act('join', r.code);
 };
-$('joinCodeBtn').onclick = () => act('join', $('joinCode').value.trim().toUpperCase());
+// 판 코드로 들어가기: 윷놀이 판인지 미니게임 판인지 서버에 물어봄
+$('joinCodeBtn').onclick = () => {
+  const code = $('joinCode').value.trim().toUpperCase(); if (!code) return;
+  socket.emit('whichCode', code, r => {
+    if (r && r.kind === 'mini') { $('joinCode').value = ''; return window.Mini && Mini.join(code); }
+    act('join', code);
+  });
+};
 $('joinCode').onkeydown = e => { if (e.key === 'Enter') $('joinCodeBtn').click(); };
 
 function showRules() {
@@ -199,7 +209,7 @@ function loadRank() {
     const list = (res && res.list) || [];
     $('rankList').innerHTML = list.length ? list.map((r, i) => `<div class="rank-row${me && r.name === me.username ? ' me' : ''}">
         <div class="no${i < 3 ? ' top' : ''}">${['🥇', '🥈', '🥉'][i] || i + 1}</div>${avHTML(pieceArt(r.piece))}
-        <div class="nm"><b>${esc(r.name)}</b><span>${r.games}판 · 승률 ${Math.round(r.win / r.games * 100)}% · 🏆 ${r.trophy}</span></div>
+        <div class="nm"><b>${esc(r.name)}${shameTag(r.shame)}</b><span>${r.games}판 · 승률 ${Math.round(r.win / r.games * 100)}% · 🏆 ${r.trophy}</span></div>
         <div class="amt">${r.win}승</div></div>`).join('')
       : '<p class="empty-note">아직 랭킹이 없어요. 첫 판을 이겨 보세요!</p>';
   });
@@ -209,11 +219,12 @@ function renderLobby() {
   if (!me) return;
   setTimeout(xlUpdate);
   const y = me.yut || {};
-  $('meChip').innerHTML = `${avHTML(pieceArt(me.equip && me.equip.piece))}<div><b>${esc(me.username)}</b><span>우승 ${y.win || 0}회 · <i class="tro">🏆 ${me.trophy || 0}</i></span></div>`;
+  $('meChip').innerHTML = `${avHTML(pieceArt(me.equip && me.equip.piece))}<div><b>${esc(me.username)}${shameTag(me.shame)}</b><span>우승 ${y.win || 0}회 · <i class="tro">🏆 ${me.trophy || 0}</i></span></div>`;
   $('wTotal').textContent = won(me.assets + (me.yutHold || 0));
   $('wCash').textContent = won(me.assets).replace('원', '');
   $('wHold').textContent = won(me.yutHold || 0).replace('원', '');
   $('wTrophy').textContent = '🏆 ' + (me.trophy || 0);
+  renderBailout();
 
   if (tab === 'rooms') {
     $('backToRoom').innerHTML = room && !inGame ? `<button class="btn gold big back-room" id="backBtn">${room.spectating ? '관전하던 판으로 돌아가기' : '진행 중인 판으로 돌아가기'}</button>` : '';
@@ -230,9 +241,30 @@ function renderLobby() {
     }).join('') : '<p class="empty-note">열린 판이 없어요.<br>판을 만들고 친구를 불러 보세요!</p>';
     document.querySelectorAll('[data-join]').forEach(b => b.onclick = () => act('join', b.dataset.join));
     document.querySelectorAll('[data-watch]').forEach(b => b.onclick = () => act('watch', b.dataset.watch));
+    if (window.Mini) Mini.renderLobby();
   }
   if (tab === 'shop') renderShop();
   if (tab === 'profile') renderProfile();
+}
+
+// 충전 (현금+판돈 1억 미만일 때, 하루 3번)
+function renderBailout() {
+  const box = $('bailout'); if (!box) return;
+  const poor = me.assets + (me.yutHold || 0) < 1e8, left = (me.bailoutLimit || 3) - (me.bailoutsToday || 0);
+  const hrs = me.shameUntil ? Math.max(1, Math.ceil((me.shameUntil - Date.now()) / 3600000)) : 0;
+  let h = '';
+  if (poor && left > 0) h += `<button class="btn red big" id="bailBtn">💸 충전하기 <small>+${won(me.bailoutAmount || 3e8)} · 오늘 ${left}번 남음</small></button>`;
+  else if (poor) h += `<p class="hint">오늘 충전 횟수를 다 썼어요. 내일 다시 충전할 수 있어요.</p>`;
+  if (me.shame > 0) h += `<p class="hint shame-line">${shameTag(me.shame)} 딱지 중 · ${hrs}시간 뒤 해제 · 오늘 충전 ${me.bailoutsToday}/${me.bailoutLimit}번</p>`;
+  box.innerHTML = h;
+  const b = $('bailBtn');
+  if (b) b.onclick = () => {
+    const next = SHAME[Math.min(3, (me.shame || 0) + 1)];
+    modal(`<h3>충전할까요?</h3><p class="hint" style="text-align:left">현금 <b>${won(me.bailoutAmount || 3e8)}</b>을 받는 대신 <b>24시간 동안 내 말에 「${next}」 딱지</b>가 붙어요. 다들 볼 수 있어요.<br>오늘 남은 충전: ${left}번</p>
+      <div class="row2"><button class="btn" data-close>그만두기</button><button class="btn red" id="bailGo">충전</button></div>`);
+    document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
+    $('bailGo').onclick = () => { closeModal(); socket.emit('bailout', r => r.error ? toast(r.error) : toast(`+${won(r.amount)} 충전 · 이제 「${SHAME[r.level]}」`, true)); };
+  };
 }
 
 function renderShop() {
@@ -284,7 +316,21 @@ $('exitBtn').onclick = () => {
 $('chatBtn').onclick = () => { $('chatSheet').classList.remove('hidden'); seenN = chatN; $('chatBadge').classList.add('hidden'); renderChat(); setTimeout(() => $('chatInput').focus(), 50); };
 document.querySelectorAll('#chatSheet [data-close]').forEach(el => el.onclick = () => $('chatSheet').classList.add('hidden'));
 $('chatForm').onsubmit = e => { e.preventDefault(); const t = $('chatInput').value; $('chatInput').value = ''; if (t.trim()) act('chat', t); };
-$('boardSvg').onclick = e => { const g = e.target.closest('.tg'); if (g) act('move', +g.dataset.opt); };
+// 판에서 고르기: 도착 자리를 누르거나(같은 자리로 가는 말이 여럿이면 말을 고르라고 안내), 움직일 말을 직접 누름
+$('boardSvg').onclick = e => {
+  const g = e.target.closest('.tg'); if (!g) return;
+  if (g.dataset.opt != null) return act('move', +g.dataset.opt);
+  toast('같은 자리로 가는 말이 여러 개예요. 움직일 말(번호 붙은 말)을 눌러 주세요');
+  const ids = g.dataset.multi.split(',');
+  document.querySelectorAll('.tok.can').forEach(t => { if (ids.includes(t.dataset.opt)) { t.classList.remove('pick'); void t.offsetWidth; t.classList.add('pick'); } });
+};
+$('tokLayer').onclick = e => { const t = e.target.closest('.tok.can'); if (t && t.dataset.opt != null) act('move', +t.dataset.opt); };
+// 단추에 손을 올리면 그 선택지 길만 진하게
+function highlightOpt(i) {
+  document.querySelectorAll('#boardSvg .route').forEach(r => r.classList.toggle('dim', i != null && r.dataset.i !== String(i)));
+  document.querySelectorAll('#boardSvg .tg').forEach(t => t.classList.toggle('dim', i != null && !t.dataset.i.split(',').includes(String(i))));
+  document.querySelectorAll('.tok.can').forEach(t => t.classList.toggle('hl', i != null && t.dataset.oi === String(i)));
+}
 
 // 판 크기: 남는 공간 안에서 정사각형
 const sizeTable = () => {
@@ -311,7 +357,7 @@ function renderGame() {
     const slots = [...Array(p.done).fill('done'), ...Array(Math.max(0, 4 - p.done - wait)).fill('on'), ...Array(wait).fill('')];
     const stTxt = p.afk ? '💤 자리비움' : p.turn ? '던지는 중' : v.status === 'open' ? '준비 완료' : `${p.done}개 났음`;
     return `<div class="opp${p.turn ? ' turn' : ''}${p.afk ? ' afk' : ''}" data-name="${esc(p.name)}" style="${colorVars(colorOf(p))}">${avHTML(skinPiece(p.skin))}
-      <div class="who"><b>${esc(p.name)}${p.host ? ' 👑' : ''}</b><span>${stTxt}</span>
+      <div class="who"><b>${esc(p.name)}${p.host ? ' 👑' : ''}${shameTag(p.shame)}</b><span>${stTxt}</span>
         <div class="slots">${slots.map(k => `<i class="${k}"></i>`).join('')}</div></div>${p.turn ? '<i class="tbar"></i>' : ''}</div>`;
   }).join('') + Array(empties).fill('<div class="opp empty">빈 자리</div>').join('');
 
@@ -341,7 +387,7 @@ function renderPlay() {
   const by = v.last && v.players.find(p => p.id === v.last.by);
   $('myPanel').className = 'my-panel' + (mine.turn ? ' turn' : '');
   $('myPanel').style.cssText = colorVars(colorOf(mine));
-  $('myPanel').innerHTML = `${avHTML(skinPiece(mine.skin))}<div class="my-info"><span class="mi-label">내 말 · 대기 ${wait} · 판 위 ${st.filter(s => s === 'on').length} · 났음 ${mine.done}</span>
+  $('myPanel').innerHTML = `${avHTML(skinPiece(mine.skin))}<div class="my-info">${mine.shame ? `<span class="mi-label">${shameTag(mine.shame)}</span>` : ''}<span class="mi-label">내 말 · 대기 ${wait} · 판 위 ${st.filter(s => s === 'on').length} · 났음 ${mine.done}</span>
     <div class="my-slots">${st.map(s => `<div class="my-slot ${s}">${Art.pieceSVG(skinPiece(mine.skin), 20)}</div>`).join('')}</div></div>
     ${v.last ? `<div class="last-chip" id="lastChip" title="던지기 기록">${by ? esc(by.id === v.you ? '나' : by.name) : ''}<b>${esc(v.last.name)}</b></div>` : ''}`;
 
@@ -362,7 +408,7 @@ function renderPlay() {
     if (v.canThrow) h = (v.again ? `<p class="hint"><b>한 번 더!</b>${v.bonusLeft ? ` 이번 다음에도 ${v.bonusLeft}번 더 던져요` : ''}</p>` : '')
       + `<button class="btn gold big throw-btn" id="throwBtn">${v.again ? '한 번 더 던지기' : '윷 던지기'}</button>`;
     else if (v.canMove) h = `<p class="hint">판에서 빛나는 자리를 누르거나 아래에서 고르세요</p><div class="opt-grid">${v.options.map((o, i) =>
-      `<button class="btn" data-opt="${o.id}">${v.options.length > 1 ? `<span class="num">${o.to === 'goal' ? '났' : i + 1}</span>` : ''}${optLabel(o)}</button>`).join('')}</div>`;
+      `<button class="btn" data-opt="${o.id}" data-oi="${i}" style="--oc:${Art.optColor(i)}">${v.options.length > 1 ? `<span class="num">${i + 1}</span>` : ''}${optLabel(o)}</button>`).join('')}</div>`;
     else h = `<div class="wait">${esc(turn ? turn.name : '')}님 차례예요</div>`;
     h += `<div class="turn-bar"><i id="myBar"></i></div>`;
   } else {
@@ -378,7 +424,11 @@ function renderPlay() {
   on('toLobby', () => { if (room && room.spectating) act('unwatch'); room = null; inGame = false; act('list'); });
   on('unwatchBtn', () => act('unwatch'));
   { const lc = $('lastChip'); if (lc) lc.onclick = showTally; }
-  document.querySelectorAll('#controls [data-opt]').forEach(b => b.onclick = () => act('move', +b.dataset.opt));
+  document.querySelectorAll('#controls [data-opt]').forEach(b => {
+    b.onclick = () => act('move', +b.dataset.opt);
+    b.onmouseenter = b.onfocus = () => highlightOpt(+b.dataset.oi);
+    b.onmouseleave = b.onblur = () => highlightOpt(null);
+  });
 
   if (v.status === 'done' && bannerFor !== v.code + v.seq) { bannerFor = v.code + v.seq; showBanner(v); }
   if (v.status !== 'done') $('banner').classList.add('hidden');
@@ -412,7 +462,7 @@ function placeTokens(v) {
       let el = tokEls.get(key);
       if (!el) {
         el = document.createElement('div'); el.className = 'tok hid'; el.dataset.p = p.id; el.dataset.i = i;
-        el.innerHTML = Art.pieceSVG(art, 20) + '<span class="cnt" hidden></span><span class="xl-lab"></span>';
+        el.innerHTML = Art.pieceSVG(art, 20) + '<span class="cnt" hidden></span><span class="xl-lab"></span><b class="sh-tag" hidden></b>';
         { const c = colorOf(p); el.style.setProperty('--c', c); el.style.setProperty('--cl', Art.light(c, .45)); el.style.setProperty('--cd', Art.dark(c, .45)); }
         el.querySelector('.xl-lab').textContent = (p.name || '?').slice(0, 1);
         const [x, y] = pct(n); el.style.left = x + '%'; el.style.top = y + '%';
@@ -423,9 +473,19 @@ function placeTokens(v) {
       const onBoard = n !== 'start' && n !== 'goal';
       const g = onBoard ? groups[n] : null;
       const primary = !!(g && g[0] === i);
-      el.classList.toggle('can', primary && p.id === v.you && movable.has(n));
+      const canMove = primary && p.id === v.you && movable.has(n);
+      el.classList.toggle('can', canMove);
+      // 움직일 수 있는 말엔 선택지 번호(색) — 눌러서 바로 이동
+      let ob = el.querySelector('.opt-no'); if (!ob) { ob = document.createElement('span'); ob.className = 'opt-no'; el.appendChild(ob); }
+      if (canMove) {
+        const oi = v.options.findIndex(o => o.from === n);
+        el.dataset.opt = v.options[oi].id; el.dataset.oi = oi;
+        ob.hidden = v.options.length < 2; ob.textContent = oi + 1; ob.style.background = Art.optColor(oi);
+      } else { delete el.dataset.opt; delete el.dataset.oi; ob.hidden = true; }
       const cnt = el.querySelector('.cnt');
       if (primary && g.length > 1) { cnt.hidden = false; cnt.textContent = g.length; } else cnt.hidden = true;
+      const sh = el.querySelector('.sh-tag');   // 충전 딱지는 말 위에
+      if (p.shame > 0) { sh.hidden = false; sh.textContent = SHAME[p.shame]; sh.className = 'sh-tag lv' + p.shame; } else sh.hidden = true;
       if (prev === n) { el.classList.toggle('hid', !primary); return; }
       tokNode.set(key, n);
       if (!onBoard && n === 'start') {   // 잡혀서 출발로 돌아감 (이펙트는 아래에서 이동 기록으로)
@@ -631,6 +691,7 @@ function drawBubbles() {
 
 // ---------- 서버 ----------
 function renderAll() {
+  if (me && window.Mini && Mini.active()) { show('mini'); Mini.render(); return; }
   if (!me) { if (!token) show('auth'); return; }
   if (room && inGame) { show('game'); renderGame(); }
   else { show('lobby'); renderLobby(); }
@@ -649,7 +710,7 @@ function act(op, arg) {
   });
 }
 function resetBoard() { tokEls.forEach(el => el.remove()); tokEls.clear(); tokNode.clear(); lastMoveN = null; shownSeq = null; playAt = 0; chatCode = null; bubbles.forEach(b => b.el && b.el.remove()); bubbles.clear(); }
-socket.on('me', m => { const first = !me; me = m; if (first) { act('list'); } else if (!inGame) renderLobby(); });
+socket.on('me', m => { const first = !me; me = m; if (first) { act('list'); if (window.Mini) Mini.checkMine(); } else if (!inGame && !(window.Mini && Mini.active())) renderLobby(); });
 socket.on('yuts', list => { lobby = list; if (!inGame) renderLobby(); });
 socket.on('yutState', v => {
   if (!room || room.code !== v.code) return;
@@ -667,7 +728,7 @@ socket.on('connect', () => {
   if (!token) { if (!me) show('auth'); return; }
   socket.emit('auth', { token }, res => {
     if (res && res.error) { token = null; try { localStorage.removeItem('fy_token'); } catch (e) {} me = null; show('auth'); return; }
-    if (me) act('list');   // 처음 접속이면 'me' 가 오면서 list 를 부름
+    if (me) { act('list'); if (window.Mini) Mini.checkMine(); }   // 처음 접속이면 'me' 가 오면서 list 를 부름
   });
 });
 

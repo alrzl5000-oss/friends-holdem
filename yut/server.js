@@ -4,6 +4,7 @@ const path = require('path');
 const { Server } = require('socket.io');
 const db = require('./db');
 const yut = require('./yut');
+const mini = require('./mini');
 const SHOP = require('./shop');
 
 const app = express();
@@ -21,11 +22,13 @@ const userSocket = new Map(); // uid -> socket.id
 function pushMe(uid) {
   const u = db.byId.get(uid);
   const sid = userSocket.get(uid);
-  if (u && sid) io.to(sid).emit('me', { id: u.id, username: u.username, assets: u.assets, yutHold: u.yutHold, trophy: u.trophy || 0, throws: u.throws || {}, yut: u.yut || {}, owned: u.owned || SHOP.DEFAULT_OWNED, equip: Object.assign({}, SHOP.DEFAULT_EQUIP, u.equip || {}) });
+  if (u && sid) io.to(sid).emit('me', { id: u.id, username: u.username, assets: u.assets, yutHold: u.yutHold, trophy: u.trophy || 0, throws: u.throws || {}, mini: u.mini || {}, shame: db.shameLevel(u), shameUntil: db.shameUntil(u), bailoutsToday: db.bailoutsToday(u), bailoutLimit: db.DAILY_BAILOUTS, bailoutAmount: db.BAILOUT_AMOUNT, yut: u.yut || {}, owned: u.owned || SHOP.DEFAULT_OWNED, equip: Object.assign({}, SHOP.DEFAULT_EQUIP, u.equip || {}) });
 }
 yut.init({
   getUser: id => db.byId.get(id),
+  shameOf: u => db.shameLevel(u),
   save: () => db.save(),
+  otherBusy: uid => mini.busy(uid),
   notify: (uid, ev, payload) => {
     if (ev === 'me') return pushMe(uid);
     if (!uid) return io.emit(ev, payload);
@@ -34,10 +37,26 @@ yut.init({
   },
 });
 
+// 미니게임 (고누 · 십이장기, 1대1)
+mini.init({
+  getUser: id => db.byId.get(id),
+  shameOf: u => db.shameLevel(u),
+  save: () => db.save(),
+  otherBusy: uid => yut.busy(uid),
+  hasOtherCode: c => yut.hasCode(c),
+  notify: (uid, ev, payload) => {
+    if (ev === 'me') return pushMe(uid);
+    const sid = userSocket.get(uid);
+    if (sid) io.to(sid).emit(ev, payload);
+  },
+});
+mini.setPushList(() => io.emit('minis', mini.lobbyList()));
+
 // 저장해 둔 판 되살리기 → 되살리지 못한 판돈은 환불
-const alive = yut.restore(db.storedGames());
+const alive = [...yut.restore(db.storedGames()), ...mini.restore(db.storedMini())];
 db.refundOrphans(alive);
 db.setDump(yut.dump);
+db.setMiniDump(mini.dump);
 db.save();
 if (alive.length) console.log(`저장된 판 복원: 참가자 ${alive.length}명`);
 // 재배포 때 꺼지기 직전 상태 저장
@@ -78,6 +97,17 @@ io.on('connection', socket => {
     if (r.ok) pushMe(user.id);
     cb(r);
   }));
+  // 충전: 현금 1억 미만이면 3억, 하루 3번, 24시간 동안 말에 딱지
+  socket.on('bailout', guard(cb => {
+    const r = db.bailout(user);
+    if (r.error) return cb(r);
+    pushMe(user.id); yut.refreshFor(user.id);
+    cb(r);
+  }));
+  socket.on('mini', guard((cb, { op, ...arg } = {}) => cb(mini.act(user, String(op), arg))));
+  socket.on('miniList', guard(cb => cb({ ok: true, list: mini.lobbyList() })));
+  // 판 코드가 윷놀이 판인지 미니게임 판인지
+  socket.on('whichCode', guard((cb, code) => { const c = String(code || '').toUpperCase(); cb({ ok: true, kind: yut.hasCode(c) ? 'yut' : mini.hasCode(c) ? 'mini' : null }); }));
   socket.on('rank', guard(cb => cb({ ok: true, list: db.rank() })));
   socket.on('throwStats', guard(cb => cb({ ok: true, all: db.throwStats(), mine: user.throws || {} })));
   socket.on('disconnect', () => { if (user && userSocket.get(user.id) === socket.id) userSocket.delete(user.id); });

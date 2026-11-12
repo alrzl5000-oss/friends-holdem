@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#07100c" />
 <title>FRIENDS 윷놀이</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<link rel="stylesheet" href="/style.css?v=20261111n" />
+<link rel="stylesheet" href="/style.css?v=20261112c" />
 </head>
 <body>
 <div class="app">
@@ -61,6 +61,7 @@
       </div>
     </div>
 
+    <div id="bailout"></div>
     <div class="tabs" id="lobbyTabs">
       <button data-t="rooms" class="on">게임</button>
       <button data-t="rank">랭킹</button>
@@ -79,6 +80,24 @@
       </div>
       <div id="backToRoom"></div>
       <div class="room-list" id="roomList"></div>
+
+      <!-- 미니게임 (1대1) -->
+      <div class="mini-box">
+        <div class="mini-head">미니게임 <small>1대1 · 판돈 내기</small></div>
+        <div class="mini-cards">
+          <div class="mini-card" data-type="gonu">
+            <div class="mc-ill" id="ill-gonu"></div>
+            <b>고누</b><span>우물고누 · 말 2개씩, 상대를 가두면 승리</span>
+            <div class="mc-btns"><button class="btn small green" data-mnew="gonu">판 만들기</button><button class="btn small" data-mrule="gonu">📖 룰북</button></div>
+          </div>
+          <div class="mini-card" data-type="j12">
+            <div class="mc-ill" id="ill-j12"></div>
+            <b>십이장기</b><span>3×4 판 · 왕을 잡거나 적진에서 버티면 승리</span>
+            <div class="mc-btns"><button class="btn small green" data-mnew="j12">판 만들기</button><button class="btn small" data-mrule="j12">📖 룰북</button></div>
+          </div>
+        </div>
+        <div class="room-list" id="miniList"></div>
+      </div>
     </div>
     <div class="tab-body hidden" id="tab-rank"><div class="rank-list" id="rankList"></div></div>
     <div class="tab-body hidden" id="tab-shop"></div>
@@ -114,6 +133,22 @@
     <div class="bub-layer" id="bubLayer"></div>
   </section>
 
+  <!-- ========== 미니게임 판 ========== -->
+  <section id="mini" class="screen hidden">
+    <header class="g-top">
+      <button class="icon-btn" id="mExit" title="로비로">‹</button>
+      <div class="g-title"><b id="mName">-</b><span id="mSub">-</span></div>
+      <button class="icon-btn" data-settings title="설정">⚙</button>
+      <button class="icon-btn" id="mRules" title="룰북">📖</button>
+    </header>
+    <div class="m-side" id="mOpp"></div>
+    <div class="m-zone"><div class="m-board" id="mBoard"></div></div>
+    <div class="m-side me" id="mMe"></div>
+    <div class="controls" id="mCtrl"></div>
+    <div class="m-chat"><div class="m-log" id="mLog"></div>
+      <form class="chat-form" id="mForm"><input id="mIn" maxlength="100" placeholder="한마디…" autocomplete="off" /><button class="btn gold small" type="submit">전송</button></form></div>
+  </section>
+
   <!-- 채팅 시트 -->
   <div class="sheet hidden" id="chatSheet">
     <div class="sheet-bg" data-close></div>
@@ -143,7 +178,8 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/art.js?v=20261111n"></script>
-<script src="/app.js?v=20261111n"></script>
+<script src="/art.js?v=20261112c"></script>
+<script src="/app.js?v=20261112c"></script>
+<script src="/mini.js?v=20261112c"></script>
 </body>
 </html>
