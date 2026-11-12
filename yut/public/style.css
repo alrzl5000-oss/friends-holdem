@@ -815,3 +815,4 @@ body.excel .j-dot.cap { background: none; border-color: #c00000; box-shadow: non
 body.excel .m-chat { background: #fff; border-color: #e1dfdd; border-radius: 0; }
 body.excel .m-log b { color: #217346; }
 .mc-ill .j-ill svg { width: 28px; height: 28px; }
+.m-warn { color: #ffcf5a !important; font-weight: 800; }

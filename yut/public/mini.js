@@ -74,7 +74,8 @@
     if (!R) return;
     const v = R;
     $('mName').textContent = `${v.host}님의 ${v.title}`;
-    $('mSub').textContent = `판돈 ${won(v.pot)} · 코드 ${v.code}${v.watchers ? ` · 👀 ${v.watchers}` : ''}`;
+    const plyTxt = v.state && v.status === 'play' ? ` · ${v.state.ply}/${v.type === 'gonu' ? 60 : 200}수` : '';
+    $('mSub').textContent = `판돈 ${won(v.pot)} · 코드 ${v.code}${plyTxt}${v.watchers ? ` · 👀 ${v.watchers}` : ''}`;
     const my = v.players.find(p => p.side === vside() && !v.spectating) || v.players.find(p => p.side === vside());
     const op = v.players.find(p => p !== my);
     $('mOpp').innerHTML = sideHTML(op, false);
@@ -93,8 +94,8 @@
     } else if (v.status === 'play') {
       const turnP = v.players.find(p => p.side === v.turn);
       h = v.spectating ? `<div class="wait">👀 관전 중 · ${esc(turnP ? turnP.name : '')}님 차례<div class="row"><button class="btn" id="mUnwatch">관전 그만하기</button></div></div>`
-        : v.moves.length ? `<p class="hint m-hint">${v.type === 'gonu' ? '움직일 말을 누르고, 갈 점을 누르세요' : '말이나 포로를 누르고, 빛나는 칸을 누르세요'}</p>`
-        : `<div class="wait">${esc(turnP ? turnP.name : '')}님 차례예요</div>`;
+        : (v.type === 'gonu' && v.state.rep === 2 ? `<p class="hint m-hint m-warn">⚠ 지금 모양이 한 번 더 나오면 무승부예요</p>` : '') + (v.moves.length ? `<p class="hint m-hint">${v.type === 'gonu' ? '움직일 말을 누르고, 갈 점을 누르세요' : '말이나 포로를 누르고, 빛나는 칸을 누르세요'}</p>`
+        : `<div class="wait">${esc(turnP ? turnP.name : '')}님 차례예요</div>`);
       if (!v.spectating) h += `<button class="btn small m-resign" id="mResignBtn">🏳 기권</button>`;
       h += `<div class="turn-bar"><i id="mBar"></i></div>`;
     } else {
@@ -289,7 +290,8 @@
         <li><b>첫 수 금지:</b> 선은 첫 수에 우물 쪽 말(왼쪽 아래)을 가운데로 넣을 수 없어요. 넣으면 상대가 바로 갇혀 버려서예요. 그래서 첫 수는 왼쪽 위 말이 가운데로 들어가요.</li></ul>
       <h4>이기는 법</h4>
       <ul class="rules"><li>내 차례가 됐는데 <b>움직일 수 있는 말이 없으면 져요.</b> 상대를 가두면 이겨요.</li>
-        <li><b>60수</b>(한 사람 30수) 동안 승부가 안 나면 무승부, 판돈은 돌려받아요.</li></ul>
+        <li><b>같은 모양</b>(말 위치와 차례가 똑같은 상태)이 <b>3번</b> 나오면 무승부예요. 우물고누는 둘 다 실수하지 않으면 끝나지 않는 게임이라, 계속 같은 수를 반복하면 바로 끝내요.</li>
+        <li><b>60수</b>(한 사람 30수)까지 끝나지 않아도 무승부. 무승부면 판돈을 돌려받아요.</li></ul>
       <h4>판돈 · 시간</h4>
       <ul class="rules"><li>둘이 같은 판돈을 내고 이긴 사람이 전부 가져가요. 선은 시작할 때 무작위로 정해요.</li>
         <li>한 수에 <b>30초</b>. 넘기면 아무 수나 자동으로 둬요. 언제든 기권할 수 있어요(판돈은 상대에게).</li></ul>
