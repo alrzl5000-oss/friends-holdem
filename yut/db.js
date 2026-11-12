@@ -80,6 +80,7 @@ function login(name, pw) {
 function buy(u, id) {
   const it = SHOP.byId(id);
   if (!it) return { error: '없는 상품이에요' };
+  if (it.ach || it.price == null) return { error: '업적 보상으로만 얻을 수 있어요' };
   u.owned = u.owned || SHOP.DEFAULT_OWNED.slice();
   if (u.owned.includes(id)) return { error: '이미 가지고 있어요' };
   if ((u.trophy || 0) < it.price) return { error: `트로피가 부족해요 (🏆 ${it.price}개 필요)` };
@@ -119,6 +120,7 @@ function bailout(u) {
   if (bailoutsToday(u) >= DAILY_BAILOUTS) return { error: `오늘은 더 충전할 수 없어요 (하루 ${DAILY_BAILOUTS}번)` };
   u.bailoutLog = (u.bailoutLog || []).filter(t => Date.now() - t < 7 * SHAME_MS);
   u.bailoutLog.push(Date.now());
+  u.st = u.st || {}; u.st.bailouts = (u.st.bailouts || 0) + 1;
   u.assets += BAILOUT_AMOUNT;
   save();
   return { ok: true, amount: BAILOUT_AMOUNT, level: shameLevel(u) };

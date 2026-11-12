@@ -83,6 +83,11 @@ function finish(R, winSide, reason) {
     release(u, R.bet, back);
     const st = stats(u, R.type); st.games++; st.net += back - R.bet;
     if (winSide == null) st.draw++; else if (i === winSide) st.win++;
+    if (winSide != null && i === winSide) {   // 업적 기록
+      const S = (u.st = u.st || {});
+      if (R.type === 'gonu') S.gonuWin = (S.gonuWin || 0) + 1;
+      if (R.type === 'j12') { S.j12Win = (S.j12Win || 0) + 1; if (/버텼/.test(reason)) S.j12Try = (S.j12Try || 0) + 1; }
+    }
     userRoom.delete(id); notifyFn(id, 'me');
   });
   if (winSide == null) { R.draw = true; say(R, `무승부 — ${reason}. 판돈을 돌려받았어요`); }

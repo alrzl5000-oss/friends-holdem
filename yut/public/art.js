@@ -22,6 +22,10 @@
       case 'cloud': return Math.hypot(x - 3.3, y - 7.3) < 2 || Math.hypot(x - 6.2, y - 6.6) < 2.6 || Math.hypot(x - 8.6, y - 7.6) < 1.8;
       case 'bamboo': return ((x === 4 || x === 7) && y > 1 && y < 10) || ((y === 3 || y === 7) && x > 3 && x < 8);
       case 'wave': return ((y + Math.round(Math.sin(x * 0.9) * 1.4)) % 4 === 0);
+      case 'tiger': return (x + Math.round(Math.sin(y * 0.8) * 1.2)) % 3 === 0 && d < 4.4;            // 호랑이 줄무늬
+      case 'scale': return ((x + (y % 2) * 1.5) % 3 < 1) && y % 2 === 0 && d < 4.4 || (d > 3.6 && d < 4.4); // 용 비늘 + 테
+      case 'feather': return Math.abs(dx) < 0.6 || (Math.abs(Math.abs(dx) - (5.5 - y) * 0.55) < 0.7 && y < 9); // 깃털 줄기·가지
+      case 'crown': return (y === 7 || y === 8) && d < 4.4 || (y >= 3 && y <= 6 && (x === 3 || x === 5 || x === 6 || x === 8) && y >= 3 + (x === 5 || x === 6 ? 0 : 1)); // 왕관
       default: return ((x + y) % 4 === 0 && d < 4.4);
     }
   }
@@ -31,6 +35,10 @@
       const d = Math.hypot(x - 5.5, y - 5.5);
       let c = null;
       if (d <= 5.6) { c = art.c1; if (d <= 4.6) { c = art.c2; if (pat(art.pat, x, y)) c = art.c3; } }
+      if (art.pat === 'rainbow' && d <= 4.6) {   // 오방색 동심원
+        const RB = ['#ff4d6d', '#ffa62b', '#ffe14d', '#3ddc84', '#2f9bff', '#9b5cff'];
+        c = d < 1.2 ? '#ffffff' : RB[Math.floor(d / 0.8) % RB.length];
+      }
       if (c) cells.push([x, y, c]);
     }
     return cells;

@@ -6,6 +6,8 @@
 // - 말 4개를 모두 골인시킨 사람이 판돈 전부를 가져감 (게임 쪽 몫 없음)
 const crypto = require('crypto');
 const SHOP = require('./shop');
+// 업적용 기록 (u.st)
+const ST = id => { const u = getUser(id); return u ? (u.st = u.st || {}) : {}; };
 
 const MIN_BET = 1e6;
 const MAX_BET = 1e8;
@@ -246,6 +248,14 @@ function finish(g, winner) {
     const pay = id === winner ? pot : 0;
     release(u, g.bet, pay);
     const st = stats(u); st.games++; st.net += pay - g.bet; if (id === winner) { st.win++; u.trophy = (u.trophy || 0) + 1; }
+    // 업적 기록: 연승 · 무혈입성 · 역전 · 큰손
+    const S = (u.st = u.st || {});
+    if (id === winner) {
+      S.streak = (S.streak || 0) + 1; S.bestStreak = Math.max(S.bestStreak || 0, S.streak);
+      if (g.players.length === 4 && !(g.hit && g.hit[id])) S.flawless4 = (S.flawless4 || 0) + 1;
+      if (g.cb && g.cb[id]) S.comebacks = (S.comebacks || 0) + 1;
+      if (g.bet >= 1e8 && g.players.length === 4) S.bigWins = (S.bigWins || 0) + 1;
+    } else S.streak = 0;
   }
   g.chat.push({ name: '📢', text: `${g.names[winner]} 님 우승! 판돈 ${pot.toLocaleString('ko-KR')}원과 🏆 1개 획득` });
   saveFn();
@@ -278,21 +288,36 @@ function applyOption(g, optId) {
     const here = g.pos[id].filter(q => nodeOf(q) === node).length;
     if (here > group.length) g.chat.push({ name: '📢', text: `${g.names[id]} 님이 말을 업었어요 (${here}동)` });
   }
-  let captured = false; const capturedAt = [];
+  let captured = false; const capturedAt = []; let capN = 0;
   if (node !== 'goal' && node !== 'start') {
     for (const other of g.players) {
       if (other === id) continue;
       g.pos[other] = g.pos[other].map(q => {
         if (!isDone(q) && !isStart(q) && nodeOf(q) === node) {
           if (!captured || captured !== other) g.chat.push({ name: '📢', text: `${g.names[id]} 님이 ${g.names[other]} 님의 말을 잡았어요 — 한 번 더!` });
-          captured = other; if (!capturedAt.some(c => c.id === other)) capturedAt.push({ id: other, node });
+          captured = other; capN++; if (!capturedAt.some(c => c.id === other)) capturedAt.push({ id: other, node });
           return START_P();
         }
         return q;
       });
     }
   }
-  g.move = { n: (g.move ? g.move.n : 0) + 1, by: id, path, to: node, count: group.length,
+  // 잡았으면 내 말(장착한 말)의 조롱 한 마디
+  let taunt = null;
+  if (captured) {
+    const mu = getUser(id), pid = (mu && mu.equip && mu.equip.piece) || 'p_basic';
+    taunt = SHOP.tauntFor(pid, capturedAt.map(c => g.names[c.id]).join(', '));
+    g.chat.push({ name: '📢', text: `😈 ${g.names[id]}: ${taunt}` });
+  }
+  // 업적 기록: 잡기 · 뒷도 잡기 · 4동 나기 · 역전 조건 · 잡힌 적 있음
+  { const S = ST(id);
+    if (capN) { S.captures = (S.captures || 0) + capN; S.maxCapOnce = Math.max(S.maxCapOnce || 0, capN); if (g.last.steps < 0) S.backCaptures = (S.backCaptures || 0) + 1; }
+    if (node === 'goal' && group.length === 4) S.fourHome = (S.fourHome || 0) + 1;
+    g.hit = g.hit || {}; for (const c of capturedAt) g.hit[c.id] = true;
+    g.cb = g.cb || {};
+    const doneOf = pid => g.pos[pid].filter(isDone).length;
+    for (const pid of g.players) if (doneOf(pid) === 0 && g.players.some(o => o !== pid && doneOf(o) >= 3)) g.cb[pid] = true; }
+  g.move = { n: (g.move ? g.move.n : 0) + 1, by: id, path, to: node, count: group.length, taunt,
     captured: captured ? capturedAt.slice() : [], stacked: stackedBefore, goal: node === 'goal' };
   if (g.pos[id].every(isDone)) { finish(g, id); return { ok: true }; }
   endTurn(g, !!captured);
@@ -307,6 +332,10 @@ function throwAct(g) {
   // 던지기 기록: 이번 판 + 계정 누적 (확률 확인용)
   g.tally = g.tally || {}; const t = (g.tally[id] = g.tally[id] || {}); t[g.last.name] = (t[g.last.name] || 0) + 1;
   const tu = getUser(id); if (tu) { tu.throws = tu.throws || {}; tu.throws[g.last.name] = (tu.throws[g.last.name] || 0) + 1; }
+  { const S = ST(id), nm = g.last.name;   // 업적 기록: 모·윷 연속, 낙
+    S.moStreak = nm === '모' ? (S.moStreak || 0) + 1 : 0; S.maxMoStreak = Math.max(S.maxMoStreak || 0, S.moStreak);
+    S.yutStreak = nm === '윷' ? (S.yutStreak || 0) + 1 : 0; S.maxYutStreak = Math.max(S.maxYutStreak || 0, S.yutStreak);
+    if (g.last.nak) S.naks = (S.naks || 0) + 1; }
   g.seq = (g.seq || 0) + 1;
   g.chat.push({ name: '🎲', text: `${g.names[id]} : ${g.last.name}` });
   if (g.last.nak) {   // 낙: 움직이지 않고 이번 던지기는 무효
@@ -417,7 +446,7 @@ function yutAct(u, op, arg) {
     // 순서는 무작위로 섞음 (Fisher–Yates)
     for (let i = g.players.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [g.players[i], g.players[j]] = [g.players[j], g.players[i]]; }
     g.chat.push({ name: '📢', text: `순서 추첨: ${g.players.map((id, i) => `${i + 1}. ${g.names[id]}`).join('  ')}` });
-    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {}; g.bonus = 0; g.repeat = false; g.move = null; g.tally = {};
+    g.status = 'play'; g.turn = 0; g.phase = 'throw'; g.last = null; g.options = []; g.winner = null; g.afk = {}; g.miss = {}; g.bonus = 0; g.repeat = false; g.move = null; g.tally = {}; g.hit = {}; g.cb = {};
     g.pos = {};
     for (const id of g.players) g.pos[id] = [START_P(), START_P(), START_P(), START_P()];
     g.chat.push({ name: '📢', text: '게임 시작!' });

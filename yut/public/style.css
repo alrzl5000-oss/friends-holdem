@@ -816,3 +816,166 @@ body.excel .m-chat { background: #fff; border-color: #e1dfdd; border-radius: 0; 
 body.excel .m-log b { color: #217346; }
 .mc-ill .j-ill svg { width: 28px; height: 28px; }
 .m-warn { color: #ffcf5a !important; font-weight: 800; }
+
+/* ================= 화려한 말·윷 효과 ================= */
+/* 공통: 효과 조각 틀 (말 안에서 말보다 넓게) */
+.fxw, .sfxw { position: absolute; inset: -45%; border-radius: 50%; pointer-events: none; z-index: 0; }
+.fxw i, .sfxw i { position: absolute; font-style: normal; pointer-events: none; }
+.tok .pc { position: relative; z-index: 1; }
+
+/* 말 효과 */
+.fx-bloom { background: radial-gradient(circle, transparent 36%, rgba(255,120,170,.6) 46%, transparent 68%); animation: fxPulse 2s ease-in-out infinite; }
+.fx-sunray { background: repeating-conic-gradient(rgba(255,196,60,.75) 0 9deg, transparent 9deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 30%, #000 36%, transparent 70%); mask: radial-gradient(circle, transparent 30%, #000 36%, transparent 70%); animation: fxSpin 6s linear infinite; }
+.fx-moonglow { background: radial-gradient(circle, transparent 34%, rgba(130,170,255,.55) 45%, transparent 70%); animation: fxPulse 3s ease-in-out infinite; }
+.fx-moonglow i { width: 14%; height: 14%; background: #fff; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: fxTwinkle 1.6s ease-in-out infinite; animation-delay: calc(var(--k) * .5s); }
+.fx-moonglow i:nth-child(1) { left: 8%; top: 18%; } .fx-moonglow i:nth-child(2) { right: 6%; top: 30%; } .fx-moonglow i:nth-child(3) { left: 40%; bottom: 4%; }
+.tok.fx-float .pc, .tok-prev.fx-float .pc { animation: fxFloat 2.4s ease-in-out infinite; }
+.fx-float i { width: 44%; height: 18%; border-radius: 50%; background: radial-gradient(rgba(255,255,255,.85), transparent 70%); bottom: 14%; animation: fxDrift 3s ease-in-out infinite alternate; animation-delay: calc(var(--k) * -1.5s); }
+.fx-float i:nth-child(1) { left: 4%; } .fx-float i:nth-child(2) { right: 4%; }
+.fx-leaf i { font-size: 34%; animation: fxFall 2.6s linear infinite; animation-delay: calc(var(--k) * -.9s); }
+.fx-leaf i::before { content: "🍃"; } .fx-leaf i:nth-child(1) { left: 6%; } .fx-leaf i:nth-child(2) { left: 46%; } .fx-leaf i:nth-child(3) { left: 80%; }
+.fx-ripple i { inset: 30%; border-radius: 50%; border: 2px solid rgba(120,200,255,.8); animation: fxRipple 2s ease-out infinite; animation-delay: calc(var(--k) * -1s); }
+.fx-roar { background: radial-gradient(circle, transparent 32%, rgba(255,120,20,.75) 42%, rgba(255,60,0,.35) 55%, transparent 70%); animation: fxFlicker .35s steps(2) infinite alternate; }
+.fx-roar i { width: 12%; height: 12%; border-radius: 50%; background: #ffb347; box-shadow: 0 0 6px #ff6a00; left: calc(15% + var(--k) * 22%); bottom: 20%; animation: fxRise 1.3s ease-out infinite; animation-delay: calc(var(--k) * -.33s); }
+.fx-lightning { background: radial-gradient(circle, transparent 32%, rgba(90,190,255,.7) 43%, transparent 66%); animation: fxZap 1.4s steps(1) infinite; }
+.fx-lightning i { width: 22%; height: 34%; background: #e6f6ff; clip-path: polygon(60% 0, 20% 55%, 48% 55%, 30% 100%, 82% 38%, 54% 38%, 72% 0); filter: drop-shadow(0 0 3px #6cf); opacity: 0; animation: fxBolt 1.4s steps(1) infinite; animation-delay: calc(var(--k) * .45s); }
+.fx-lightning i:nth-child(1) { left: 0; top: 10%; } .fx-lightning i:nth-child(2) { right: 0; top: 20%; } .fx-lightning i:nth-child(3) { left: 38%; top: -6%; }
+.fx-fire { background: radial-gradient(circle at 50% 60%, transparent 32%, rgba(255,90,20,.7) 42%, rgba(255,200,60,.35) 54%, transparent 70%); animation: fxFlicker .25s steps(2) infinite alternate; }
+.fx-fire i { width: 13%; height: 18%; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: radial-gradient(#fff3b0, #ff8a1f 60%, transparent 70%);
+  left: calc(8% + var(--k) * 15%); bottom: 26%; animation: fxRise 1s ease-out infinite; animation-delay: calc(var(--k) * -.17s); }
+.tok.fx-rainbow .pc, .tok-prev.fx-rainbow .pc, .avfx-rainbow .pc { animation: fxHue 3s linear infinite; }
+.fx-rainbow { background: conic-gradient(#ff4d6d, #ffa62b, #ffe14d, #3ddc84, #2f9bff, #9b5cff, #ff4d6d);
+  -webkit-mask: radial-gradient(circle, transparent 36%, #000 40%, #000 46%, transparent 52%); mask: radial-gradient(circle, transparent 36%, #000 40%, #000 46%, transparent 52%); animation: fxSpin 2.5s linear infinite; }
+.fx-rainbow i { width: 14%; height: 14%; background: #fff; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: fxTwinkle 1.2s ease-in-out infinite; animation-delay: calc(var(--k) * .6s); }
+.fx-rainbow i:nth-child(1) { left: 10%; top: 12%; } .fx-rainbow i:nth-child(2) { right: 8%; bottom: 16%; }
+.fx-gold { background: radial-gradient(circle, transparent 32%, rgba(255,215,90,.85) 41%, rgba(255,170,0,.35) 52%, transparent 68%); animation: fxPulse 1.6s ease-in-out infinite; }
+.fx-gold i { width: 15%; height: 15%; background: #fff6c8; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); filter: drop-shadow(0 0 3px #ffd36a); animation: fxTwinkle 1.4s ease-in-out infinite; animation-delay: calc(var(--k) * .35s); }
+.fx-gold i:nth-child(1) { left: 4%; top: 14%; } .fx-gold i:nth-child(2) { right: 2%; top: 8%; } .fx-gold i:nth-child(3) { right: 8%; bottom: 10%; } .fx-gold i:nth-child(4) { left: 12%; bottom: 4%; }
+.tok.fx-gold::after, .tok-prev.fx-gold::after { background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.9) 48%, transparent 62%); background-size: 250% 100%; animation: fxShine 2.2s ease-in-out infinite; inset: 0; width: auto; height: auto; left: 0; top: 0; border-radius: 50%; }
+
+/* 프로필 상자에도 은은하게 */
+.av[class*="avfx-"] { position: relative; }
+.avfx-bloom { box-shadow: 0 0 0 2px #ff8ab8, 0 0 14px rgba(255,120,170,.8) !important; }
+.avfx-sunray, .avfx-roar, .avfx-fire { box-shadow: 0 0 0 2px #ff9a3c, 0 0 16px rgba(255,120,20,.85) !important; animation: fxFlicker .4s steps(2) infinite alternate; }
+.avfx-moonglow, .avfx-ripple, .avfx-float { box-shadow: 0 0 0 2px #8fb4ff, 0 0 14px rgba(130,170,255,.8) !important; }
+.avfx-leaf { box-shadow: 0 0 0 2px #7fd36a, 0 0 12px rgba(120,210,100,.8) !important; }
+.avfx-lightning { box-shadow: 0 0 0 2px #6cf, 0 0 16px rgba(90,190,255,.9) !important; animation: fxZap 1.4s steps(1) infinite; }
+.avfx-rainbow { box-shadow: 0 0 0 2px #fff, 0 0 16px rgba(255,255,255,.7) !important; }
+.avfx-gold { box-shadow: 0 0 0 2px #ffd36a, 0 0 18px rgba(255,200,60,1) !important; animation: fxPulse 1.6s ease-in-out infinite; }
+
+@keyframes fxPulse { 50% { transform: scale(1.12); opacity: .7; } }
+@keyframes fxSpin { to { transform: rotate(360deg); } }
+@keyframes fxTwinkle { 0%, 100% { transform: scale(.3); opacity: 0; } 50% { transform: scale(1); opacity: 1; } }
+@keyframes fxFloat { 50% { transform: translateY(-14%); } }
+@keyframes fxDrift { to { transform: translateX(14%); } }
+@keyframes fxFall { from { top: -10%; transform: rotate(0); opacity: 0; } 15% { opacity: 1; } to { top: 92%; transform: rotate(240deg); opacity: 0; } }
+@keyframes fxRipple { from { transform: scale(.7); opacity: 1; } to { transform: scale(1.9); opacity: 0; } }
+@keyframes fxFlicker { from { opacity: .75; } to { opacity: 1; filter: brightness(1.25); } }
+@keyframes fxRise { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(-160%) scale(.3); opacity: 0; } }
+@keyframes fxZap { 0%, 100% { opacity: .55; } 8% { opacity: 1; filter: brightness(1.8); } 12% { opacity: .4; } 16% { opacity: 1; } }
+@keyframes fxBolt { 0%, 100% { opacity: 0; } 8%, 14% { opacity: 1; } }
+@keyframes fxHue { to { filter: hue-rotate(360deg) saturate(1.4); } }
+@keyframes fxShine { 0%, 40% { background-position: 150% 0; } 100% { background-position: -100% 0; } }
+
+/* 상점 미리보기 */
+.tok-prev { position: relative; width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 34% 28%, #fff 0, var(--cl) 18%, var(--c) 52%, var(--cd) 100%); box-shadow: 0 3px 6px rgba(0,0,0,.5), 0 0 0 1.5px rgba(255,255,255,.6); }
+.tok-prev .pc { width: 70% !important; height: 70% !important; position: relative; z-index: 1; }
+.stick-prev { position: relative; }
+.shop-item { position: relative; overflow: hidden; }
+.shop-item .tier { position: absolute; left: 6px; top: 6px; font-style: normal; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 99px; z-index: 2; background: rgba(255,255,255,.12); color: var(--muted); }
+.shop-item.tier-rare .tier { background: #1d4f9a; color: #cfe2ff; }
+.shop-item.tier-hero .tier { background: #6a2fb8; color: #ecdcff; }
+.shop-item.tier-legend .tier { background: linear-gradient(90deg, #ffd36a, #ff9a3c); color: #3a2400; }
+.shop-item.tier-rare { border-color: rgba(80,140,255,.5); }
+.shop-item.tier-hero { border-color: rgba(170,110,255,.6); box-shadow: 0 0 14px rgba(150,90,255,.25); }
+.shop-item.tier-legend { border-color: #ffd36a; box-shadow: 0 0 18px rgba(255,200,80,.35); }
+.shop-item.tier-legend::before { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255,230,150,.22) 50%, transparent 65%); background-size: 250% 100%; animation: fxShine 3s ease-in-out infinite; pointer-events: none; }
+.taunt-prev { display: block; font-style: normal; font-size: 10px; color: #ffb3b3; line-height: 1.35; min-height: 26px; }
+
+/* 윷 미리보기 효과 (상점) */
+.sfxw { inset: -10%; border-radius: 12px; }
+.sfx-jade { box-shadow: inset 0 0 18px rgba(79,227,200,.55); }
+.sfx-jade i, .sfx-gold i { width: 9px; height: 9px; background: #bff8ec; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: fxTwinkle 1.4s ease-in-out infinite; animation-delay: calc(var(--k) * .35s); left: calc(10% + var(--k) * 20%); top: calc(20% + var(--k) * 20%); }
+.sfx-gold { background: radial-gradient(circle, rgba(255,210,90,.35), transparent 65%); }
+.sfx-gold i { background: #fff3b0; filter: drop-shadow(0 0 3px #ffb700); top: calc(15% + var(--k) * 14%); }
+.sfx-flame i { width: 7px; height: 9px; border-radius: 50%; background: radial-gradient(#fff3b0, #ff7a1a 60%, transparent 72%); bottom: 10%; left: calc(14% + var(--k) * 13%); animation: fxRise 1s ease-out infinite; animation-delay: calc(var(--k) * -.16s); }
+.sfx-leaf i::before { content: "🍃"; } .sfx-leaf i { font-size: 10px; left: calc(8% + var(--k) * 24%); animation: fxFall 2.2s linear infinite; animation-delay: calc(var(--k) * -.55s); }
+.sfx-petals i::before { content: "🌸"; } .sfx-petals i { font-size: 10px; left: calc(4% + var(--k) * 16%); animation: fxFall 2.4s linear infinite; animation-delay: calc(var(--k) * -.4s); }
+.sfx-chips i { width: 4px; height: 4px; background: #8a5a32; bottom: 12%; left: calc(20% + var(--k) * 18%); animation: fxRise 1.2s ease-out infinite; animation-delay: calc(var(--k) * -.3s); }
+.sfx-thunder { animation: fxZap 1.6s steps(1) infinite; box-shadow: inset 0 0 16px rgba(90,190,255,.55); }
+.sfx-thunder i { width: 12px; height: 20px; background: #e6f6ff; clip-path: polygon(60% 0, 20% 55%, 48% 55%, 30% 100%, 82% 38%, 54% 38%, 72% 0); filter: drop-shadow(0 0 3px #6cf); opacity: 0; top: 6%; left: calc(18% + var(--k) * 50%); animation: fxBolt 1.6s steps(1) infinite; animation-delay: calc(var(--k) * .5s); }
+
+/* 던질 때 윷 효과 (판 위) */
+.toss.sfx-jade .face svg { filter: drop-shadow(0 0 6px #4fe3c8) drop-shadow(0 0 12px #2fbfa0); }
+.toss.sfx-flame .face svg { filter: drop-shadow(0 0 6px #ff7a1a) drop-shadow(0 0 14px #ff3d00); }
+.toss.sfx-thunder .face svg { filter: drop-shadow(0 0 6px #9fd3ff) drop-shadow(0 0 12px #3a8bff); }
+.toss.sfx-petals .face svg { filter: drop-shadow(0 0 6px #ffb3d1); }
+.toss.sfx-gold .face svg { filter: drop-shadow(0 0 8px #ffd36a) drop-shadow(0 0 16px #ffb000); }
+.toss .amb { position: absolute; top: -8%; font-style: normal; pointer-events: none; animation-name: ambFall; animation-timing-function: linear; animation-fill-mode: both; font-size: calc(var(--s) * .05); }
+.toss .amb-flame { top: auto; bottom: -6%; width: calc(var(--s) * .025); height: calc(var(--s) * .035); border-radius: 50%; background: radial-gradient(#fff3b0, #ff7a1a 60%, transparent 72%); animation-name: ambRise; }
+.toss .amb-jade { width: calc(var(--s) * .02); height: calc(var(--s) * .02); background: #bff8ec; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation-name: ambRise; top: auto; bottom: 0; }
+.toss .amb-gold { color: #ffd36a; text-shadow: 0 0 8px #ffb000; }
+@keyframes ambFall { from { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } to { transform: translateY(calc(var(--s) * 1.1)) rotate(300deg); opacity: .8; } }
+@keyframes ambRise { from { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } to { transform: translateY(calc(var(--s) * -1.05)); opacity: 0; } }
+.toss .flash { position: absolute; inset: 0; background: #e8f4ff; opacity: 0; animation: flash .5s ease-out .66s both; pointer-events: none; }
+@keyframes flash { 0% { opacity: 0; } 15% { opacity: .85; } 30% { opacity: .1; } 45% { opacity: .6; } 100% { opacity: 0; } }
+.toss .bolt { position: absolute; top: 0; width: 7%; height: 62%; transform: translateX(-50%); fill: #eaf6ff; filter: drop-shadow(0 0 6px #6cf) drop-shadow(0 0 14px #2f7cf6); opacity: 0; animation: fxBolt .9s steps(1) both; }
+.toss .land { position: absolute; transform: translate(-50%, -50%); font-style: normal; pointer-events: none; font-size: calc(var(--s) * .035); animation: spark .8s cubic-bezier(.2,.7,.3,1) forwards; }
+.toss .land-flame, .toss .land-chips { text-shadow: 0 0 6px currentColor; }
+
+/* 잡을 때 조롱 */
+.taunt-fx { position: absolute; left: 50%; top: 62%; transform: translate(-50%, -50%); z-index: 6; max-width: 86%; text-align: center; pointer-events: none;
+  font-weight: 900; font-size: calc(var(--s) * .05); line-height: 1.3; color: #fff; padding: 8px 14px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(120,10,20,.92), rgba(60,5,10,.92)); border: 2px solid #ff5a5f; box-shadow: 0 6px 20px rgba(0,0,0,.6), 0 0 18px rgba(255,80,90,.5);
+  animation: tauntIn 2.8s cubic-bezier(.2,.9,.3,1.2) forwards; }
+@keyframes tauntIn { 0% { transform: translate(-50%, -50%) scale(.3) rotate(-8deg); opacity: 0; } 12% { transform: translate(-50%, -50%) scale(1.08) rotate(2deg); opacity: 1; } 20% { transform: translate(-50%, -50%) scale(1) rotate(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -70%); } }
+
+/* 엑셀 모드·움직임 줄이기: 효과 끔 */
+body.excel .fxw, body.excel .sfxw, body.excel .toss .amb, body.excel .toss .flash, body.excel .toss .bolt, body.excel .toss .land, body.excel .shop-item.tier-legend::before { display: none !important; }
+body.excel [class*="avfx-"], body.excel .tok[class*="fx-"] .pc, body.excel .tok-prev .pc { animation: none !important; box-shadow: none !important; }
+body.excel .taunt-fx { background: #fff2cc; color: #9c0006; border: 1px solid #c8c6c4; border-radius: 0; box-shadow: none; font-size: 13px; animation: none; }
+body.excel .shop-item .tier { border-radius: 0; background: #f3f2f1 !important; color: #252423 !important; }
+@media (prefers-reduced-motion: reduce) { .fxw, .fxw i, .sfxw, .sfxw i, .tok .pc, [class*="avfx-"], .toss .amb, .toss .bolt, .toss .flash, .taunt-fx, .shop-item::before { animation: none !important; } }
+
+/* 업적 전용 효과 */
+.fx-void { background: conic-gradient(from 0deg, rgba(123,44,255,.9), transparent 25%, rgba(200,120,255,.8) 50%, transparent 75%, rgba(123,44,255,.9));
+  -webkit-mask: radial-gradient(circle, transparent 34%, #000 40%, transparent 66%); mask: radial-gradient(circle, transparent 34%, #000 40%, transparent 66%); animation: fxSpin 1.8s linear infinite; }
+.fx-void i { width: 12%; height: 12%; background: #e9d8ff; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: fxTwinkle 1.2s ease-in-out infinite; animation-delay: calc(var(--k) * .4s); }
+.fx-void i:nth-child(1) { left: 6%; top: 20%; } .fx-void i:nth-child(2) { right: 4%; top: 10%; } .fx-void i:nth-child(3) { left: 44%; bottom: 0; }
+.avfx-void { box-shadow: 0 0 0 2px #b07bff, 0 0 18px rgba(140,70,255,.9) !important; animation: fxPulse 1.8s ease-in-out infinite; }
+.sfx-meteor { background: radial-gradient(circle, rgba(150,90,255,.3), transparent 65%); }
+.sfx-meteor i::before { content: "☄️"; } .sfx-meteor i { font-size: 10px; left: calc(var(--k) * 24%); animation: fxFall 1.6s linear infinite; animation-delay: calc(var(--k) * -.4s); }
+.toss.sfx-meteor .face svg { filter: drop-shadow(0 0 8px #b07bff) drop-shadow(0 0 16px #7b2cff); }
+.toss .amb-meteor { animation-name: meteorFall; font-size: calc(var(--s) * .06); }
+@keyframes meteorFall { from { transform: translate(-40%, 0) rotate(0); opacity: 0; } 10% { opacity: 1; } to { transform: translate(40%, calc(var(--s) * 1.1)) rotate(20deg); opacity: .8; } }
+.toss .flash.meteor { background: #d9c2ff; }
+.shop-item.tier-ach .tier { background: linear-gradient(90deg, #7b2cff, #c49bff); color: #fff; }
+.shop-item.tier-ach { border-color: rgba(176,123,255,.7); box-shadow: 0 0 16px rgba(140,70,255,.3); }
+
+/* 업적 목록 (프로필) */
+.ach-head { margin: 16px 0 8px; font-weight: 900; font-size: 15px; }
+.ach-head b { color: var(--gold2); }
+.ach-list { display: flex; flex-direction: column; gap: 8px; }
+.ach { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.ach.done { background: linear-gradient(90deg, rgba(233,196,106,.16), rgba(233,196,106,.04)); border-color: rgba(233,196,106,.5); }
+.ach.has-item:not(.done) { border-color: rgba(176,123,255,.45); }
+.ach-ic { font-size: 22px; width: 32px; text-align: center; filter: grayscale(.2); }
+.ach:not(.done) .ach-ic { opacity: .7; }
+.ach-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ach-body b { font-size: 14px; } .ach-body span { font-size: 12px; color: var(--muted); }
+.ach-body small { font-size: 11px; color: #cdbb8a; }
+.ach-bar { height: 6px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; margin: 3px 0 1px; }
+.ach-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold2)); border-radius: 99px; }
+.ach.done .ach-bar i { background: linear-gradient(90deg, #6ee7a8, #2fb874); }
+/* 업적 달성 팝업 */
+.ach-pop { display: flex; flex-direction: column; gap: 10px; text-align: center; }
+.ach-pop-ic { font-size: 54px; filter: drop-shadow(0 0 18px rgba(255,200,80,.9)); animation: namePop .6s cubic-bezier(.2,.9,.3,1.4) both; }
+.ach-pop-row { padding: 10px; border-radius: 12px; background: rgba(233,196,106,.1); border: 1px solid rgba(233,196,106,.4); display: flex; flex-direction: column; gap: 2px; }
+.ach-pop-row b { font-size: 16px; color: var(--gold2); } .ach-pop-row span { font-size: 12px; color: var(--muted); }
+.ach-pop-row em { font-style: normal; font-weight: 800; font-size: 13px; }
+body.excel .ach, body.excel .ach-pop-row { background: #fff; border-color: #e1dfdd; border-radius: 0; }
+body.excel .ach.done { background: #e2efda; border-color: #217346; }
+body.excel .ach-bar { background: #e1dfdd; border-radius: 0; } body.excel .ach-bar i { background: #217346; border-radius: 0; }
+body.excel .ach-head b, body.excel .ach-pop-row b { color: #217346; }

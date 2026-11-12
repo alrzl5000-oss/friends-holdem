@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const db = require('./db');
 const yut = require('./yut');
 const mini = require('./mini');
+const ach = require('./ach');
 const SHOP = require('./shop');
 
 const app = express();
@@ -22,7 +23,15 @@ const userSocket = new Map(); // uid -> socket.id
 function pushMe(uid) {
   const u = db.byId.get(uid);
   const sid = userSocket.get(uid);
-  if (u && sid) io.to(sid).emit('me', { id: u.id, username: u.username, assets: u.assets, yutHold: u.yutHold, trophy: u.trophy || 0, throws: u.throws || {}, mini: u.mini || {}, shame: db.shameLevel(u), shameUntil: db.shameUntil(u), bailoutsToday: db.bailoutsToday(u), bailoutLimit: db.DAILY_BAILOUTS, bailoutAmount: db.BAILOUT_AMOUNT, yut: u.yut || {}, owned: u.owned || SHOP.DEFAULT_OWNED, equip: Object.assign({}, SHOP.DEFAULT_EQUIP, u.equip || {}) });
+  // 업적: 최고 현금 기록 → 새로 달성한 업적 보상 지급 → 알림
+  let fresh = [];
+  if (u) {
+    const S = ach.st(u); S.maxCash = Math.max(S.maxCash || 0, u.assets || 0);
+    fresh = ach.check(u);
+    if (fresh.length) db.save();
+  }
+  if (u && sid && fresh.length) io.to(sid).emit('achDone', fresh);
+  if (u && sid) io.to(sid).emit('me', { id: u.id, ach: ach.progress(u), username: u.username, assets: u.assets, yutHold: u.yutHold, trophy: u.trophy || 0, throws: u.throws || {}, mini: u.mini || {}, shame: db.shameLevel(u), shameUntil: db.shameUntil(u), bailoutsToday: db.bailoutsToday(u), bailoutLimit: db.DAILY_BAILOUTS, bailoutAmount: db.BAILOUT_AMOUNT, yut: u.yut || {}, owned: u.owned || SHOP.DEFAULT_OWNED, equip: Object.assign({}, SHOP.DEFAULT_EQUIP, u.equip || {}) });
 }
 yut.init({
   getUser: id => db.byId.get(id),
