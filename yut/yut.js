@@ -78,17 +78,21 @@ const NAK_TAUNTS = [
   '{n} 님 오늘 운세: 낙 🔮',
   '다들 박수 👏👏 {n} 님이 해냈어요 (낙을)',
 ];   // 낙: 윷가락이 판 밖으로 떨어짐 → 무효, 차례 넘어감
+// 결과별 확률(낙 제외 100 기준): 도 > 윷 > 모 순서가 되도록 직접 정함
+const ODDS = [['도', 18], ['뒷도', 5], ['개', 35], ['걸', 30], ['윷', 8], ['모', 4]];
+const STEPS = { '도': 1, '뒷도': -1, '개': 2, '걸': 3, '윷': 4, '모': 5 };
+function bitsFor(name) {   // 화면에 보일 윷가락 앞뒷면 (1 = 배·평평한 면)
+  const flat = { '도': 1, '뒷도': 1, '개': 2, '걸': 3, '윷': 4, '모': 0 }[name];
+  if (name === '뒷도') return [1, 0, 0, 0];
+  const idx = name === '도' ? [1, 2, 3] : [0, 1, 2, 3];
+  for (let i = idx.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  const bits = [0, 0, 0, 0]; idx.slice(0, flat).forEach(i => { bits[i] = 1; }); return bits;
+}
 function throwYut() {
-  // 실제 나무 윷처럼 평평한 면(배)이 60% 확률로 위로 → 개·걸이 많고 모·뒷도는 드묾
-  const FLAT_PCT = 60;
-  const bits = [0, 0, 0, 0].map(() => (crypto.randomInt(100) < FLAT_PCT ? 1 : 0)); // 1 = 배(평평한 면)
-  if (crypto.randomInt(100) < NAK_PCT) return { bits, steps: 0, name: '낙', extra: false, nak: true, taunt: NAK_TAUNTS[crypto.randomInt(NAK_TAUNTS.length)] };
-  const flat = bits.reduce((a, b) => a + b, 0);
-  if (flat === 0) return { bits, steps: 5, name: '모', extra: true };
-  if (flat === 1) return bits[0] ? { bits, steps: -1, name: '뒷도', extra: false } : { bits, steps: 1, name: '도', extra: false };
-  if (flat === 2) return { bits, steps: 2, name: '개', extra: false };
-  if (flat === 3) return { bits, steps: 3, name: '걸', extra: false };
-  return { bits, steps: 4, name: '윷', extra: true };
+  if (crypto.randomInt(100) < NAK_PCT) return { bits: bitsFor(['도', '개', '걸'][crypto.randomInt(3)]), steps: 0, name: '낙', extra: false, nak: true, taunt: NAK_TAUNTS[crypto.randomInt(NAK_TAUNTS.length)] };
+  let r = crypto.randomInt(100), name = '개';
+  for (const [n, w] of ODDS) { if (r < w) { name = n; break; } r -= w; }
+  return { bits: bitsFor(name), steps: STEPS[name], name, extra: name === '윷' || name === '모' };
 }
 
 // 말 상태: { r: 'main'|'A'|'B'|'done', i } — i=-1 은 출발 전
