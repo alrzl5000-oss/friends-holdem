@@ -283,7 +283,7 @@ function renderShop() {
       <div class="shop-grid">${ITEMS.filter(i => i.cat === cat).map(it => {
         const owned = (me.owned || []).includes(it.id), on = Object.values(me.equip || {}).includes(it.id);
         const fx = it.art && it.art.fx;
-        const pv = cat === 'piece' ? `<div class="tok-prev${fx ? ' fx-' + fx : ''}" style="${colorVars('#7a5230')}">${Art.pieceSVG(it.art, 44)}${fxDeco(fx)}</div>`
+        const pv = cat === 'piece' ? `<div class="tok-prev${fx ? ' tfx-' + fx : ''}" style="${colorVars('#7a5230')}">${Art.pieceSVG(it.art, 44)}${fxDeco(fx)}</div>`
           : cat === 'stick' ? `<div class="stick-prev">${fan(it.art.wood)}${sfxDeco(fx)}</div>` : `<div class="pv-bd">${Art.boardSVG({ theme: it.art.theme })}</div>`;
         const [tc, tn] = tierOf(it.price);
         const taunt = cat === 'piece' && it.taunts && it.taunts.length && it.price > 0 ? `<i class="taunt-prev">😈 "${esc(it.taunts[0].replace(/\{n\}/g, '상대'))}"</i>` : '';
@@ -501,7 +501,7 @@ function placeTokens(v) {
       if (!el) {
         el = document.createElement('div'); el.className = 'tok hid'; el.dataset.p = p.id; el.dataset.i = i;
         el.innerHTML = Art.pieceSVG(art, 20) + fxDeco(art.fx) + '<span class="cnt" hidden></span><span class="xl-lab"></span><b class="sh-tag" hidden></b>';
-        if (art.fx) el.classList.add('fx-' + art.fx);
+        if (art.fx) el.classList.add('tfx-' + art.fx);   // 말 전체용 효과(둥실·무지개·광택). 'fx-' 는 장식 전용이라 말에 붙이면 안 됨
         { const c = colorOf(p); el.style.setProperty('--c', c); el.style.setProperty('--cl', Art.light(c, .45)); el.style.setProperty('--cd', Art.dark(c, .45)); }
         el.querySelector('.xl-lab').textContent = (p.name || '?').slice(0, 1);
         const [x, y] = pct(n); el.style.left = x + '%'; el.style.top = y + '%';

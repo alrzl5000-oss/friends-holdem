@@ -830,7 +830,7 @@ body.excel .m-log b { color: #217346; }
 .fx-moonglow { background: radial-gradient(circle, transparent 34%, rgba(130,170,255,.55) 45%, transparent 70%); animation: fxPulse 3s ease-in-out infinite; }
 .fx-moonglow i { width: 14%; height: 14%; background: #fff; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: fxTwinkle 1.6s ease-in-out infinite; animation-delay: calc(var(--k) * .5s); }
 .fx-moonglow i:nth-child(1) { left: 8%; top: 18%; } .fx-moonglow i:nth-child(2) { right: 6%; top: 30%; } .fx-moonglow i:nth-child(3) { left: 40%; bottom: 4%; }
-.tok.fx-float .pc, .tok-prev.fx-float .pc { animation: fxFloat 2.4s ease-in-out infinite; }
+.tok.tfx-float .pc, .tok-prev.tfx-float .pc { animation: fxFloat 2.4s ease-in-out infinite; }
 .fx-float i { width: 44%; height: 18%; border-radius: 50%; background: radial-gradient(rgba(255,255,255,.85), transparent 70%); bottom: 14%; animation: fxDrift 3s ease-in-out infinite alternate; animation-delay: calc(var(--k) * -1.5s); }
 .fx-float i:nth-child(1) { left: 4%; } .fx-float i:nth-child(2) { right: 4%; }
 .fx-leaf i { font-size: 34%; animation: fxFall 2.6s linear infinite; animation-delay: calc(var(--k) * -.9s); }
@@ -844,7 +844,7 @@ body.excel .m-log b { color: #217346; }
 .fx-fire { background: radial-gradient(circle at 50% 60%, transparent 32%, rgba(255,90,20,.7) 42%, rgba(255,200,60,.35) 54%, transparent 70%); animation: fxFlicker .25s steps(2) infinite alternate; }
 .fx-fire i { width: 13%; height: 18%; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: radial-gradient(#fff3b0, #ff8a1f 60%, transparent 70%);
   left: calc(8% + var(--k) * 15%); bottom: 26%; animation: fxRise 1s ease-out infinite; animation-delay: calc(var(--k) * -.17s); }
-.tok.fx-rainbow .pc, .tok-prev.fx-rainbow .pc, .avfx-rainbow .pc { animation: fxHue 3s linear infinite; }
+.tok.tfx-rainbow .pc, .tok-prev.tfx-rainbow .pc, .avfx-rainbow .pc { animation: fxHue 3s linear infinite; }
 .fx-rainbow { background: conic-gradient(#ff4d6d, #ffa62b, #ffe14d, #3ddc84, #2f9bff, #9b5cff, #ff4d6d);
   -webkit-mask: radial-gradient(circle, transparent 36%, #000 40%, #000 46%, transparent 52%); mask: radial-gradient(circle, transparent 36%, #000 40%, #000 46%, transparent 52%); animation: fxSpin 2.5s linear infinite; }
 .fx-rainbow i { width: 14%; height: 14%; background: #fff; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: fxTwinkle 1.2s ease-in-out infinite; animation-delay: calc(var(--k) * .6s); }
@@ -852,7 +852,7 @@ body.excel .m-log b { color: #217346; }
 .fx-gold { background: radial-gradient(circle, transparent 32%, rgba(255,215,90,.85) 41%, rgba(255,170,0,.35) 52%, transparent 68%); animation: fxPulse 1.6s ease-in-out infinite; }
 .fx-gold i { width: 15%; height: 15%; background: #fff6c8; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); filter: drop-shadow(0 0 3px #ffd36a); animation: fxTwinkle 1.4s ease-in-out infinite; animation-delay: calc(var(--k) * .35s); }
 .fx-gold i:nth-child(1) { left: 4%; top: 14%; } .fx-gold i:nth-child(2) { right: 2%; top: 8%; } .fx-gold i:nth-child(3) { right: 8%; bottom: 10%; } .fx-gold i:nth-child(4) { left: 12%; bottom: 4%; }
-.tok.fx-gold::after, .tok-prev.fx-gold::after { background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.9) 48%, transparent 62%); background-size: 250% 100%; animation: fxShine 2.2s ease-in-out infinite; inset: 0; width: auto; height: auto; left: 0; top: 0; border-radius: 50%; }
+.tok.tfx-gold::after, .tok-prev.tfx-gold::after { background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.9) 48%, transparent 62%); background-size: 250% 100%; animation: fxShine 2.2s ease-in-out infinite; inset: 0; width: auto; height: auto; left: 0; top: 0; border-radius: 50%; }
 
 /* 프로필 상자에도 은은하게 */
 .av[class*="avfx-"] { position: relative; }
@@ -934,7 +934,7 @@ body.excel .m-log b { color: #217346; }
 
 /* 엑셀 모드·움직임 줄이기: 효과 끔 */
 body.excel .fxw, body.excel .sfxw, body.excel .toss .amb, body.excel .toss .flash, body.excel .toss .bolt, body.excel .toss .land, body.excel .shop-item.tier-legend::before { display: none !important; }
-body.excel [class*="avfx-"], body.excel .tok[class*="fx-"] .pc, body.excel .tok-prev .pc { animation: none !important; box-shadow: none !important; }
+body.excel [class*="avfx-"], body.excel .tok[class*="tfx-"] .pc, body.excel .tok-prev .pc { animation: none !important; box-shadow: none !important; }
 body.excel .taunt-fx { background: #fff2cc; color: #9c0006; border: 1px solid #c8c6c4; border-radius: 0; box-shadow: none; font-size: 13px; animation: none; }
 body.excel .shop-item .tier { border-radius: 0; background: #f3f2f1 !important; color: #252423 !important; }
 @media (prefers-reduced-motion: reduce) { .fxw, .fxw i, .sfxw, .sfxw i, .tok .pc, [class*="avfx-"], .toss .amb, .toss .bolt, .toss .flash, .taunt-fx, .shop-item::before { animation: none !important; } }
