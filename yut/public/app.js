@@ -320,11 +320,24 @@ $('chatForm').onsubmit = e => { e.preventDefault(); const t = $('chatInput').val
 $('boardSvg').onclick = e => {
   const g = e.target.closest('.tg'); if (!g) return;
   if (g.dataset.opt != null) return act('move', +g.dataset.opt);
-  toast('같은 자리로 가는 말이 여러 개예요. 움직일 말(번호 붙은 말)을 눌러 주세요');
+  toast('같은 자리로 가는 말이 여러 개예요. 번호 붙은 말이나 아래 단추로 골라 주세요');
   const ids = g.dataset.multi.split(',');
   document.querySelectorAll('.tok.can').forEach(t => { if (ids.includes(t.dataset.opt)) { t.classList.remove('pick'); void t.offsetWidth; t.classList.add('pick'); } });
 };
-$('tokLayer').onclick = e => { const t = e.target.closest('.tok.can'); if (t && t.dataset.opt != null) act('move', +t.dataset.opt); };
+// 말을 눌렀을 때: 그 칸이 다른 말의 도착 자리면 '그 자리로 가는 말'을 움직임 (자리 우선)
+// 도착 자리가 아닐 때만 누른 말 자신을 움직임
+$('tokLayer').onclick = e => {
+  const t = e.target.closest('.tok.can'); if (!t || !room) return;
+  const into = (room.options || []).filter(o => o.to === t.dataset.node);
+  if (into.length === 1) return act('move', into[0].id);
+  if (into.length > 1) {
+    toast('이 자리로 가는 말이 여러 개예요. 아래 단추에서 골라 주세요');
+    const ids = into.map(o => String(o.id));
+    document.querySelectorAll('.tok.can').forEach(x => { if (ids.includes(x.dataset.opt)) { x.classList.remove('pick'); void x.offsetWidth; x.classList.add('pick'); } });
+    return;
+  }
+  if (t.dataset.opt != null) act('move', +t.dataset.opt);
+};
 // 단추에 손을 올리면 그 선택지 길만 진하게
 function highlightOpt(i) {
   document.querySelectorAll('#boardSvg .route').forEach(r => r.classList.toggle('dim', i != null && r.dataset.i !== String(i)));
@@ -473,6 +486,7 @@ function placeTokens(v) {
       const onBoard = n !== 'start' && n !== 'goal';
       const g = onBoard ? groups[n] : null;
       const primary = !!(g && g[0] === i);
+      el.dataset.node = n;
       const canMove = primary && p.id === v.you && movable.has(n);
       el.classList.toggle('can', canMove);
       // 움직일 수 있는 말엔 선택지 번호(색) — 눌러서 바로 이동
