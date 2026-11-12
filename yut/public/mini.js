@@ -35,7 +35,7 @@
 
   function createModal(type) {
     let bet = 1e7;
-    const title = type === 'gonu' ? '고누' : '십이장기';
+    const title = type === 'gonu' ? '호박고누' : '십이장기';
     const draw = () => {
       modal(`<h3>${title} 판 만들기</h3><p class="hint" style="text-align:left">1대1로 같은 판돈을 내고, 이긴 사람이 다 가져가요. 무승부면 돌려받아요. 선은 시작할 때 무작위.</p>
         <div class="bet-grid">${BETS.map(b => `<button class="bet-opt${b === bet ? ' on' : ''}" data-b="${b}" ${me.assets < b ? 'disabled' : ''}>${won(b)}<small>이기면 ${won(b * 2)}</small></button>`).join('')}</div>
@@ -94,7 +94,7 @@
     } else if (v.status === 'play') {
       const turnP = v.players.find(p => p.side === v.turn);
       h = v.spectating ? `<div class="wait">👀 관전 중 · ${esc(turnP ? turnP.name : '')}님 차례<div class="row"><button class="btn" id="mUnwatch">관전 그만하기</button></div></div>`
-        : (v.type === 'gonu' && v.state.rep === 2 ? `<p class="hint m-hint m-warn">⚠ 지금 모양이 한 번 더 나오면 무승부예요</p>` : '') + (v.moves.length ? `<p class="hint m-hint">${v.type === 'gonu' ? '움직일 말을 누르고, 갈 점을 누르세요' : '말이나 포로를 누르고, 빛나는 칸을 누르세요'}</p>`
+        : (v.type === 'gonu' && v.state.rep === 2 ? `<p class="hint m-hint m-warn">⚠ 지금 모양이 한 번 더 나오면 무승부예요</p>` : '') + (v.moves.length ? `<p class="hint m-hint">${v.type === 'gonu' ? '움직일 말을 누르고, 빛나는 점을 누르세요' : '말이나 포로를 누르고, 빛나는 칸을 누르세요'}</p>`
         : `<div class="wait">${esc(turnP ? turnP.name : '')}님 차례예요</div>`);
       if (!v.spectating) h += `<button class="btn small m-resign" id="mResignBtn">🏳 기권</button>`;
       h += `<div class="turn-bar"><i id="mBar"></i></div>`;
@@ -129,7 +129,7 @@
     }).join('') : '<span class="m-hand-empty">포로 없음</span>'}</div>` : '';
     return `<div class="m-card${turn ? ' turn' : ''}" style="--c:${c}">${avHTML(pieceArt(p.piece))}
       <div class="m-who"><b>${esc(p.name)}${p.id === R.you ? ' (나)' : ''}${shameTag(p.shame)}</b>
-        <span>${R.type === 'j12' ? (p.side === 0 ? '초 (아래에서 시작)' : '한 (위에서 시작)') : (p.side === 0 ? '선 · 왼쪽' : '후 · 오른쪽')}${turn ? ' · <i class="m-turn">차례</i>' : ''}</span></div>${handHTML}</div>`;
+        <span>${R.type === 'j12' ? (p.side === 0 ? '초 (아래에서 시작)' : '한 (위에서 시작)') : (p.side === 0 ? '선 · 아래 진영' : '후 · 위 진영')}${turn ? ' · <i class="m-turn">차례</i>' : ''}</span></div>${handHTML}</div>`;
   }
   const sizeBoard = () => {
     const z = document.querySelector('.m-zone'), b = $('mBoard'); if (!z || !b) return;
@@ -140,40 +140,54 @@
   };
   if (window.ResizeObserver) new ResizeObserver(sizeBoard).observe(document.querySelector('.m-zone'));
 
-  // ---------- 고누 ----------
-  const GP = [[16, 16], [84, 16], [50, 50], [16, 84], [84, 84]];
-  const GE = [[0, 1], [0, 3], [1, 4], [0, 2], [1, 2], [3, 2], [4, 2]];
+  // ---------- 호박고누 ----------
+  // 점: 0 가운데, 1 위(N) 2 오른쪽(E) 3 아래(S) 4 왼쪽(W), 5·6·7 위 진영(1번), 8·9·10 아래 진영(0번)
+  const GP = [[50, 50], [50, 26], [74, 50], [50, 74], [26, 50], [33, 10.5], [50, 8.5], [67, 10.5], [33, 89.5], [50, 91.5], [67, 89.5]];
+  const GE = [[0, 1], [0, 2], [0, 3], [0, 4], [5, 1], [6, 1], [7, 1], [8, 3], [9, 3], [10, 3]];
+  const START_BOARD = [null, null, null, null, null, 1, 1, 1, 0, 0, 0];
   let gid = 0;
   function gonuSVG(v, ill) {
     const U = 'gn' + (++gid);   // 그라데이션 id 가 다른 그림(윷가락 등)과 겹치지 않게
     const xl = (typeof isExcel === 'function' && isExcel());
-    const board = v && v.state ? v.state.board : [0, 1, null, 0, 1];
-    const flip = v && vside() === 1;   // 후는 자기 말이 왼쪽에 오도록 좌우 뒤집기
-    const P = i => { const [x, y] = GP[i]; return flip ? [100 - x, y] : [x, y]; };
+    const board = v && v.state && v.state.board && v.state.board.length === 11 ? v.state.board : START_BOARD;
+    const flip = v && vside() === 1;   // 위쪽(1번)이 나면 판을 뒤집어 내 진영이 아래로
+    const P = i => { const [x, y] = GP[i]; return flip ? [100 - x, 100 - y] : [x, y]; };
     const myMoves = v && isMe() ? v.moves : [];
     const targets = sel && sel.from != null ? myMoves.filter(m => m.from === sel.from) : [];
     const last = v && v.state && v.state.last;
-    const ink = xl ? '#8a8886' : '#3b2a1c';
-    const lines = GE.map(([a, b]) => `<line x1="${P(a)[0]}" y1="${P(a)[1]}" x2="${P(b)[0]}" y2="${P(b)[1]}" stroke="${ink}" stroke-width="${xl ? .8 : 1.6}" stroke-linecap="round"/>`).join('');
-    const well = (() => { const [x1] = P(3), [x2] = P(4), cx = (x1 + x2) / 2; return xl
-      ? `<rect x="${cx - 7}" y="80" width="14" height="8" fill="#ddebf7" stroke="#8a8886" stroke-width=".4"/><text x="${cx}" y="85.8" font-size="3.6" text-anchor="middle" fill="#595959">우물</text>`
-      : `<ellipse cx="${cx}" cy="86" rx="11" ry="6.5" fill="url(#${U}w)" stroke="${ink}" stroke-width="1.1"/><ellipse cx="${cx}" cy="85" rx="7" ry="2.6" fill="#bfe3ff" opacity=".45"/><text x="${cx}" y="96.5" font-size="4" text-anchor="middle" fill="${ink}" font-weight="700">우물</text>`; })();
-    const pts = GP.map((_, i) => { const [x, y] = P(i); return `<circle cx="${x}" cy="${y}" r="${xl ? 2.2 : 3.2}" fill="${xl ? '#fff' : '#efe3c4'}" stroke="${ink}" stroke-width="${xl ? .6 : 1}"/>`; }).join('');
-    const lastMark = last ? (() => { const [x, y] = P(last.to), [fx, fy] = P(last.from); return `<circle cx="${fx}" cy="${fy}" r="5" fill="none" stroke="#e9c46a" stroke-width=".8" stroke-dasharray="1.6 1.2"/><circle cx="${x}" cy="${y}" r="10" fill="#e9c46a" opacity=".22"/>`; })() : '';
+    const ink = xl ? '#8a8886' : '#4a2a10';
+    const sw = xl ? .8 : 1.5;
+    // 호박: 주황 몸통 + 골(세로 줄) + 꼭지·잎 (엑셀 모드에선 그냥 원)
+    const pumpkin = xl ? `<circle cx="50" cy="50" r="24" fill="#fff" stroke="${ink}" stroke-width="${sw}"/>`
+      : `<g><ellipse cx="50" cy="51" rx="34" ry="29" fill="url(#${U}pk)"/>
+          ${[-24, -12, 12, 24].map(dx => `<path d="M${50 + dx * .2} 21 Q${50 + dx * 1.05} 51 ${50 + dx * .2} 81" fill="none" stroke="#b8561a" stroke-width="1" opacity=".55"/>`).join('')}
+          <ellipse cx="50" cy="51" rx="34" ry="29" fill="none" stroke="#9c4512" stroke-width="1.2"/>
+          <ellipse cx="38" cy="36" rx="10" ry="5" fill="#fff" opacity=".18" transform="rotate(-25 38 36)"/>
+          <circle cx="50" cy="50" r="24" fill="none" stroke="${ink}" stroke-width="${sw}"/></g>`;
+    const camps = [0, 1].map(side => {   // 진영 바탕 (말 색으로 은은하게)
+      const pts = side === 0 ? [8, 9, 10] : [5, 6, 7];
+      const c = v ? colorOfSide(side) : SIDE_COLOR.gonu[side];
+      const [ax, ay] = P(pts[0]), [bx, by] = P(pts[2]), [mx, my] = P(pts[1]);
+      return xl ? '' : `<path d="M${ax} ${ay} Q${mx} ${my + (my > 50 ? 5 : -5)} ${bx} ${by}" fill="none" stroke="${c}" stroke-width="7" stroke-linecap="round" opacity=".22"/>`;
+    }).join('');
+    const lines = GE.map(([a, b]) => `<line x1="${P(a)[0]}" y1="${P(a)[1]}" x2="${P(b)[0]}" y2="${P(b)[1]}" stroke="${ink}" stroke-width="${sw}" stroke-linecap="round"/>`).join('');
+    const pts = GP.map((_, i) => { const [x, y] = P(i); return `<circle cx="${x}" cy="${y}" r="${xl ? 1.8 : 2.4}" fill="${xl ? '#fff' : '#fff4dc'}" stroke="${ink}" stroke-width="${xl ? .6 : .9}"/>`; }).join('');
+    const lastMark = last ? (() => { const [x, y] = P(last.to), [fx, fy] = P(last.from); return `<circle cx="${fx}" cy="${fy}" r="4.4" fill="none" stroke="#ffe08a" stroke-width=".8" stroke-dasharray="1.6 1.2"/><circle cx="${x}" cy="${y}" r="8.5" fill="#ffe08a" opacity=".3"/>`; })() : '';
+    const R0 = 6.2;
     const pieces = board.map((o, i) => {
       if (o === null) return '';
       const [x, y] = P(i), c = (v ? colorOfSide : s => SIDE_COLOR.gonu[s])(o);
       const can = myMoves.some(m => m.from === i), on = sel && sel.from === i;
       return `<g class="g-p${can ? ' can' : ''}${on ? ' on' : ''}" data-pt="${i}">${xl
-        ? `<rect x="${x - 6}" y="${y - 6}" width="12" height="12" fill="${c}" stroke="#fff" stroke-width=".8"/>`
-        : `<circle cx="${x}" cy="${y + 1.2}" r="8.6" fill="#000" opacity=".3"/><circle cx="${x}" cy="${y}" r="8.4" fill="url(#${U}s${o})" stroke="#fff" stroke-width="1.1"/><ellipse cx="${x - 2.6}" cy="${y - 3.2}" rx="3.6" ry="2" fill="#fff" opacity=".45"/>`}
-        ${on ? `<circle cx="${x}" cy="${y}" r="11" fill="none" stroke="#ffd36a" stroke-width="1.4"/>` : can ? `<circle class="pulse" cx="${x}" cy="${y}" r="10.5" fill="none" stroke="#ffd36a" stroke-width=".9"/>` : ''}</g>`;
+        ? `<rect x="${x - 4.5}" y="${y - 4.5}" width="9" height="9" fill="${c}" stroke="#fff" stroke-width=".8"/>`
+        : `<circle cx="${x}" cy="${y + 1}" r="${R0 + .2}" fill="#000" opacity=".3"/><circle cx="${x}" cy="${y}" r="${R0}" fill="url(#${U}s${o})" stroke="#fff" stroke-width="1"/><ellipse cx="${x - 1.9}" cy="${y - 2.3}" rx="2.6" ry="1.5" fill="#fff" opacity=".45"/>`}
+        ${on ? `<circle cx="${x}" cy="${y}" r="8.6" fill="none" stroke="#ffd36a" stroke-width="1.3"/>` : can ? `<circle class="pulse" cx="${x}" cy="${y}" r="8.2" fill="none" stroke="#ffd36a" stroke-width=".9"/>` : ''}</g>`;
     }).join('');
-    const tg = targets.map(m => { const [x, y] = P(m.to); return `<g class="g-t" data-mv="${m.id}"><circle cx="${x}" cy="${y}" r="8" fill="#ffd36a" opacity=".3"/><circle class="pulse" cx="${x}" cy="${y}" r="6" fill="#ffd36a" stroke="#fff" stroke-width=".8"/></g>`; }).join('');
-    const defs = `<defs><radialGradient id="${U}w" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#5aa9e6"/><stop offset="1" stop-color="#1d4f7a"/></radialGradient>
+    const tg = targets.map(m => { const [x, y] = P(m.to); return `<g class="g-t" data-mv="${m.id}"><circle cx="${x}" cy="${y}" r="6.5" fill="#ffd36a" opacity=".3"/><circle class="pulse" cx="${x}" cy="${y}" r="4.6" fill="#ffd36a" stroke="#fff" stroke-width=".8"/></g>`; }).join('');
+    const defs = `<defs><radialGradient id="${U}pk" cx=".42" cy=".38" r=".75"><stop offset="0" stop-color="#ffb35c"/><stop offset=".6" stop-color="#f08a24"/><stop offset="1" stop-color="#c4581a"/></radialGradient>
       ${[0, 1].map(s => { const c = v ? colorOfSide(s) : SIDE_COLOR.gonu[s]; return `<radialGradient id="${U}s${s}" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="${Art.light(c, .55)}"/><stop offset=".55" stop-color="${c}"/><stop offset="1" stop-color="${Art.dark(c, .45)}"/></radialGradient>`; }).join('')}</defs>`;
-    const bg = xl ? `<rect width="100" height="100" fill="#fff"/>` : `<rect width="100" height="100" rx="4" fill="#efe3c4"/><rect x="4" y="4" width="92" height="92" rx="2" fill="none" stroke="#8a5a32" stroke-width=".5"/>`;
-    return `<svg viewBox="0 0 100 100" class="${ill ? 'ill' : ''}">${defs}${bg}${lines}${well}${pts}${lastMark}${pieces}${tg}</svg>`;
+    const bg = xl ? `<rect width="100" height="100" fill="#fff"/>` : `<rect width="100" height="100" rx="4" fill="#efe3c4"/><rect x="2.5" y="2.5" width="95" height="95" rx="3" fill="none" stroke="#8a5a32" stroke-width=".5"/>`;
+    return `<svg viewBox="0 0 100 100" class="${ill ? 'ill' : ''}">${defs}${bg}${pumpkin}${camps}${lines}${pts}${lastMark}${pieces}${tg}</svg>`;
   }
 
   // ---------- 십이장기 ----------
@@ -282,22 +296,23 @@
     const body = type === 'gonu' ? `
       <div class="rb-fig">${gonuSVG(null, true)}</div>
       <h4>판과 말</h4>
-      <ul class="rules"><li>점 5개(네 모서리와 가운데)를 선으로 이은 판이에요.</li>
-        <li>아래쪽 두 점 사이에는 <b>우물</b>이 있어서 서로 오갈 수 없어요.</li>
-        <li>한 사람에 말 <b>2개</b>. 선(먼저 두는 사람)은 왼쪽 두 점, 후는 오른쪽 두 점에서 시작해요.</li></ul>
+      <ul class="rules"><li>둥근 호박 모양 판이에요. 원 위의 네 점과 가운데 점이 원과 십자선으로 이어져 있어요.</li>
+        <li>판 위아래에 점 3개짜리 <b>진영</b>이 있어요. 아래 진영은 아래 점(S)으로만, 위 진영은 위 점(N)으로만 이어져요.</li>
+        <li>한 사람에 말 <b>3개</b>. 선(먼저 두는 사람)은 아래 진영, 후는 위 진영에서 시작해요. 화면에서는 항상 내 진영이 아래예요.</li></ul>
       <h4>두는 법</h4>
       <ul class="rules"><li>자기 차례에 말 하나를 <b>선을 따라 바로 옆 빈 점</b>으로 한 칸 옮겨요. 건너뛰기·잡기는 없어요.</li>
-        <li><b>첫 수 금지:</b> 선은 첫 수에 우물 쪽 말(왼쪽 아래)을 가운데로 넣을 수 없어요. 넣으면 상대가 바로 갇혀 버려서예요. 그래서 첫 수는 왼쪽 위 말이 가운데로 들어가요.</li></ul>
+        <li>진영에 있는 말은 <b>자기 진영 입구</b>로만 나올 수 있어요. 입구가 막혀 있으면 못 나와요.</li>
+        <li><b>진영을 나온 말은 다시 들어갈 수 없어요.</b> 자기 진영에도, 상대 진영에도요.</li>
+        <li>원 안에서는 원과 십자선을 따라 자유롭게 한 칸씩 움직여요.</li></ul>
       <h4>이기는 법</h4>
-      <ul class="rules"><li>내 차례가 됐는데 <b>움직일 수 있는 말이 없으면 져요.</b> 상대를 가두면 이겨요.</li>
-        <li><b>같은 모양</b>(말 위치와 차례가 똑같은 상태)이 <b>3번</b> 나오면 무승부예요. 우물고누는 둘 다 실수하지 않으면 끝나지 않는 게임이라, 계속 같은 수를 반복하면 바로 끝내요.</li>
-        <li><b>60수</b>(한 사람 30수)까지 끝나지 않아도 무승부. 무승부면 판돈을 돌려받아요.</li></ul>
+      <ul class="rules"><li>내 차례가 됐는데 <b>움직일 수 있는 말이 없으면 져요.</b> 상대 말을 가둬서 꼼짝 못 하게 하면 이겨요.</li>
+        <li>같은 모양(말 위치와 차례가 똑같은 상태)이 <b>3번</b> 나오거나 <b>80수</b>(한 사람 40수)가 지나면 무승부, 판돈은 돌려받아요.</li></ul>
       <h4>판돈 · 시간</h4>
       <ul class="rules"><li>둘이 같은 판돈을 내고 이긴 사람이 전부 가져가요. 선은 시작할 때 무작위로 정해요.</li>
         <li>한 수에 <b>30초</b>. 넘기면 아무 수나 자동으로 둬요. 언제든 기권할 수 있어요(판돈은 상대에게).</li></ul>
       <h4>요령</h4>
-      <ul class="rules"><li>가운데 점은 모든 점과 이어져 있어서 가장 중요해요. 상대 말이 우물 옆에 몰려 있을 때 가운데를 차지하면 가두기 쉬워요.</li></ul>`
-      : `
+      <ul class="rules"><li>상대 진영 입구(상대가 나오는 점)를 막으면 진영에 남은 상대 말은 못 나와요.</li>
+        <li>가운데 점은 네 점과 모두 이어져 있어서 가장 중요해요. 내 말을 너무 빨리 다 꺼내면 원 안이 붐벼서 내가 갇히기 쉬워요.</li></ul>`      : `
       <div class="rb-fig rb-j12">${rbBoard()}</div>
       <h4>판과 말</h4>
       <ul class="rules"><li>가로 3칸 × 세로 4칸 판. 각자 <b>맨 끝 줄이 자기 진영</b>이에요(판에 색으로 표시).</li>
@@ -319,7 +334,7 @@
         <li>한 수에 <b>30초</b>, 넘기면 아무 수나 자동. 언제든 기권할 수 있어요.</li></ul>
       <h4>조작</h4>
       <ul class="rules"><li>내 말이나 포로를 누르면 갈 수 있는 칸이 빛나요. 빛나는 칸을 누르면 둬요.</li></ul>`;
-    modal(`<h3>📖 ${type === 'gonu' ? '고누 (우물고누)' : '십이장기'} 룰북</h3><div class="rulebook">${body}</div><button class="btn gold" data-close>닫기</button>`);
+    modal(`<h3>📖 ${type === 'gonu' ? '호박고누' : '십이장기'} 룰북</h3><div class="rulebook">${body}</div><button class="btn gold" data-close>닫기</button>`);
     document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
   }
   function rbBoard() {   // 룰북용 처음 배치 그림

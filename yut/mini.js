@@ -200,6 +200,7 @@ function dump() { return [...rooms.values()].filter(R => R.status !== 'done').ma
 function restore(list) {
   for (const R of list || []) {
     if (!R || !R.code || rooms.has(R.code)) continue;
+    if (R.type === 'gonu' && R.state && (!R.state.board || R.state.board.length !== ENGINES.gonu.N)) continue;   // 예전 우물고누 판 → 환불
     R.timer = null; R.watchers = R.watchers || [];
     rooms.set(R.code, R);
     for (const id of R.players) userRoom.set(id, R.code);
