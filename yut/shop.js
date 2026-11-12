@@ -29,7 +29,26 @@ const ITEMS = [
   { id: 'p_king', cat: 'piece', name: '임금님 말', price: 80, desc: '황금빛 후광과 왕관, 최고급', art: { pat: 'crown', c1: '#4a2c00', c2: '#fff1b8', c3: '#e0a800', fx: 'gold' },
     taunts: ['어명이오! {n} 님은 출발점으로 귀양 👑', '감히 짐의 길을 막다니… 물렀거라! 🐎', '{n} 님, 성은이 망극하옵니다 해 보세요 🙇', '짐이 곧 판이니라 👑✨'] },
 
+  // 창의 효과 말
+  { id: 'p_heart', cat: 'piece', name: '사랑꾼 말', price: 20, desc: '하트가 몽글몽글 피어오르는 말', art: { pat: 'heart', c1: '#7a0f3a', c2: '#ffd1e3', c3: '#ff2e7e', fx: 'heart' },
+    taunts: ['{n} 님 사랑해요… 출발점에서 기다릴게요 💘', '이건 사랑의 매예요 {n} 님 💕', '잡았다 내 사랑 😘'] },
+  { id: 'p_snow', cat: 'piece', name: '눈사람 말', price: 20, desc: '머리 위로 눈이 펑펑 내리는 말', art: { pat: 'cloud', c1: '#2a4a6a', c2: '#ffffff', c3: '#bfe6ff', fx: 'snow' },
+    taunts: ['{n} 님 말, 꽁꽁 얼려서 반송 ❄️', '겨울왕국 입장 실패 ⛄', '눈 오는 날엔 출발점이 따뜻해요 {n} 님 🧣'] },
+  { id: 'p_ghost', cat: 'piece', name: '도깨비 말', price: 30, desc: '도깨비불이 빙빙 돌고 몸이 깜빡깜빡', art: { pat: 'moon', c1: '#0d1b3a', c2: '#6f8cff', c3: '#c7f9ff', fx: 'ghost' },
+    taunts: ['금 나와라 뚝딱! {n} 님 말은 사라져라 뚝딱 👹', '도깨비한테 홀리셨네요 {n} 님 🔥', '방망이로 한 대 퉁 🪄'] },
+  { id: 'p_disco', cat: 'piece', name: '디스코 말', price: 40, desc: '사방으로 조명을 뿌리는 미러볼', art: { pat: 'scale', c1: '#3a3a4a', c2: '#e8e8f0', c3: '#9aa0b8', fx: 'disco' },
+    taunts: ['{n} 님 말, 무대에서 퇴장 🕺', '음악 끝났어요 {n} 님, 집에 가세요 🪩', '오늘 밤 주인공은 나야 나 💃'] },
+  { id: 'p_orbit', cat: 'piece', name: '우주 말', price: 45, desc: '작은 행성들이 궤도를 도는 말', art: { pat: 'dot', c1: '#05051a', c2: '#2a2a6a', c3: '#ffe680', fx: 'orbit' },
+    taunts: ['{n} 님 말, 블랙홀로 빨려 들어감 🕳️', '지구는 둥글고 출발점은 저기예요 🌍', '휴스턴, {n} 님에게 문제가 생겼다 🚀'] },
+
   // 업적 전용 말 (상점에서 못 삼, ach = 얻는 업적)
+  { id: 'p_sandbag', cat: 'piece', name: '샌드백 말', price: null, ach: 'f_punchbag', desc: '30번 맞고도 버틴 말, 맞을 때마다 흔들림', art: { pat: 'bamboo', c1: '#5a3a1a', c2: '#e8c99a', c3: '#a87a4a', fx: 'sandbag' },
+    taunts: ['30번 맞아 본 사람의 주먹은 맵습니다 🥊', '{n} 님, 이제 제 차례예요 💢'] },
+  { id: 'p_glitch', cat: 'piece', name: '버그 말', price: null, ach: 'f_cursed', desc: '낙 3연속으로 세상이 고장 남', art: { pat: 'wave', c1: '#001a00', c2: '#00ff66', c3: '#ff00aa', fx: 'glitch' },
+    taunts: ['ERROR 404: {n} 님 말을 찾을 수 없음 👾', '{n}.exe 가 응답하지 않습니다 💻', '시스템이 {n} 님을 삭제했습니다 🗑️'] },
+  { id: 'p_zzz', cat: 'piece', name: '잠꾸러기 말', price: null, ach: 'f_sleep', desc: '자면서 우승한 전설, 쿨쿨', art: { pat: 'moon', c1: '#2a1a4a', c2: '#d8c8ff', c3: '#7a5acc', fx: 'zzz' },
+    taunts: ['zzZ… 아 잡았어요? 몰랐어요 😴', '{n} 님은 자는 사람한테도 지네요 💤'] },
+
   { id: 'p_legend', cat: 'piece', name: '전설의 윷꾼 말', price: null, ach: 'win50', desc: '보랏빛 소용돌이를 두른 전설', art: { pat: 'crown', c1: '#1a0b2e', c2: '#d9b8ff', c3: '#7b2cff', fx: 'void' },
     taunts: ['전설 앞에 무릎 꿇어라 {n} 👑🌀', '{n} 님은 제 전설의 엑스트라 1이에요', '이게 바로 50승의 손맛 🌀'] },
   { id: 'p_shadow', cat: 'piece', name: '그림자 말', price: null, ach: 'streak10', desc: '어둠 속에서 떠다니는 무패의 말', art: { pat: 'moon', c1: '#050505', c2: '#4a4a5a', c3: '#a0a0ff', fx: 'void' },
@@ -51,6 +70,12 @@ const ITEMS = [
   { id: 's_blossom', cat: 'stick', name: '벚꽃 윷', price: 35, desc: '던지면 판 위로 꽃비가 내림', art: { wood: '#e48aa8', fx: 'petals' } },
   { id: 's_gold', cat: 'stick', name: '황금 윷', price: 60, desc: '황금빛 후광과 엽전이 쏟아짐', art: { wood: '#d9a21f', fx: 'gold' } },
 
+  { id: 's_bubble', cat: 'stick', name: '비눗방울 윷', price: 20, desc: '던지면 비눗방울이 몽글몽글', art: { wood: '#7ec8e3', fx: 'bubble' } },
+  { id: 's_snow', cat: 'stick', name: '눈꽃 윷', price: 20, desc: '떨어지면 눈보라가 휘몰아침', art: { wood: '#cfe8ff', fx: 'snow' } },
+  { id: 's_ink', cat: 'stick', name: '먹물 윷', price: 25, desc: '떨어질 때 먹물이 촥 튐', art: { wood: '#2b2b2b', fx: 'ink' } },
+  { id: 's_confetti', cat: 'stick', name: '축하 윷', price: 30, desc: '떨어지면 폭죽이 펑! 색종이 파티', art: { wood: '#ff7ab6', fx: 'confetti' } },
+  { id: 's_disco', cat: 'stick', name: '디스코 윷', price: null, ach: 'f_moonwalk', desc: '판이 클럽이 됨, 조명이 번쩍번쩍', art: { wood: '#c0c0d0', fx: 'disco' } },
+  { id: 's_rocket', cat: 'stick', name: '로켓 윷', price: null, ach: 'f_speed', desc: '연기를 뿜으며 날아와 쾅', art: { wood: '#e0e0e0', fx: 'rocket' } },
   { id: 's_meteor', cat: 'stick', name: '유성 윷', price: null, ach: 'fourhome', desc: '하늘에서 유성이 쏟아지는 윷', art: { wood: '#5a2d8f', fx: 'meteor' } },
 
   // ---------------- 판 ----------------

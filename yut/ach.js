@@ -30,6 +30,30 @@ const ACH = [
   // 기타
   { id: 'nak20', name: '낙의 달인', desc: '낙 누적 20번 (자랑 아님)', stat: 'naks', goal: 20, reward: { trophy: 2, item: 'p_clown' } },
   { id: 'collector', name: '수집가', desc: '상점에서 파는 아이템 전부 모으기', stat: 'collect', goal: SHOP.BUYABLE.length, reward: { trophy: 10, item: 'p_collector' } },
+
+  // ---------------- 예능 업적 (fun) — 웃기지만 드묾 (시뮬레이션으로 확률 맞춤) ----------------
+  { id: 'f_punchbag', fun: true, name: '동네북', desc: '한 판에서 내 말이 30번 잡히기', stat: 'maxCaughtGame', goal: 30, reward: { trophy: 5, item: 'p_sandbag' } },
+  { id: 'f_nemesis', fun: true, name: '원수가 생겼다', desc: '한 판에서 같은 사람한테 18번 잡히기', stat: 'maxSameHit', goal: 18, reward: { trophy: 4 } },
+  { id: 'f_mukbang', fun: true, name: '먹방 BJ', desc: '한 판에서 혼자 30번 잡기', stat: 'maxCapsGame', goal: 30, reward: { trophy: 6 } },
+  { id: 'f_brawl', fun: true, name: '난타전', desc: '한 판에서 20번 잡고 20번 잡히기', stat: 'brawls', goal: 1, reward: { trophy: 6 } },
+  { id: 'f_revenge', fun: true, name: '복수의 화신', desc: '나를 잡은 사람을 바로 다음 내 차례에 되잡기 300번', stat: 'revenges', goal: 300, reward: { trophy: 8 } },
+  { id: 'f_lost4', fun: true, name: '업고 튀다 객사', desc: '4동 업은 말이 한 번에 몽땅 잡히기', stat: 'lost4', goal: 1, reward: { trophy: 5 } },
+  { id: 'f_almost', fun: true, name: '다 된 밥에 재', desc: '3동 나고 마지막 말이 도착 바로 앞에 있는데 지기', stat: 'almost', goal: 1, reward: { trophy: 5 } },
+  { id: 'f_home', fun: true, name: '집 앞에서 객사', desc: '참먹이(나가기 직전 칸)에서 15번 잡히기', stat: 'caughtAtHome', goal: 15, reward: { trophy: 4 } },
+  { id: 'f_moonwalk', fun: true, name: '문워크', desc: '한 판에서 뒷도 6번', stat: 'maxBackGame', goal: 6, reward: { trophy: 6, item: 's_disco' } },
+  { id: 'f_backshort', fun: true, name: '빽도 지름길', desc: '첫 칸에서 뒷도로 참먹이 간 말이 바로 나가기 5번', stat: 'backShortcut', goal: 5, reward: { trophy: 5 } },
+  { id: 'f_oil', fun: true, name: '손에 참기름', desc: '한 판에서 낙 5번', stat: 'maxNakGame', goal: 5, reward: { trophy: 4 } },
+  { id: 'f_cursed', fun: true, name: '하늘이 버린 손', desc: '낙 3번 연속', stat: 'maxNakRun', goal: 3, reward: { trophy: 10, item: 'p_glitch' } },
+  { id: 'f_heavenhell', fun: true, name: '천당과 지옥', desc: '모 나오고 바로 다음에 낙 5번', stat: 'moNak', goal: 5, reward: { trophy: 5 } },
+  { id: 'f_zero', fun: true, name: '완패 장인', desc: '말 하나도 못 내고 지기 20번', stat: 'zeroLoss', goal: 20, reward: { trophy: 3 } },
+  { id: 'f_bankrupt', fun: true, name: '패가망신', desc: '판돈 1억 · 4인 판에서 5번 지기', stat: 'bigLoss', goal: 5, reward: { trophy: 2 } },
+  { id: 'f_speed', fun: true, name: '속전속결', desc: '10번 이하로 던지고 우승', stat: 'fastWin', goal: 1, reward: { trophy: 12, item: 's_rocket' } },
+  { id: 'f_turtle', fun: true, name: '거북이', desc: '한 판에서 혼자 80번 넘게 던지기', stat: 'maxThrowsGame', goal: 80, reward: { trophy: 4 } },
+  { id: 'f_sleep', fun: true, name: '자는 사이에 우승', desc: '자리비움 상태로 우승', stat: 'afkWin', goal: 1, reward: { trophy: 6, item: 'p_zzz' } },
+  { id: 'f_chatter', fun: true, name: '입으로 윷 던지기', desc: '한 판에서 채팅 100번', stat: 'maxChatsGame', goal: 100, reward: { trophy: 2 } },
+  { id: 'f_charger', fun: true, name: '충전의 신', desc: '충전 누적 30번', stat: 'bailouts', goal: 30, reward: { trophy: 1 } },
+  { id: 'f_pumpkin', fun: true, name: '호박에 갇힘', desc: '호박고누에서 10수 안에 지기', stat: 'gonuQuickLoss', goal: 1, reward: { trophy: 3 } },
+  { id: 'f_pawn', fun: true, name: '자(子)의 반란', desc: '십이장기에서 자(또는 후)로 상대 왕 잡기', stat: 'pawnKing', goal: 1, reward: { trophy: 6 } },
 ];
 const VALUE = {
   win: u => (u.yut && u.yut.win) || 0,
@@ -56,6 +80,6 @@ function check(u) {
 }
 function progress(u) {
   const done = u.achDone || {};
-  return ACH.map(a => ({ id: a.id, name: a.name, desc: a.desc, goal: a.goal, value: Math.min(a.goal, valueOf(u, a)), done: !!done[a.id], at: done[a.id] || 0, reward: a.reward }));
+  return ACH.map(a => ({ id: a.id, fun: !!a.fun, name: a.name, desc: a.desc, goal: a.goal, value: Math.min(a.goal, valueOf(u, a)), done: !!done[a.id], at: done[a.id] || 0, reward: a.reward }));
 }
 module.exports = { ACH, check, progress, st };

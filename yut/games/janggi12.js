@@ -55,6 +55,7 @@ function apply(s, side, m) {
   } else {
     const [c, r] = m.from, [nc, nr] = m.to;
     const p = s.b[r][c], q = s.b[nr][nc];
+    ev.by = p.t;   // 어떤 말로 뒀는지 (업적: 자로 왕 잡기)
     if (q) { ev.captured = q.t; if (q.t === 'K') { s.winner = side; s.reason = '상대 왕을 잡았어요'; } else s.hand[side].push(q.t === 'H' ? 'P' : q.t); }
     s.b[nr][nc] = p; s.b[r][c] = null;
     if (p.t === 'P' && nr === enemyRow(side)) { p.t = 'H'; ev.promote = true; }

@@ -22,6 +22,7 @@
       case 'cloud': return Math.hypot(x - 3.3, y - 7.3) < 2 || Math.hypot(x - 6.2, y - 6.6) < 2.6 || Math.hypot(x - 8.6, y - 7.6) < 1.8;
       case 'bamboo': return ((x === 4 || x === 7) && y > 1 && y < 10) || ((y === 3 || y === 7) && x > 3 && x < 8);
       case 'wave': return ((y + Math.round(Math.sin(x * 0.9) * 1.4)) % 4 === 0);
+      case 'heart': { const X = (x - 5.5) / 3.4, Y = (5.2 - y) / 3.4; return Math.pow(X * X + Y * Y - 1, 3) - X * X * Y * Y * Y < 0; }   // 하트
       case 'tiger': return (x + Math.round(Math.sin(y * 0.8) * 1.2)) % 3 === 0 && d < 4.4;            // 호랑이 줄무늬
       case 'scale': return ((x + (y % 2) * 1.5) % 3 < 1) && y % 2 === 0 && d < 4.4 || (d > 3.6 && d < 4.4); // 용 비늘 + 테
       case 'feather': return Math.abs(dx) < 0.6 || (Math.abs(Math.abs(dx) - (5.5 - y) * 0.55) < 0.7 && y < 9); // 깃털 줄기·가지

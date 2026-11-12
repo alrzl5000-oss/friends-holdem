@@ -95,10 +95,10 @@ function xlUpdate() {
 }
 const avHTML = (art, extra = '', style = '') => `<div class="av ${extra}${art && art.fx ? ' avfx-' + art.fx : ''}" style="${style}">${Art.pieceSVG(art, 40)}</div>`;
 // 말 효과 장식: 효과마다 작은 조각(i) 몇 개 — 모양·움직임은 CSS (.fxw.fx-이름)
-const FX_PARTS = { void: 3, bloom: 0, sunray: 0, moonglow: 3, float: 2, leaf: 3, ripple: 2, roar: 4, lightning: 3, fire: 6, rainbow: 2, gold: 4 };
+const FX_PARTS = { heart: 4, snow: 6, ghost: 3, disco: 6, orbit: 3, sandbag: 2, glitch: 0, zzz: 3, void: 3, bloom: 0, sunray: 0, moonglow: 3, float: 2, leaf: 3, ripple: 2, roar: 4, lightning: 3, fire: 6, rainbow: 2, gold: 4 };
 const fxDeco = fx => (fx ? `<span class="fxw fx-${fx}">${Array.from({ length: FX_PARTS[fx] || 0 }, (_, k) => `<i style="--k:${k}"></i>`).join('')}</span>` : '');
 // 윷 효과 미리보기용 조각
-const SFX_PARTS = { meteor: 4, chips: 4, leaf: 4, jade: 3, flame: 6, thunder: 2, petals: 6, gold: 5 };
+const SFX_PARTS = { bubble: 5, snow: 6, ink: 3, confetti: 6, disco: 4, rocket: 3, meteor: 4, chips: 4, leaf: 4, jade: 3, flame: 6, thunder: 2, petals: 6, gold: 5 };
 const sfxDeco = fx => (fx ? `<span class="sfxw sfx-${fx}">${Array.from({ length: SFX_PARTS[fx] || 0 }, (_, k) => `<i style="--k:${k}"></i>`).join('')}</span>` : '');
 // 상점 등급
 const tierOf = price => price == null ? ['ach', '업적'] : price >= 50 ? ['legend', '전설'] : price >= 25 ? ['hero', '영웅'] : price >= 10 ? ['rare', '희귀'] : price > 0 ? ['normal', '일반'] : ['basic', '기본'];
@@ -316,13 +316,14 @@ function renderProfile() {
   const list = me.ach || [], doneN = list.filter(a => a.done).length;
   const rw = r => [r.trophy ? `🏆 ${r.trophy}` : '', r.item ? `🎁 ${esc((ITEM(r.item) || {}).name || r.item)}` : ''].filter(Boolean).join(' + ');
   const fmt = (v, g) => g >= 1e8 ? `${won(v).replace('원', '')} / ${won(g).replace('원', '')}` : `${v.toLocaleString('ko-KR')} / ${g.toLocaleString('ko-KR')}`;
-  $('tab-profile').insertAdjacentHTML('beforeend', `<div class="ach-head">🏅 업적 <b>${doneN}</b> / ${list.length}</div>
-    <div class="ach-list">${list.slice().sort((a, b) => (a.done === b.done ? b.value / b.goal - a.value / a.goal : a.done ? 1 : -1)).map(a => `
-      <div class="ach${a.done ? ' done' : ''}${a.reward.item ? ' has-item' : ''}">
-        <div class="ach-ic">${a.done ? '🏅' : a.reward.item ? '🎁' : '🔒'}</div>
+  const section = (title, arr) => `<div class="ach-head">${title} <b>${arr.filter(a => a.done).length}</b> / ${arr.length}</div>
+    <div class="ach-list">${arr.slice().sort((a, b) => (a.done === b.done ? b.value / b.goal - a.value / a.goal : a.done ? 1 : -1)).map(a => `
+      <div class="ach${a.done ? ' done' : ''}${a.reward.item ? ' has-item' : ''}${a.fun ? ' fun' : ''}">
+        <div class="ach-ic">${a.done ? (a.fun ? '🤡' : '🏅') : a.reward.item ? '🎁' : '🔒'}</div>
         <div class="ach-body"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span>
           <div class="ach-bar"><i style="width:${Math.min(100, a.value / a.goal * 100)}%"></i></div>
-          <small>${a.done ? '달성 완료' : fmt(a.value, a.goal)} · 보상 ${rw(a.reward)}</small></div></div>`).join('')}</div>`);
+          <small>${a.done ? '달성 완료' : fmt(a.value, a.goal)} · 보상 ${rw(a.reward)}</small></div></div>`).join('')}</div>`;
+  $('tab-profile').insertAdjacentHTML('beforeend', section('🏅 업적', list.filter(a => !a.fun)) + section('🤡 예능 업적', list.filter(a => a.fun)));
 }
 
 // ---------- 게임 ----------
@@ -645,23 +646,29 @@ function showToss(v) {
 
 // 윷 효과: 던지는 동안 깔리는 분위기(tossAmbient) + 가락이 떨어질 때 튀는 것(landFx)
 function tossAmbient(fx) {
-  const n = { meteor: 9, petals: 18, flame: 10, leaf: 10, gold: 10, thunder: 0, jade: 8, chips: 0 }[fx] || 0;
-  const pick = { meteor: ['☄️'], petals: ['🌸', '🌸', '💮'], leaf: ['🍃', '🌿'], gold: ['✦', '🪙'], flame: [''], jade: [''] }[fx] || [''];
+  const n = { bubble: 12, snow: 22, ink: 0, confetti: 0, disco: 0, rocket: 0, meteor: 9, petals: 18, flame: 10, leaf: 10, gold: 10, thunder: 0, jade: 8, chips: 0 }[fx] || 0;
+  const pick = { bubble: ['🫧'], snow: ['❄', '❅', '❆'], meteor: ['☄️'], petals: ['🌸', '🌸', '💮'], leaf: ['🍃', '🌿'], gold: ['✦', '🪙'], flame: [''], jade: [''] }[fx] || [''];
   let h = Array.from({ length: n }, (_, i) => `<i class="amb amb-${fx}" style="left:${(i * 53 + 7) % 96}%;animation-delay:${(i % 7) * .12}s;animation-duration:${1.4 + (i % 5) * .25}s">${pick[i % pick.length]}</i>`).join('');
   if (fx === 'meteor') h += '<i class="flash meteor"></i>';
+  if (fx === 'disco') h += '<i class="disco-floor"></i>' + [0, 1, 2, 3].map(i => `<i class="beam" style="--h:${i * 90}deg;animation-delay:${i * -.4}s"></i>`).join('');
+  if (fx === 'rocket') h += '<i class="smoke-sky"></i>';
   if (fx === 'thunder') h += '<i class="flash"></i>' + [22, 50, 78].map((x, i) => `<svg class="bolt" style="left:${x}%;animation-delay:${.62 + i * .05}s" viewBox="0 0 20 100"><path d="M12 0 L4 44 L11 44 L3 100 L17 38 L10 38 L16 0Z"/></svg>`).join('');
   return h;
 }
 function landFx(t, fx, s) {
-  const conf = { meteor: ['#c49bff', 10, '✦'], chips: ['#8a5a32', 7, '▪'], leaf: ['#5fbf4a', 6, '🍃'], jade: ['#4fe3c8', 8, '✦'], flame: ['#ff7a1a', 9, '●'], thunder: ['#9fd3ff', 8, '⚡'], petals: ['#ff9ec4', 7, '🌸'], gold: ['#ffd36a', 9, '🪙'] }[fx];
+  const conf = { bubble: ['#bfefff', 6, '🫧'], snow: ['#e8f6ff', 9, '❄'], ink: ['#111', 7, '●'], confetti: ['', 16, ''], disco: ['#fff', 7, '✦'], rocket: ['#ff9a3c', 6, '💥'], meteor: ['#c49bff', 10, '✦'], chips: ['#8a5a32', 7, '▪'], leaf: ['#5fbf4a', 6, '🍃'], jade: ['#4fe3c8', 8, '✦'], flame: ['#ff7a1a', 9, '●'], thunder: ['#9fd3ff', 8, '⚡'], petals: ['#ff9ec4', 7, '🌸'], gold: ['#ffd36a', 9, '🪙'] }[fx];
   if (!conf) return;
   const [col, n, ch] = conf;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + Math.random() * .5, d = 18 + Math.random() * 26;
     const e = document.createElement('i'); e.className = 'land land-' + fx; e.textContent = ch;
-    e.style.cssText = `left:${s.x}%;top:${s.y}%;color:${col};--tx:${Math.cos(a) * d}px;--ty:${Math.sin(a) * d - 10}px`;
+    const c = fx === 'confetti' ? ['#ff4d6d', '#ffd23f', '#3ddc84', '#2f9bff', '#c86bff'][i % 5] : col;
+    e.style.cssText = `left:${s.x}%;top:${s.y}%;color:${c};background:${fx === 'confetti' ? c : 'none'};--tx:${Math.cos(a) * d * (fx === 'confetti' ? 1.6 : 1)}px;--ty:${Math.sin(a) * d - (fx === 'confetti' ? 30 : 10)}px;--r:${Math.round(Math.random() * 720)}deg`;
     t.appendChild(e);
   }
+  // 특수: 먹물 얼룩 · 로켓 연기
+  if (fx === 'ink') { const sp = document.createElement('i'); sp.className = 'ink-splat'; sp.style.cssText = `left:${s.x}%;top:${s.y}%;--r:${Math.round(Math.random() * 360)}deg`; t.appendChild(sp); }
+  if (fx === 'rocket') { const sm = document.createElement('i'); sm.className = 'smoke'; sm.style.cssText = `left:${s.x}%;top:${s.y}%`; t.appendChild(sm); }
 }
 
 function showBanner(v) {

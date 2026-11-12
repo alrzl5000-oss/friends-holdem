@@ -87,6 +87,11 @@ function finish(R, winSide, reason) {
       const S = (u.st = u.st || {});
       if (R.type === 'gonu') S.gonuWin = (S.gonuWin || 0) + 1;
       if (R.type === 'j12') { S.j12Win = (S.j12Win || 0) + 1; if (/버텼/.test(reason)) S.j12Try = (S.j12Try || 0) + 1; }
+      const ev = (R.state && R.state.last && R.state.last.ev) || {};
+      if (R.type === 'j12' && ev.captured === 'K' && (ev.by === 'P' || ev.by === 'H')) S.pawnKing = (S.pawnKing || 0) + 1;   // 자(子)의 반란
+    }
+    if (winSide != null && i !== winSide && R.type === 'gonu' && R.state && R.state.ply <= 10) {   // 호박에 갇힘: 10수 안에 짐
+      const S = (u.st = u.st || {}); S.gonuQuickLoss = (S.gonuQuickLoss || 0) + 1;
     }
     userRoom.delete(id); notifyFn(id, 'me');
   });
