@@ -244,7 +244,7 @@ function armTimer(g) {
         g.chat.push({ name: '📢', text: `${g.names[id]} 님이 자리비움 상태가 됐어요 (자동으로 진행해요)` });
       }
     }
-    if (g.phase === 'throw') throwAct(g);
+    if (g.phase === 'throw') throwAct(g, true);
     else if (g.options.length) applyOption(g, g.options[0].id);
   }, wait);
 }
@@ -370,7 +370,7 @@ function applyOption(g, optId) {
   push(g);
   return { ok: true };
 }
-function throwAct(g) {
+function throwAct(g, auto = false) {
   if (g.phase !== 'throw') return { error: '던질 차례가 아니에요' };
   const id = g.players[g.turn];
   g.last = { ...throwYut(), by: id };
@@ -387,6 +387,8 @@ function throwAct(g) {
     if (g.last.nak) { me.nak++; if (me.prevThrow === '모') inc(S, 'moNak'); }   // 천당과 지옥: 모 바로 다음 낙
     me.prevThrow = nm; }
   g.seq = (g.seq || 0) + 1;
+  // 확인용 기록 (Railway 로그): 판·순번·누가·결과·윷가락 앞뒤·자동 여부
+  console.log(`[THROW] ${JSON.stringify({ code: g.code, seq: g.seq, by: g.names[id], r: g.last.name, bits: g.last.bits.join(''), auto, t: Date.now() })}`);
   g.chat.push({ name: '🎲', text: `${g.names[id]} : ${g.last.name}` });
   if (g.last.nak) {   // 낙: 움직이지 않고 이번 던지기는 무효
     g.options = []; g.move = null;
@@ -500,6 +502,7 @@ function yutAct(u, op, arg) {
     g.pos = {};
     for (const id of g.players) g.pos[id] = [START_P(), START_P(), START_P(), START_P()];
     g.chat.push({ name: '📢', text: '게임 시작!' });
+    console.log(`[START] ${JSON.stringify({ code: g.code, players: g.players.map(x => g.names[x]), t: Date.now() })}`);
     armTimer(g); pushList(); push(g);
     return { ok: true };
   }
