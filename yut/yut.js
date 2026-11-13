@@ -260,6 +260,7 @@ function finish(g, winner) {
     // 업적 기록: 연승 · 무혈입성 · 역전 · 큰손
     const S = (u.st = u.st || {});
     if (id === winner) {
+      S.prize = (S.prize || 0) + pot;   // 누적 상금 (받은 판돈 전체)
       S.streak = (S.streak || 0) + 1; S.bestStreak = Math.max(S.bestStreak || 0, S.streak);
       if (g.players.length >= 3 && !(g.hit && g.hit[id])) S.flawless4 = (S.flawless4 || 0) + 1;
       if (g.cb && g.cb[id]) S.comebacks = (S.comebacks || 0) + 1;

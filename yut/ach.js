@@ -22,7 +22,7 @@ const ACH = [
   { id: 'flawless', name: '무혈입성', desc: '3인 이상 판에서 내 말이 한 번도 안 잡히고 우승', stat: 'flawless4', goal: 1, reward: { trophy: 12, item: 'tr_petal' } },
   { id: 'comeback', name: '기적의 역전', desc: '상대가 3동 났을 때 나는 0동이었다가 우승', stat: 'comebacks', goal: 1, reward: { trophy: 15, item: 'tr_fire' } },
   { id: 'highroller', name: '큰손', desc: '판돈 1억 · 3인 이상 판에서 우승', stat: 'bigWins', goal: 1, reward: { trophy: 8, item: 'b_royal' } },
-  { id: 'rich', name: '재벌', desc: '현금 100억 모으기', stat: 'maxCash', goal: 1e10, reward: { trophy: 15, item: 'tr_coin' } },
+  { id: 'rich', name: '재벌', desc: '누적 상금 100억 (윷놀이·미니게임에서 이겨서 받은 판돈 합계)', stat: 'prize', goal: 1e10, reward: { trophy: 15, item: 'tr_coin' } },
   // 미니게임
   { id: 'gonu20', name: '호박 장인', desc: '호박고누 20승', stat: 'gonuWin', goal: 20, reward: { trophy: 8, item: 'b_jade' } },
   { id: 'j12_20', name: '십이장기 국수', desc: '십이장기 20승', stat: 'j12Win', goal: 20, reward: { trophy: 8, item: 'b_ink' } },
@@ -36,7 +36,7 @@ const ACH = [
   { id: 'four3', name: '네 동 세 번', desc: '말 4개를 업어서 한 번에 내보내기 3번', stat: 'fourHome', goal: 3, reward: { trophy: 20, item: 'fr_sun' } },
   { id: 'gonu50', name: '호박 대감', desc: '호박고누 50승', stat: 'gonuWin', goal: 50, reward: { trophy: 12, item: 'nc_pumpkin' } },
   { id: 'j12_50', name: '십이장기 명인', desc: '십이장기 50승', stat: 'j12Win', goal: 50, reward: { trophy: 12, item: 'fr_jang' } },
-  { id: 'rich2', name: '갑부', desc: '현금 30억 모으기', stat: 'maxCash', goal: 3e9, reward: { trophy: 10, item: 'nc_tycoon' } },
+  { id: 'rich2', name: '갑부', desc: '누적 상금 30억 (윷놀이·미니게임에서 이겨서 받은 판돈 합계)', stat: 'prize', goal: 3e9, reward: { trophy: 10, item: 'nc_tycoon' } },
   { id: 'collector', name: '수집가', desc: '상점에서 파는 아이템 전부 모으기', stat: 'collect', goal: SHOP.BUYABLE.length, reward: { trophy: 10, item: 'p_collector' } },
 
   // ---------------- 예능 업적 (fun) — 웃기지만 드묾 (시뮬레이션으로 확률 맞춤) ----------------
