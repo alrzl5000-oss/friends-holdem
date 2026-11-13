@@ -25,6 +25,16 @@ if (data.resetId !== RESET_ID) {
 }
 const byId = new Map();
 for (const u of Object.values(data.users)) byId.set(u.id, u);
+// 한 번만 지급: 운영자가 확인한 업적 기록 (보상은 다음 접속 때 업적 확인으로 지급)
+data.grants = data.grants || [];
+for (const [gid, name, stat] of [['grant-2026-11-13-flawless-모잡이백수', '모잡이백수', 'flawless4']]) {
+  if (data.grants.includes(gid)) continue;
+  const u = Object.values(data.users).find(x => x.username === name);
+  if (!u) continue;
+  u.st = u.st || {}; u.st[stat] = Math.max(u.st[stat] || 0, 1);
+  data.grants.push(gid);
+  console.log(`업적 기록 지급: ${name} ${stat}`);
+}
 // 서버가 다시 켜졌을 때 되살리지 못한 판의 판돈은 돌려줌 (activeIds: 복원된 판의 참가자)
 function refundOrphans(activeIds) {
   const keep = new Set(activeIds || []);

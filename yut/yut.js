@@ -261,9 +261,9 @@ function finish(g, winner) {
     const S = (u.st = u.st || {});
     if (id === winner) {
       S.streak = (S.streak || 0) + 1; S.bestStreak = Math.max(S.bestStreak || 0, S.streak);
-      if (g.players.length === 4 && !(g.hit && g.hit[id])) S.flawless4 = (S.flawless4 || 0) + 1;
+      if (g.players.length >= 3 && !(g.hit && g.hit[id])) S.flawless4 = (S.flawless4 || 0) + 1;
       if (g.cb && g.cb[id]) S.comebacks = (S.comebacks || 0) + 1;
-      if (g.bet >= 1e8 && g.players.length === 4) S.bigWins = (S.bigWins || 0) + 1;
+      if (g.bet >= 1e8 && g.players.length >= 3) S.bigWins = (S.bigWins || 0) + 1;
     } else S.streak = 0;
     const me = GS(g, id), done = g.pos[id].filter(isDone).length;
     maxTo(S, 'maxCaughtGame', me.caught); maxTo(S, 'maxCapsGame', me.caps); maxTo(S, 'maxBackGame', me.back);
@@ -275,7 +275,7 @@ function finish(g, winner) {
       if (g.afk && g.afk[id]) inc(S, 'afkWin');
     } else {
       if (done === 0) inc(S, 'zeroLoss');
-      if (g.bet >= 1e8 && g.players.length === 4) inc(S, 'bigLoss');
+      if (g.bet >= 1e8 && g.players.length >= 3) inc(S, 'bigLoss');
       const rest = g.pos[id].find(q => !isDone(q));
       if (done === 3 && rest && ['R20', 'R19', 'E2'].includes(nodeOf(rest))) inc(S, 'almost');   // 다 된 밥에 재
     }
