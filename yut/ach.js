@@ -36,7 +36,7 @@ const ACH = [
   { id: 'four3', name: '네 동 세 번', desc: '말 4개를 업어서 한 번에 내보내기 3번', stat: 'fourHome', goal: 3, reward: { trophy: 20, item: 'fr_sun' } },
   { id: 'gonu50', name: '호박 대감', desc: '호박고누 50승', stat: 'gonuWin', goal: 50, reward: { trophy: 12, item: 'nc_pumpkin' } },
   { id: 'j12_50', name: '십이장기 명인', desc: '십이장기 50승', stat: 'j12Win', goal: 50, reward: { trophy: 12, item: 'fr_jang' } },
-  { id: 'rich2', name: '갑부', desc: '현금 1,000억 모으기', stat: 'maxCash', goal: 1e11, reward: { trophy: 25, item: 'nc_tycoon' } },
+  { id: 'rich2', name: '갑부', desc: '현금 30억 모으기', stat: 'maxCash', goal: 3e9, reward: { trophy: 10, item: 'nc_tycoon' } },
   { id: 'collector', name: '수집가', desc: '상점에서 파는 아이템 전부 모으기', stat: 'collect', goal: SHOP.BUYABLE.length, reward: { trophy: 10, item: 'p_collector' } },
 
   // ---------------- 예능 업적 (fun) — 웃기지만 드묾 (시뮬레이션으로 확률 맞춤) ----------------
