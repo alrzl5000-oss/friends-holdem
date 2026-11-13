@@ -54,6 +54,97 @@
     return `<svg class="pc" width="${px}" height="${px}" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">${cellRects(art)}</svg>`;
   }
 
+  // ---------- 말 테두리 (도트) ----------
+  // 20×20 격자. 가운데 4~15 칸(지름 12)이 말 자리, 그 바깥에 모양을 찍는다.
+  // 움직이는 부분은 <g class="..."> 로 묶어 CSS 로 흔든다.
+  function frameSVG(kind) {
+    const G = {}, put = (g, x, y, c) => { if (x >= 0 && x < 20 && y >= 0 && y < 20) (G[g] = G[g] || []).push([x, y, c]); };
+    const C = 9.5;
+    for (let y = 0; y < 20; y++) for (let x = 0; x < 20; x++) {
+      const dx = x - C, dy = y - C, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx), m = Math.max(Math.abs(dx), Math.abs(dy));
+      switch (kind) {
+        case 'stone': if (m >= 6.5 && m < 9) {   // 돌담: 벽돌 쌓기
+          const mortar = y % 2 === 0 ? (x % 4 === 0) : (x % 4 === 2);
+          put('f', x, y, mortar ? '#3b3530' : ((x * 7 + y * 3) % 5 < 2 ? '#9a938a' : '#7b746b'));
+        } break;
+        case 'flower': for (let k = 0; k < 8; k++) {   // 꽃잎 8장
+          const pa = k * Math.PI / 4, px = C + Math.cos(pa) * 7.7, py = C + Math.sin(pa) * 7.7, q = Math.hypot(x - px, y - py);
+          if (q < 0.8) put('f', x, y, '#ffe14d'); else if (q < 1.6) put('f', x, y, '#ff9cc4'); else if (q < 2.1 && d > 6.3) put('f', x, y, '#d94a85');
+        } break;
+        case 'crown':
+          if (d >= 6.3 && d < 7.1 && y > 4) put('f', x, y, '#d9a21f');
+          if (x >= 5 && x <= 14) {
+            const spike = (x <= 6 && y >= 1) || (x >= 9 && x <= 10 && y >= 0) || (x >= 13 && y >= 1) || (y >= 2 && y <= 4);
+            if (y <= 4 && spike) put('f', x, y, (y === 4 || x === 5 || x === 14) ? '#a0700a' : '#f6d25a');
+          }
+          [[6, 1, '#2f7cf6'], [9, 0, '#e5484d'], [10, 0, '#e5484d'], [13, 1, '#2f7cf6'], [7, 3, '#3ddc84'], [12, 3, '#3ddc84'], [9, 3, '#fff'], [10, 3, '#fff']].forEach(([gx, gy, c]) => x === gx && y === gy && put('j', x, y, c));
+          break;
+        case 'wing': {   // 천사 날개 + 머리 위 고리
+          const rows = { 5: [2, 4], 6: [1, 4], 7: [0, 4], 8: [0, 4], 9: [0, 4], 10: [1, 4], 11: [2, 4], 12: [3, 4] };
+          const r = rows[y];
+          if (r && x >= r[0] && x <= r[1]) put('wl', x, y, (x + y) % 3 === 0 ? '#c9d6f2' : '#ffffff');
+          if (r && 19 - x >= r[0] && 19 - x <= r[1]) put('wr', x, y, (19 - x + y) % 3 === 0 ? '#c9d6f2' : '#ffffff');
+          const h = Math.hypot((x - C) / 4.2, (y - 1) / 1.2);
+          if (y <= 2 && h > .62 && h < 1.12) put('h', x, y, '#ffe680');
+        } break;
+        case 'devil': {
+          const horn = [[6, 4], [5, 4], [5, 3], [4, 3], [4, 2], [3, 1], [3, 0]];
+          horn.forEach(([hx, hy]) => { if (x === hx && y === hy) put('f', x, y, hy <= 1 ? '#ff6a6a' : '#b0202f'); if (x === 19 - hx && y === hy) put('f', x, y, hy <= 1 ? '#ff6a6a' : '#b0202f'); });
+          [[15, 15], [16, 16], [17, 16], [18, 15], [18, 14], [17, 13], [18, 12], [19, 13], [19, 12]].forEach(([tx, ty], i) => x === tx && y === ty && put('t', x, y, i >= 5 ? '#ff3030' : '#8a1020'));
+        } break;
+        case 'cat': {
+          const ear = (ex, flip) => { const lx = flip ? 19 - x : x; const yy = y - 1; if (yy >= 0 && yy <= 3 && lx >= ex && lx <= ex + yy) put('f', x, y, (lx > ex && lx < ex + yy && yy >= 2) ? '#ffb3c6' : '#3a2a1e'); };
+          ear(4, false); ear(4, true);
+          if ((y === 10 || y === 12) && (x <= 2 || x >= 17)) put('w', x, y, '#f4f4f4');
+        } break;
+        case 'laurel':
+          if (d >= 6.4 && d < 8.8 && !(dy < -6 && Math.abs(dx) < 3)) {
+            const leaf = Math.sin(a * 9) > 0.15 ? (d < 7.6) : (d >= 7.6);
+            if (leaf) put('f', x, y, Math.sin(a * 9) > 0.6 ? '#7fbf4d' : '#3e7d2a');
+          }
+          if ((y === 17 || y === 18) && x >= 8 && x <= 11) put('f', x, y, '#c0303f');
+          break;
+        case 'thorn':
+          if (d >= 6.4 && d < 7.3) put('f', x, y, (x + y) % 4 === 0 ? '#4a7a2a' : '#2a4f1d');
+          for (let k = 0; k < 12; k++) { const ta = k * Math.PI / 6 + .2; if (Math.round(C + Math.cos(ta) * 8.2) === x && Math.round(C + Math.sin(ta) * 8.2) === y) put('f', x, y, '#9a1a1a'); if (Math.round(C + Math.cos(ta) * 9.1) === x && Math.round(C + Math.sin(ta) * 9.1) === y) put('f', x, y, '#d84040'); }
+          break;
+        case 'star': {   // 큰 오각별
+          const t = ((a + Math.PI / 2) % (2 * Math.PI / 5) + 2 * Math.PI / 5) % (2 * Math.PI / 5), f = Math.abs(t - Math.PI / 5) / (Math.PI / 5);
+          const rr = 6.9 + 3.1 * f * f;
+          if (d > 6.2 && d < rr) put('s', x, y, d > rr - 1.1 ? '#e08a00' : '#ffe14d');
+        } break;
+        case 'ice':
+          for (let k = 0; k < 8; k++) {
+            const ia = k * Math.PI / 4, along = dx * Math.cos(ia) + dy * Math.sin(ia), side = Math.abs(-dx * Math.sin(ia) + dy * Math.cos(ia));
+            if (along > 6.1 && along < 9.8 && side < .75) put('f', x, y, along > 8.6 ? '#ffffff' : '#9fdcff');
+            if (along > 7.4 && along < 8.8 && Math.abs(side - (along - 7.4)) < .6 && k % 2 === 0) put('f', x, y, '#d8f2ff');
+          }
+          break;
+        case 'skull':
+          if (d >= 6.3 && d < 7) put('f', x, y, '#cfc6b0');
+          for (let k = 0; k < 8; k++) {
+            const cx = Math.round(C + Math.cos(k * Math.PI / 4) * 8.2), cy = Math.round(C + Math.sin(k * Math.PI / 4) * 8.2), ox = x - cx, oy = y - cy;
+            if (Math.abs(ox) <= 1 && oy >= -1 && oy <= 1) put('f', x, y, oy === 0 && ox !== 0 ? '#111' : oy === 1 && ox === 0 ? '#555' : '#f4efe2');
+          }
+          break;
+        case 'sun': for (let k = 0; k < 12; k++) {
+          const ia = k * Math.PI / 6, along = dx * Math.cos(ia) + dy * Math.sin(ia), side = Math.abs(-dx * Math.sin(ia) + dy * Math.cos(ia));
+          if (along > 6 && along < 10 && side < (10 - along) * .42) put('s', x, y, along < 7.4 ? '#ffe14d' : along < 8.6 ? '#ffa62b' : '#e8590c');
+        } break;
+        case 'jang': {   // 팔각 장기알
+          const oct = Math.abs(dx) + Math.abs(dy);
+          if (oct <= 12.2 && m <= 8.7 && (oct > 10.2 || m > 7.2)) put('f', x, y, (oct > 11.4 || m > 8.1) ? '#7a4a1e' : '#e3b46e');
+        } break;
+        case 'fire': for (const [g, ph] of [['fa', 0], ['fb', 1.3]]) {   // 두 장을 번갈아 보여 일렁이게
+          const top = 6.6 + 2.6 * Math.abs(Math.sin(a * 4 + ph)) + (dy < 0 ? 0.6 : 0);
+          if (d > 6.1 && d < top) put(g, x, y, d < 7.2 ? '#ffe14d' : d < 8.2 ? '#ff9000' : '#ff3a00');
+        } break;
+      }
+    }
+    const rect = ([x, y, c]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;
+    return `<svg class="frm fr-${kind}" viewBox="0 0 20 20" shape-rendering="crispEdges" aria-hidden="true">${Object.entries(G).map(([g, cells]) => `<g class="g-${g}">${cells.map(rect).join('')}</g>`).join('')}</svg>`;
+  }
+
   // ---------- 윷가락 ----------
   // 배(평평한 면): 밝은 속살·나뭇결·모서리 광택. 등(둥근 면): 원통 음영·옹이·껍질 결.
   // marked=true 인 가락은 배에 X 표시 — 이 가락 하나만 배가 보이면 뒷도.
@@ -264,5 +355,5 @@
     return `<svg class="board" viewBox="0 0 100 100" role="img" aria-label="윷판"><defs>${defs}</defs>${frame}${lines}${nodes}${seal}<g class="routes">${paths}</g><g class="targets">${targets}</g></svg>`;
   }
 
-  window.Art = { optColor, pieceSVG, pieceCells, stickEl, stickFace, boardSVG, pathOf, THEMES, XY, mix, dark, light };
+  window.Art = { optColor, frameSVG, pieceSVG, pieceCells, stickEl, stickFace, boardSVG, pathOf, THEMES, XY, mix, dark, light };
 })();

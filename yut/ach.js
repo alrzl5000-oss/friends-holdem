@@ -29,6 +29,14 @@ const ACH = [
   { id: 'j12try', name: '입궁', desc: '십이장기에서 왕 입궁으로 5번 이기기', stat: 'j12Try', goal: 5, reward: { trophy: 6, item: 'b_autumn' } },
   // 기타
   { id: 'nak20', name: '낙의 달인', desc: '낙 누적 20번 (자랑 아님)', stat: 'naks', goal: 20, reward: { trophy: 2, item: 'p_clown' } },
+  { id: 'games300', name: '윷판 지박령', desc: '윷놀이 300판 하기', stat: 'games', goal: 300, reward: { trophy: 10, item: 'nc_scroll' } },
+  { id: 'cap1000', name: '도살자', desc: '상대 말 누적 1,000개 잡기', stat: 'captures', goal: 1000, reward: { trophy: 12, item: 'fr_skull' } },
+  { id: 'mo100', name: '모 수집가', desc: '모 누적 100번 던지기', stat: 'moTotal', goal: 100, reward: { trophy: 8, item: 'tr_clover' } },
+  { id: 'yut300', name: '윷 장인', desc: '윷 누적 300번 던지기', stat: 'yutTotal', goal: 300, reward: { trophy: 8, item: 'pet_cow' } },
+  { id: 'four3', name: '네 동 세 번', desc: '말 4개를 업어서 한 번에 내보내기 3번', stat: 'fourHome', goal: 3, reward: { trophy: 20, item: 'fr_sun' } },
+  { id: 'gonu50', name: '호박 대감', desc: '호박고누 50승', stat: 'gonuWin', goal: 50, reward: { trophy: 12, item: 'nc_pumpkin' } },
+  { id: 'j12_50', name: '십이장기 명인', desc: '십이장기 50승', stat: 'j12Win', goal: 50, reward: { trophy: 12, item: 'fr_jang' } },
+  { id: 'rich2', name: '갑부', desc: '현금 1,000억 모으기', stat: 'maxCash', goal: 1e11, reward: { trophy: 25, item: 'nc_tycoon' } },
   { id: 'collector', name: '수집가', desc: '상점에서 파는 아이템 전부 모으기', stat: 'collect', goal: SHOP.BUYABLE.length, reward: { trophy: 10, item: 'p_collector' } },
 
   // ---------------- 예능 업적 (fun) — 웃기지만 드묾 (시뮬레이션으로 확률 맞춤) ----------------
@@ -54,8 +62,13 @@ const ACH = [
   { id: 'f_charger', fun: true, name: '충전의 신', desc: '충전 누적 30번', stat: 'bailouts', goal: 30, reward: { trophy: 1, item: 'pet_pig' } },
   { id: 'f_pumpkin', fun: true, name: '호박에 갇힘', desc: '호박고누에서 10수 안에 지기', stat: 'gonuQuickLoss', goal: 1, reward: { trophy: 3, item: 'p_pumpkin' } },
   { id: 'f_pawn', fun: true, name: '자(子)의 반란', desc: '십이장기에서 자(또는 후)로 상대 왕 잡기', stat: 'pawnKing', goal: 1, reward: { trophy: 6, item: 'p_pawn' } },
+  { id: 'f_plain', fun: true, name: '노잼 우승', desc: '윷·모 한 번도 없이 우승 3번', stat: 'plainWin', goal: 3, reward: { trophy: 6, item: 'pet_sloth' } },
+  { id: 'f_nakwin', fun: true, name: '미끄러져도 1등', desc: '한 판에서 낙 3번 하고도 우승', stat: 'nakWin', goal: 1, reward: { trophy: 6, item: 'tr_banana' } },
+  { id: 'f_shrimp', fun: true, name: '뒷걸음질 사냥꾼', desc: '한 판에서 뒷도로 3번 잡기', stat: 'maxBackCapsGame', goal: 3, reward: { trophy: 8, item: 'pet_shrimp' } },
 ];
 const VALUE = {
+  moTotal: u => (u.throws && u.throws['모']) || 0,
+  yutTotal: u => (u.throws && u.throws['윷']) || 0,
   win: u => (u.yut && u.yut.win) || 0,
   games: u => (u.yut && u.yut.games) || 0,
   maxCash: u => Math.max((u.st && u.st.maxCash) || 0, u.assets || 0),

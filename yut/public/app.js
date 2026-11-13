@@ -36,7 +36,7 @@ const EQ0 = { piece: 'p_basic', stick: 's_basic', board: 'b_hanji', trail: 'tr_n
 const eqOf = e => Object.assign({}, EQ0, e || {});
 // 펫(말 옆에 따라다님) · 말 테두리 · 이름표
 const petHTML = id => { const a = artOf(id) || {}; return a.em ? `<i class="pet pm-${a.move || 'hop'}${a.glow ? ' pet-glow' : ''}">${a.em}</i>` : ''; };
-const frameHTML = id => { const a = artOf(id) || {}; return a.fr ? `<i class="frm fr-${a.fr}"></i>` : ''; };
+const frameHTML = id => { const a = artOf(id) || {}; return a.fr ? Art.frameSVG(a.fr) : ''; };
 const cardCls = id => { const a = artOf(id) || {}; return a.nc ? ` nc nc-${a.nc}` : ''; };
 const ncDeco = id => { const a = artOf(id) || {}; return a.nc ? `<span class="ncw">${Array.from({ length: 5 }, (_, k) => `<i style="--k:${k}"></i>`).join('')}</span>` : ''; };
 const colorVars = c => `--c:${c};--cl:${Art.light(c, .45)};--cd:${Art.dark(c, .45)}`;

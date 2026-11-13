@@ -1101,24 +1101,27 @@ body.excel .ink-splat, body.excel .disco-floor, body.excel .beam, body.excel .sm
 .pet-prev .pet { font-size: 22px; right: -18px; bottom: 6px; }
 .pet-prev .pet.pm-fly { bottom: 26px; }
 
-/* ================= 말 테두리 ================= */
-.frm { position: absolute; inset: -13%; border-radius: 50%; z-index: 0; pointer-events: none; }
-.frm.fr-silver { border: 2.5px solid #e6e9ee; box-shadow: 0 0 0 1px #8a9099, inset 0 0 0 1px #8a9099, 0 0 6px rgba(255,255,255,.5); }
-.frm.fr-gold { border: 3px solid #f2c94c; box-shadow: 0 0 0 1px #8a6a10, inset 0 0 0 1px #fff2b0, 0 0 10px rgba(242,201,76,.8); animation: frGold 2.4s linear infinite; }
-@keyframes frGold { 50% { box-shadow: 0 0 0 1px #8a6a10, inset 0 0 0 1px #fff2b0, 0 0 18px rgba(255,220,110,1); } }
-.frm.fr-ice { border: 3px solid #bfeaff; box-shadow: 0 0 10px #7fd3ff, inset 0 0 6px #fff;
-  background: conic-gradient(from 0deg, transparent 0 20deg, rgba(255,255,255,.7) 22deg 26deg, transparent 28deg 110deg, rgba(255,255,255,.7) 112deg 116deg, transparent 118deg 220deg, rgba(255,255,255,.7) 222deg 226deg, transparent 228deg);
-  -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%); mask: radial-gradient(circle, transparent 62%, #000 64%); }
-.frm.fr-neon { border: 2.5px solid #39ffb6; box-shadow: 0 0 6px #39ffb6, 0 0 14px #39ffb6, inset 0 0 6px #39ffb6; animation: frNeon 1s ease-in-out infinite; }
-@keyframes frNeon { 50% { border-color: #ff3dd6; box-shadow: 0 0 8px #ff3dd6, 0 0 20px #ff3dd6, inset 0 0 8px #ff3dd6; } }
-.frm.fr-fire { inset: -20%; background: conic-gradient(#ff3a00, #ffb300, #ff5a00, #ffe14d, #ff3a00, #ff9000, #ff3a00);
-  -webkit-mask: radial-gradient(circle, transparent 56%, #000 60%, transparent 72%); mask: radial-gradient(circle, transparent 56%, #000 60%, transparent 72%);
-  filter: blur(.6px) drop-shadow(0 0 6px #ff6a00); animation: fxSpin 1.2s linear infinite, frFlick .25s steps(2) infinite alternate; }
-@keyframes frFlick { to { opacity: .8; transform: scale(1.06) rotate(20deg); } }
-.frm.fr-rainbow { inset: -16%; background: conic-gradient(#ff4d6d, #ffa62b, #ffe14d, #3ddc84, #2f9bff, #9b5cff, #ff4d6d);
-  -webkit-mask: radial-gradient(circle, transparent 60%, #000 63%); mask: radial-gradient(circle, transparent 60%, #000 63%);
-  filter: drop-shadow(0 0 5px rgba(255,255,255,.7)); animation: fxSpin 1.8s linear infinite; }
-.frame-prev .frm { inset: -6px; }
+/* ================= 말 테두리 (도트 SVG) ================= */
+/* 20칸 격자 중 가운데 12칸이 말 → 말보다 20/12 배 크게 */
+svg.frm { position: absolute; left: -33.3%; top: -33.3%; width: 166.6%; height: 166.6%; z-index: 0; pointer-events: none; overflow: visible;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,.55)); }
+.frm .g-wl { transform-origin: 85% 45%; transform-box: view-box; animation: wingL .7s ease-in-out infinite; }
+.frm .g-wr { transform-origin: 15% 45%; transform-box: view-box; animation: wingL .7s ease-in-out infinite reverse; }
+.frm.fr-wing .g-wl { transform-origin: 22.5% 45%; } .frm.fr-wing .g-wr { transform-origin: 77.5% 45%; }
+@keyframes wingL { 0%, 100% { transform: scaleY(1) rotate(0); } 50% { transform: scaleY(.8) rotate(-8deg); } }
+.frm .g-h { animation: haloF 1.6s ease-in-out infinite; filter: drop-shadow(0 0 1px #fff3b0); }
+@keyframes haloF { 50% { transform: translateY(-.6px); } }
+.frm .g-t { transform-box: view-box; transform-origin: 77% 77%; animation: tailW 1s ease-in-out infinite; }
+@keyframes tailW { 50% { transform: rotate(14deg); } }
+.frm .g-j { animation: gemTw 1.4s steps(2) infinite; } @keyframes gemTw { 50% { opacity: .55; } }
+.frm.fr-crown { filter: drop-shadow(0 0 2px rgba(255,220,110,.9)) drop-shadow(0 1px 0 rgba(0,0,0,.55)); }
+.frm.fr-star .g-s { transform-box: view-box; transform-origin: 50% 50%; animation: fxSpin 8s linear infinite; }
+.frm.fr-ice { filter: drop-shadow(0 0 2px #9fdcff) drop-shadow(0 1px 0 rgba(0,0,0,.4)); }
+.frm.fr-fire .g-fa { animation: flickA .36s steps(1) infinite; } .frm.fr-fire .g-fb { animation: flickA .36s steps(1) infinite reverse; opacity: 0; }
+@keyframes flickA { 0% { opacity: 1; } 50% { opacity: 0; } }
+.frm.fr-fire .g-fb { animation-name: flickB; } @keyframes flickB { 0% { opacity: 0; } 50% { opacity: 1; } }
+.frm.fr-fire { filter: drop-shadow(0 0 3px #ff6a00); }
+.frm.fr-cat .g-w { opacity: .85; }
 
 /* ================= 이동 잔상 ================= */
 .trl { position: absolute; transform: translate(-50%, -50%); pointer-events: none; z-index: 1; font-style: normal; line-height: 1; }
@@ -1175,5 +1178,17 @@ body.excel .ink-splat, body.excel .disco-floor, body.excel .beam, body.excel .sm
 @keyframes ncOrb { 0%, 100% { transform: translateY(-14px); opacity: .3; } 50% { transform: translateY(14px); opacity: 1; } }
 .nc-prev { width: 96px; height: 52px; padding: 8px 10px; }
 .nc-prev .who b { font-size: 13px; }
-body.excel .pet, body.excel .frm, body.excel .trl, body.excel .ncw { display: none !important; }
+body.excel .pet, body.excel svg.frm, body.excel .trl, body.excel .ncw { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .pet, .frm, .ncw i, .nc-gold, .nc-dragon, .nc-neon { animation: none !important; } }
+
+.frm.fr-sun .g-s { transform-box: view-box; transform-origin: 50% 50%; animation: fxSpin 10s linear infinite; }
+.frm.fr-sun { filter: drop-shadow(0 0 3px #ffb300); }
+.nc-scroll { background: linear-gradient(90deg, #6b4a26 0 6px, #e9d5a8 6px calc(100% - 6px), #6b4a26 calc(100% - 6px)) !important; border-color: #8a6a3a !important; }
+.nc-scroll .who b, .my-panel.nc-scroll .mi-label { color: #3b2a1c; font-family: serif; } .nc-scroll .who span { color: #6b4a2a; }
+.nc-pumpkin { background: repeating-linear-gradient(90deg, #ff8c1a 0 14px, #e87400 14px 18px) !important; border-color: #5a2a00 !important; }
+.nc-pumpkin .who b, .my-panel.nc-pumpkin .mi-label { color: #2a1200; } .nc-pumpkin .who span { color: #4a2200; }
+.nc-pumpkin .ncw i::before { content: "🎃"; font-size: 11px; } .nc-pumpkin .ncw i { right: calc(4% + var(--k) * 9%); top: 30%; animation: petHop 1.4s ease-in-out infinite; animation-delay: calc(var(--k) * .2s); }
+.nc-pumpkin .ncw i:nth-child(n+3) { display: none; }
+.nc-tycoon { background: linear-gradient(135deg, #2a1a00, #6a4a00) !important; border-color: #f2c94c !important; box-shadow: inset 0 0 14px rgba(242,201,76,.5) !important; }
+.nc-tycoon .who b, .my-panel.nc-tycoon .mi-label { color: #ffe08a; }
+.nc-tycoon .ncw i::before { content: "🪙"; font-size: 10px; } .nc-tycoon .ncw i { top: -12px; left: calc(10% + var(--k) * 19%); animation: fxFall 2.2s linear infinite; animation-delay: calc(var(--k) * -.44s); }

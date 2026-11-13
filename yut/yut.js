@@ -9,7 +9,7 @@ const SHOP = require('./shop');
 // 업적용 기록 (u.st)
 const ST = id => { const u = getUser(id); return u ? (u.st = u.st || {}) : {}; };
 // 한 판 안의 기록 (예능 업적용) — 판이 끝나면 계정 기록으로 옮김
-const GS = (g, id) => { g.gs = g.gs || {}; return (g.gs[id] = g.gs[id] || { caught: 0, caps: 0, back: 0, nak: 0, throws: 0, chats: 0, hitBy: {}, turns: 0 }); };
+const GS = (g, id) => { g.gs = g.gs || {}; return (g.gs[id] = g.gs[id] || { caught: 0, caps: 0, back: 0, nak: 0, throws: 0, chats: 0, hitBy: {}, turns: 0, big: 0, backCaps: 0 }); };
 const inc = (S, k, n = 1) => { S[k] = (S[k] || 0) + n; };
 const maxTo = (S, k, v) => { S[k] = Math.max(S[k] || 0, v); };
 
@@ -270,9 +270,12 @@ function finish(g, winner) {
     maxTo(S, 'maxNakGame', me.nak); maxTo(S, 'maxChatsGame', me.chats); maxTo(S, 'maxThrowsGame', me.throws);
     maxTo(S, 'maxSameHit', Math.max(0, ...Object.values(me.hitBy)));
     if (me.caps >= 20 && me.caught >= 20) inc(S, 'brawls');
+    maxTo(S, 'maxBackCapsGame', me.backCaps);
     if (id === winner) {
       if (me.throws <= 10) inc(S, 'fastWin');
       if (g.afk && g.afk[id]) inc(S, 'afkWin');
+      if (me.big === 0) inc(S, 'plainWin');        // 윷·모 한 번도 없이 우승
+      if (me.nak >= 3) inc(S, 'nakWin');           // 낙 3번 하고도 우승
     } else {
       if (done === 0) inc(S, 'zeroLoss');
       if (g.bet >= 1e8 && g.players.length >= 3) inc(S, 'bigLoss');
@@ -343,6 +346,7 @@ function applyOption(g, optId) {
     if (backShort) inc(ST(id), 'backShortcut');                                                          // 그 말이 바로 나감
     for (const qi of group) if (node !== 'R20') delete g.backHome[id + ':' + qi];
     me.caps += capN;
+    if (capN && g.last.steps < 0) me.backCaps++;
     g.rev = g.rev || {};
     for (const [vid, n] of Object.entries(capBy)) {
       const V = GS(g, vid), VS = ST(vid);
@@ -386,6 +390,7 @@ function throwAct(g, auto = false) {
     S.nakRun = g.last.nak ? (S.nakRun || 0) + 1 : 0; maxTo(S, 'maxNakRun', S.nakRun);
     const me = GS(g, id); me.throws++;
     if (nm === '뒷도') me.back++;
+    if (nm === '윷' || nm === '모') me.big++;
     if (g.last.nak) { me.nak++; if (me.prevThrow === '모') inc(S, 'moNak'); }   // 천당과 지옥: 모 바로 다음 낙
     me.prevThrow = nm; }
   g.seq = (g.seq || 0) + 1;
