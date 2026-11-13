@@ -81,8 +81,13 @@ const st = u => (u.st = u.st || {});
 function check(u) {
   u.achDone = u.achDone || {};
   const fresh = [];
+  u.owned = u.owned || SHOP.DEFAULT_OWNED.slice();
   for (const a of ACH) {
-    if (u.achDone[a.id]) continue;
+    // 이미 달성한 업적에 나중에 아이템 보상이 붙은 경우: 아이템만 추가 지급 (트로피는 다시 안 줌)
+    if (u.achDone[a.id]) {
+      if (a.reward.item && !u.owned.includes(a.reward.item)) { u.owned.push(a.reward.item); fresh.push({ id: a.id, name: a.name, desc: a.desc, reward: { item: a.reward.item }, late: true }); }
+      continue;
+    }
     if (valueOf(u, a) < a.goal) continue;
     u.achDone[a.id] = Date.now();
     if (a.reward.trophy) u.trophy = (u.trophy || 0) + a.reward.trophy;

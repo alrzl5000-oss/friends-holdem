@@ -853,8 +853,9 @@ socket.on('yutState', v => {
 // 업적 달성 축하
 socket.on('achDone', list => {
   const rw = r => [r.trophy ? `🏆 ${r.trophy}개` : '', r.item ? `🎁 ${esc((ITEM(r.item) || {}).name || r.item)}` : ''].filter(Boolean).join(' + ');
-  modal(`<div class="ach-pop"><div class="ach-pop-ic">🏅</div><h3>업적 달성!</h3>
-    ${list.map(a => `<div class="ach-pop-row"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span><em>보상: ${rw(a.reward)}</em></div>`).join('')}
+  const late = list.every(a => a.late);
+  modal(`<div class="ach-pop"><div class="ach-pop-ic">${late ? '🎁' : '🏅'}</div><h3>${late ? '업적 보상 추가 지급!' : '업적 달성!'}</h3>${late ? '<p class="hint">예전에 달성한 업적에 새 보상이 생겨서 드려요</p>' : ''}
+    ${list.map(a => `<div class="ach-pop-row"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span><em>${a.late ? '추가 보상' : '보상'}: ${rw(a.reward)}</em></div>`).join('')}
     <button class="btn gold" data-close>받기</button></div>`);
   document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
 });
