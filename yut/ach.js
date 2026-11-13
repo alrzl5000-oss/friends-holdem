@@ -62,7 +62,7 @@ const ACH = [
   { id: 'f_charger', fun: true, name: '충전의 신', desc: '충전 누적 30번', stat: 'bailouts', goal: 30, reward: { trophy: 1, item: 'pet_pig' } },
   { id: 'f_pumpkin', fun: true, name: '호박에 갇힘', desc: '호박고누에서 10수 안에 지기', stat: 'gonuQuickLoss', goal: 1, reward: { trophy: 3, item: 'p_pumpkin' } },
   { id: 'f_pawn', fun: true, name: '자(子)의 반란', desc: '십이장기에서 자(또는 후)로 상대 왕 잡기', stat: 'pawnKing', goal: 1, reward: { trophy: 6, item: 'p_pawn' } },
-  { id: 'f_plain', fun: true, name: '노잼 우승', desc: '윷·모 한 번도 없이 우승 3번', stat: 'plainWin', goal: 3, reward: { trophy: 6, item: 'pet_sloth' } },
+  { id: 'f_plain', fun: true, name: '노잼 우승', desc: '상대 말 한 번도 안 잡고 우승 3번', stat: 'noCapWin', goal: 3, reward: { trophy: 6, item: 'pet_sloth' } },
   { id: 'f_nakwin', fun: true, name: '미끄러져도 1등', desc: '한 판에서 낙 3번 하고도 우승', stat: 'nakWin', goal: 1, reward: { trophy: 6, item: 'tr_banana' } },
   { id: 'f_shrimp', fun: true, name: '뒷걸음질 사냥꾼', desc: '한 판에서 뒷도로 3번 잡기', stat: 'maxBackCapsGame', goal: 3, reward: { trophy: 8, item: 'pet_shrimp' } },
 ];

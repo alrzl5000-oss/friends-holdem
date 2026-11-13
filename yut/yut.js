@@ -275,7 +275,7 @@ function finish(g, winner) {
     if (id === winner) {
       if (me.throws <= 10) inc(S, 'fastWin');
       if (g.afk && g.afk[id]) inc(S, 'afkWin');
-      if (me.big === 0) inc(S, 'plainWin');        // 윷·모 한 번도 없이 우승
+      if (me.caps === 0) inc(S, 'noCapWin');       // 상대 말 한 번도 안 잡고 우승
       if (me.nak >= 3) inc(S, 'nakWin');           // 낙 3번 하고도 우승
     } else {
       if (done === 0) inc(S, 'zeroLoss');

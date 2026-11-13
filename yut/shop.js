@@ -145,7 +145,7 @@ const ITEMS = [
   { id: 'pet_turtle', cat: 'pet', name: '거북이', price: null, ach: 'f_turtle', desc: '느려도 끝까지 따라옴', art: { em: '🐢', move: 'side' } },
   { id: 'pet_parrot', cat: 'pet', name: '앵무새', price: null, ach: 'f_chatter', desc: '수다쟁이 곁엔 앵무새', art: { em: '🦜', move: 'fly' } },
   { id: 'pet_cow', cat: 'pet', name: '황소', price: null, ach: 'yut300', desc: '윷(소)을 300번 부른 자의 황소', art: { em: '🐂', move: 'side' } },
-  { id: 'pet_sloth', cat: 'pet', name: '나무늘보', price: null, ach: 'f_plain', desc: '윷·모 없이도 느긋하게 이긴 자', art: { em: '🦥', move: 'sway' } },
+  { id: 'pet_sloth', cat: 'pet', name: '나무늘보', price: null, ach: 'f_plain', desc: '아무도 안 잡고 느긋하게 이긴 평화주의자', art: { em: '🦥', move: 'sway' } },
   { id: 'pet_shrimp', cat: 'pet', name: '새우', price: null, ach: 'f_shrimp', desc: '뒷걸음질 전문가', art: { em: '🦐', move: 'side' } },
   { id: 'pet_pig', cat: 'pet', name: '저금통 돼지', price: null, ach: 'f_charger', desc: '충전할 때마다 배가 불렀던 돼지', art: { em: '🐷', move: 'hop' } },
 
