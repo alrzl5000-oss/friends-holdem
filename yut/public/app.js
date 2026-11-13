@@ -295,7 +295,7 @@ function trailPrev(a) {
 let shopCat = 'piece', shopOwned = false;
 try { shopCat = localStorage.getItem('fy_shopCat') || 'piece'; shopOwned = localStorage.getItem('fy_shopOwned') === '1'; } catch (e) {}
 function renderShop() {
-  const cats = [['piece', '말', '판 위에서 움직이는 내 말'], ['stick', '윷가락', '던질 때 보이는 윷'], ['board', '말판', '내 화면에 깔리는 판'],
+  const cats = [['piece', '말', '판 위에서 움직이는 내 말'], ['stick', '윷가락', '던질 때 보이는 윷'], ['board', '말판', '내가 방장인 판에 깔림 (모두에게 보임)'],
     ['trail', '이동 잔상', '말이 지나간 자리에 남는 효과'], ['pet', '펫', '내 말 옆에 따라다님'], ['frame', '말 테두리', '판 위 내 말 둘레'], ['card', '네임 카드', '게임 화면의 내 이름표']];
   const eqv = eqOf(me.equip);
   if (!cats.some(c => c[0] === shopCat)) shopCat = 'piece';
@@ -454,7 +454,8 @@ function renderPlay() {
   const v = room; if (!v) return;
   const mine = v.players.find(p => p.id === v.you) || { color: '#888', nodes: [], done: 0 };
   const steps = v.last ? v.last.steps : 1;
-  $('boardSvg').innerHTML = Art.boardSVG({ theme: isExcel() ? 'excel' : themeOf(mine.skin), options: v.canMove ? v.options : [], steps });
+  const hostP = v.players.find(p => p.host) || mine;   // 판은 방장이 장착한 판으로 모두에게 같게
+  $('boardSvg').innerHTML = Art.boardSVG({ theme: isExcel() ? 'excel' : themeOf(hostP.skin), options: v.canMove ? v.options : [], steps });
   placeTokens(v);
 
   // 내 자리
