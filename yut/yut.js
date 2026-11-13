@@ -366,6 +366,8 @@ function applyOption(g, optId) {
     captured: captured ? capturedAt.slice() : [], stacked: stackedBefore, goal: node === 'goal' };
   if (g.pos[id].every(isDone)) { finish(g, id); return { ok: true }; }
   endTurn(g, !!captured);
+  // 확인용 기록: 이동·잡기·다음 차례 (Railway 로그)
+  console.log(`[MOVE] ${JSON.stringify({ code: g.code, seq: g.seq, by: g.names[id], r: g.last.name, to: node, count: group.length, caught: capN, next: g.names[g.players[g.turn]], bonusLeft: g.bonus, t: Date.now() })}`);
   armTimer(g);
   push(g);
   return { ok: true };
