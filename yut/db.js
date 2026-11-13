@@ -102,7 +102,7 @@ function equip(u, id) {
   const it = SHOP.byId(id);
   if (!it) return { error: '없는 상품이에요' };
   u.owned = u.owned || SHOP.DEFAULT_OWNED.slice();
-  if (!u.owned.includes(id)) return { error: '먼저 구매해 주세요' };
+  if (!u.owned.includes(id) && it.price !== 0) return { error: '먼저 구매해 주세요' };
   u.equip = Object.assign({}, SHOP.DEFAULT_EQUIP, u.equip || {});
   u.equip[it.cat] = id;
   save();

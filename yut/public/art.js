@@ -27,6 +27,11 @@
       case 'scale': return ((x + (y % 2) * 1.5) % 3 < 1) && y % 2 === 0 && d < 4.4 || (d > 3.6 && d < 4.4); // 용 비늘 + 테
       case 'feather': return Math.abs(dx) < 0.6 || (Math.abs(Math.abs(dx) - (5.5 - y) * 0.55) < 0.7 && y < 9); // 깃털 줄기·가지
       case 'crown': return (y === 7 || y === 8) && d < 4.4 || (y >= 3 && y <= 6 && (x === 3 || x === 5 || x === 6 || x === 8) && y >= 3 + (x === 5 || x === 6 ? 0 : 1)); // 왕관
+      case 'skull': return Math.hypot(x - 3.9, y - 4.6) < 1.2 || Math.hypot(x - 7.1, y - 4.6) < 1.2 || (y === 6 && x === 5) || (y === 6 && x === 6) || (y === 8 && x > 2 && x < 9 && x % 2 === 1);   // 해골 눈·코·이
+      case 'tomb': return (y >= 3 && y <= 9 && Math.abs(dx) < 2.6 && (y > 4 || Math.hypot(dx, y - 4.6) < 2.6)) && !(x >= 5 && x <= 6 && y >= 4 && y <= 8) && !(y === 5 && x >= 4 && x <= 7);   // 비석 + 십자 홈
+      case 'coin': { const m = Math.max(Math.abs(dx), Math.abs(dy)); return (d > 3.5 && d < 4.4) || (m > 1 && m < 2); }   // 엽전 테두리 + 네모 구멍
+      case 'pumpkin': return d < 4.4 && (Math.abs(dx) < .6 || Math.abs(Math.abs(dx) - 2.3) < .55) || (y <= 1 && (x === 5 || x === 6));   // 호박 골 + 꼭지
+      case 'cross': return d < 3.8 && (Math.abs(dx) < .6 || Math.abs(dy) < .6) || (d > 3.6 && d < 4.4);   // 졸(卒) 표식
       default: return ((x + y) % 4 === 0 && d < 4.4);
     }
   }
@@ -125,6 +130,11 @@
     hanji: { paper: '#f1e5c6', paper2: '#e2cf9f', ink: '#3b2a1c', rule: '#8a5a32', accent: '#c0303f', gold: '#c9952b', noise: .11, wm: .13, band: null },
     dancheong: { paper: '#ece0c0', paper2: '#d9c899', ink: '#1d3f4a', rule: '#1d3f4a', accent: '#c0303f', gold: '#d9a62e', noise: .09, wm: .12, band: ['#2d6b5f', '#c0303f', '#d9a62e', '#1d3f4a'] },
     night: { paper: '#1c2846', paper2: '#121b33', ink: '#e8d39a', rule: '#c9a85a', accent: '#ffcf5a', gold: '#f0c75e', noise: .07, wm: .2, band: null, night: true },
+    royal: { paper: '#6b0f1a', paper2: '#3d0610', ink: '#f5d76e', rule: '#d4af37', accent: '#ffe08a', gold: '#f2c94c', noise: .06, wm: .22, band: ['#3d0610', '#d4af37', '#f5d76e', '#8a1020'], night: true },
+    jade: { paper: '#cfe3d6', paper2: '#a9cdb9', ink: '#1f4d3f', rule: '#2f6b57', accent: '#2f8f7f', gold: '#9cc9b4', noise: .08, wm: .16, band: null },
+    ink: { paper: '#f4f1ea', paper2: '#dcd7cc', ink: '#111111', rule: '#333333', accent: '#222222', gold: '#8a8a8a', noise: .13, wm: .3, band: null },
+    autumn: { paper: '#f3dcc0', paper2: '#e3b98d', ink: '#5a2a0a', rule: '#8a3a12', accent: '#d2491e', gold: '#e8902a', noise: .1, wm: .18, band: ['#7a2410', '#d2491e', '#f0a020', '#4a1806'] },
+    hell: { paper: '#2a0505', paper2: '#140000', ink: '#ff8a3a', rule: '#ff5a1f', accent: '#ffcf3a', gold: '#ff6a1a', noise: .08, wm: .25, band: null, night: true, hell: true },
   };
 
   // opts: { theme, options:[{id,from,to,route}], steps }

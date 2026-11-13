@@ -60,6 +60,20 @@ const ITEMS = [
   { id: 'p_collector', cat: 'piece', name: '수집가 말', price: null, ach: 'collector', desc: '상점을 다 털어 버린 자', art: { pat: 'rainbow', c1: '#4a2c00', c2: '#fff1b8', c3: '#e0a800', fx: 'gold' },
     taunts: ['{n} 님 말도 제 수집품에 추가 🗃️', '트로피로 산 말에 잡히는 기분 💸'] },
 
+  // 업적 보상 말 (2차)
+  { id: 'p_revenge', cat: 'piece', name: '복수귀 말', price: null, ach: 'f_revenge', desc: '300번 되갚은 원한, 붉은 불꽃이 이글이글', art: { pat: 'skull', c1: '#2a0000', c2: '#5a0a0a', c3: '#ff3a3a', fx: 'fire' },
+    taunts: ['기억하지? 아까 네가 날 잡았잖아 {n} 😈', '원한은 반드시 갚는다 🔥', '{n} 님, 복수는 차갑게… 아니 뜨겁게 🔥'] },
+  { id: 'p_ash', cat: 'piece', name: '잿더미 말', price: null, ach: 'f_almost', desc: '다 된 밥에 재 뿌린 말, 재가 폴폴', art: { pat: 'dot', c1: '#2e2e2e', c2: '#bdbdbd', c3: '#6a6a6a', fx: 'snow' },
+    taunts: ['{n} 님 밥에 재 뿌려 드렸어요 🍚', '다 된 밥이었는데 아깝다 그쵸? ㅋㅋ'] },
+  { id: 'p_tomb', cat: 'piece', name: '비석 말', price: null, ach: 'f_home', desc: '집 앞에서 15번 객사한 영혼이 맴돎', art: { pat: 'tomb', c1: '#1e1e22', c2: '#9aa0a6', c3: '#4a4f55', fx: 'ghost' },
+    taunts: ['{n} 님 여기 잠들다 🪦', '명복을 빕니다 {n} 님 🕯️'] },
+  { id: 'p_bankrupt', cat: 'piece', name: '빈털터리 말', price: null, ach: 'f_bankrupt', desc: '엽전이 블랙홀로 빨려 들어가는 말', art: { pat: 'coin', c1: '#3a2a00', c2: '#7a6640', c3: '#e0b93a', fx: 'void' },
+    taunts: ['{n} 님도 같이 가난해집시다 💸', '내 지갑처럼 {n} 님 말도 텅 비었네요 👛'] },
+  { id: 'p_pumpkin', cat: 'piece', name: '호박 말', price: null, ach: 'f_pumpkin', desc: '호박에 갇혀 봤던 자, 이제 호박이 되다', art: { pat: 'pumpkin', c1: '#4a2200', c2: '#ff8c1a', c3: '#b85200', fx: 'leaf' },
+    taunts: ['{n} 님 호박에 가둬 드림 🎃', '호박 넝쿨째 굴러왔다 🎃'] },
+  { id: 'p_pawn', cat: 'piece', name: '반란군 말', price: null, ach: 'f_pawn', desc: '졸병이 왕을 잡았다, 황금빛 반란', art: { pat: 'cross', c1: '#0b3d1f', c2: '#e9f7ec', c3: '#1f8a4c', fx: 'gold' },
+    taunts: ['졸병한테 잡힌 기분 어때요 {n} 님? ⚔️', '하극상이다! {n} 님 퇴장 🪖'] },
+
   // ---------------- 윷 ----------------
   { id: 's_basic', cat: 'stick', name: '소박한 윷', price: 0, desc: '기본 윷가락', art: { wood: '#b9824a' } },
   { id: 's_paul', cat: 'stick', name: '오동나무 윷', price: 3, desc: '떨어질 때 나무 부스러기가 튐', art: { wood: '#6b3d1f', fx: 'chips' } },
@@ -82,11 +96,76 @@ const ITEMS = [
   { id: 'b_hanji', cat: 'board', name: '한지 판', price: 0, desc: '기본 판', art: { theme: 'hanji' } },
   { id: 'b_dancheong', cat: 'board', name: '단청 판', price: 10, desc: '청·적·황 단청 테두리', art: { theme: 'dancheong' } },
   { id: 'b_night', cat: 'board', name: '밤하늘 판', price: 15, desc: '쪽빛 밤하늘에 별이 가득', art: { theme: 'night' } },
+  // 업적 보상 판
+  { id: 'b_royal', cat: 'board', name: '궁궐 금박 판', price: null, ach: 'highroller', desc: '붉은 비단에 금박, 큰손 전용', art: { theme: 'royal' } },
+  { id: 'b_jade', cat: 'board', name: '청자 판', price: null, ach: 'gonu20', desc: '비색 청자빛 판', art: { theme: 'jade' } },
+  { id: 'b_ink', cat: 'board', name: '수묵화 판', price: null, ach: 'j12_20', desc: '먹으로만 그린 판', art: { theme: 'ink' } },
+  { id: 'b_autumn', cat: 'board', name: '단풍 판', price: null, ach: 'j12try', desc: '붉게 물든 가을 판', art: { theme: 'autumn' } },
+  { id: 'b_hell', cat: 'board', name: '지옥불 판', price: null, ach: 'f_brawl', desc: '난타전이 벌어진 불지옥', art: { theme: 'hell' } },
+
+  // ---------------- 이동 잔상 (말이 지나간 자리에 남는 효과) ----------------
+  { id: 'tr_none', cat: 'trail', name: '잔상 없음', price: 0, desc: '아무것도 안 남김', art: {} },
+  { id: 'tr_heart', cat: 'trail', name: '하트 뿅뿅', price: 60, desc: '지나간 자리에 하트가 뿅뿅', art: { kind: 'emoji', em: '💖' } },
+  { id: 'tr_music', cat: 'trail', name: '음표', price: 60, desc: '걸을 때마다 음표가 흘러나옴', art: { kind: 'emoji', em: '🎵' } },
+  { id: 'tr_leaf', cat: 'trail', name: '나뭇잎', price: 50, desc: '바람에 나뭇잎이 날림', art: { kind: 'emoji', em: '🍃' } },
+  { id: 'tr_snow', cat: 'trail', name: '눈발', price: 50, desc: '지나간 자리에 눈이 흩날림', art: { kind: 'emoji', em: '❄️' } },
+  { id: 'tr_comet', cat: 'trail', name: '혜성 꼬리', price: 90, desc: '빛나는 꼬리를 길게 끌며 이동', art: { kind: 'comet' } },
+  { id: 'tr_rainbow', cat: 'trail', name: '무지개 길', price: 120, desc: '지나간 길이 무지개로 물듦', art: { kind: 'rainbow' } },
+  { id: 'tr_ghost', cat: 'trail', name: '분신술', price: null, ach: 'capmulti', desc: '지나간 자리에 내 말 잔상이 남음', art: { kind: 'ghost' } },
+  { id: 'tr_star', cat: 'trail', name: '별똥별', price: null, ach: 'mo3', desc: '별이 줄줄이 떨어짐', art: { kind: 'emoji', em: '⭐' } },
+  { id: 'tr_spark', cat: 'trail', name: '반짝이', price: null, ach: 'yut4', desc: '반짝이 가루가 흩날림', art: { kind: 'emoji', em: '✨' } },
+  { id: 'tr_petal', cat: 'trail', name: '꽃길', price: null, ach: 'flawless', desc: '지나간 길에 꽃잎이 깔림', art: { kind: 'emoji', em: '🌸' } },
+  { id: 'tr_fire', cat: 'trail', name: '불길', price: null, ach: 'comeback', desc: '지나간 자리가 활활', art: { kind: 'emoji', em: '🔥' } },
+  { id: 'tr_coin', cat: 'trail', name: '돈길', price: null, ach: 'rich', desc: '엽전을 뿌리며 이동', art: { kind: 'emoji', em: '🪙' } },
+  { id: 'tr_skull', cat: 'trail', name: '해골길', price: null, ach: 'f_lost4', desc: '지나간 자리에 해골이 굴러다님', art: { kind: 'emoji', em: '💀' } },
+  { id: 'tr_ink', cat: 'trail', name: '먹물 발자국', price: null, ach: 'f_backshort', desc: '먹물이 뚝뚝 번짐', art: { kind: 'ink' } },
+  { id: 'tr_bubble', cat: 'trail', name: '참기름 방울', price: null, ach: 'f_oil', desc: '손에 묻은 기름이 방울방울', art: { kind: 'emoji', em: '🫧' } },
+  { id: 'tr_bolt', cat: 'trail', name: '번개길', price: null, ach: 'f_heavenhell', desc: '지나갈 때마다 번쩍번쩍', art: { kind: 'emoji', em: '⚡' } },
+
+  // ---------------- 펫 (내 말 옆에 따라다님) ----------------
+  { id: 'pet_none', cat: 'pet', name: '펫 없음', price: 0, desc: '혼자 다님', art: {} },
+  { id: 'pet_dog', cat: 'pet', name: '강아지', price: 60, desc: '꼬리 치며 졸졸 따라오는 강아지', art: { em: '🐶', move: 'hop' } },
+  { id: 'pet_rabbit', cat: 'pet', name: '토끼', price: 60, desc: '깡총깡총 옥토끼', art: { em: '🐰', move: 'hop' } },
+  { id: 'pet_penguin', cat: 'pet', name: '펭귄', price: 70, desc: '뒤뚱뒤뚱 펭귄', art: { em: '🐧', move: 'side' } },
+  { id: 'pet_panda', cat: 'pet', name: '판다', price: 80, desc: '대나무 씹으며 따라오는 판다', art: { em: '🐼', move: 'sway' } },
+  { id: 'pet_tiger', cat: 'pet', name: '아기 호랑이', price: 100, desc: '어흥 하는 새끼 호랑이', art: { em: '🐯', move: 'hop' } },
+  { id: 'pet_unicorn', cat: 'pet', name: '유니콘', price: 150, desc: '무지갯빛으로 날아다니는 유니콘', art: { em: '🦄', move: 'fly', glow: 1 } },
+  { id: 'pet_chick', cat: 'pet', name: '병아리', price: null, ach: 'win1', desc: '첫 승리 기념, 종종종 따라옴', art: { em: '🐥', move: 'hop' } },
+  { id: 'pet_cat', cat: 'pet', name: '고양이', price: null, ach: 'win10', desc: '말 옆에서 꼬리 흔드는 고양이', art: { em: '🐈', move: 'sway' } },
+  { id: 'pet_dragon', cat: 'pet', name: '아기 용', price: null, ach: 'win100', desc: '윷신을 지키는 아기 용, 둥실둥실', art: { em: '🐉', move: 'fly' } },
+  { id: 'pet_owl', cat: 'pet', name: '부엉이', price: null, ach: 'games100', desc: '백 판을 지켜본 부엉이', art: { em: '🦉', move: 'sway' } },
+  { id: 'pet_fox', cat: 'pet', name: '여우', price: null, ach: 'streak5', desc: '파죽지세 여우, 깡총깡총', art: { em: '🦊', move: 'hop' } },
+  { id: 'pet_bat', cat: 'pet', name: '박쥐', price: null, ach: 'cap300', desc: '사냥꾼 곁을 맴도는 박쥐', art: { em: '🦇', move: 'fly' } },
+  { id: 'pet_crab', cat: 'pet', name: '꽃게', price: null, ach: 'backcap', desc: '옆으로… 아니 뒤로 걷는 게', art: { em: '🦀', move: 'side' } },
+  { id: 'pet_ghost', cat: 'pet', name: '원혼', price: null, ach: 'f_nemesis', desc: '원수를 잊지 않는 유령', art: { em: '👻', move: 'fly' } },
+  { id: 'pet_hamster', cat: 'pet', name: '먹방 햄스터', price: null, ach: 'f_mukbang', desc: '볼 빵빵하게 잡아먹는 햄스터', art: { em: '🐹', move: 'hop' } },
+  { id: 'pet_snail', cat: 'pet', name: '달팽이', price: null, ach: 'f_zero', desc: '말 하나도 못 낸 자의 친구', art: { em: '🐌', move: 'side' } },
+  { id: 'pet_turtle', cat: 'pet', name: '거북이', price: null, ach: 'f_turtle', desc: '느려도 끝까지 따라옴', art: { em: '🐢', move: 'side' } },
+  { id: 'pet_parrot', cat: 'pet', name: '앵무새', price: null, ach: 'f_chatter', desc: '수다쟁이 곁엔 앵무새', art: { em: '🦜', move: 'fly' } },
+  { id: 'pet_pig', cat: 'pet', name: '저금통 돼지', price: null, ach: 'f_charger', desc: '충전할 때마다 배가 불렀던 돼지', art: { em: '🐷', move: 'hop' } },
+
+  // ---------------- 말 테두리 ----------------
+  { id: 'fr_none', cat: 'frame', name: '테두리 없음', price: 0, desc: '기본', art: {} },
+  { id: 'fr_silver', cat: 'frame', name: '은테', price: 40, desc: '은빛 테두리', art: { fr: 'silver' } },
+  { id: 'fr_gold', cat: 'frame', name: '금테', price: 60, desc: '번쩍이는 금 테두리', art: { fr: 'gold' } },
+  { id: 'fr_ice', cat: 'frame', name: '얼음 테', price: 70, desc: '서리가 낀 얼음 테두리', art: { fr: 'ice' } },
+  { id: 'fr_neon', cat: 'frame', name: '네온 테', price: 90, desc: '맥박처럼 뛰는 네온 테두리', art: { fr: 'neon' } },
+  { id: 'fr_fire', cat: 'frame', name: '불꽃 테', price: 110, desc: '테두리가 활활 타오름', art: { fr: 'fire' } },
+  { id: 'fr_rainbow', cat: 'frame', name: '무지개 테', price: 150, desc: '빙글빙글 도는 무지개 테두리', art: { fr: 'rainbow' } },
+
+  // ---------------- 네임 카드 (게임 화면의 내 이름표) ----------------
+  { id: 'nc_none', cat: 'card', name: '기본 이름표', price: 0, desc: '기본', art: {} },
+  { id: 'nc_hanji', cat: 'card', name: '한지 이름표', price: 40, desc: '은은한 한지 결', art: { nc: 'hanji' } },
+  { id: 'nc_night', cat: 'card', name: '밤하늘 이름표', price: 60, desc: '별이 반짝이는 밤하늘', art: { nc: 'night' } },
+  { id: 'nc_sakura', cat: 'card', name: '벚꽃 이름표', price: 60, desc: '꽃잎이 흩날리는 분홍빛', art: { nc: 'sakura' } },
+  { id: 'nc_gold', cat: 'card', name: '황금 이름표', price: 100, desc: '빛이 스쳐 지나가는 금박', art: { nc: 'gold' } },
+  { id: 'nc_neon', cat: 'card', name: '네온 이름표', price: 120, desc: '사이버펑크 네온사인', art: { nc: 'neon' } },
+  { id: 'nc_dragon', cat: 'card', name: '청룡 이름표', price: 180, desc: '용이 휘감은 오색 이름표', art: { nc: 'dragon' } },
 ];
 const byId = id => ITEMS.find(x => x.id === id);
 const DEFAULT_OWNED = ITEMS.filter(x => x.price === 0).map(x => x.id);
 const BUYABLE = ITEMS.filter(x => x.price > 0).map(x => x.id);   // 수집가 업적 기준
-const DEFAULT_EQUIP = { piece: 'p_basic', stick: 's_basic', board: 'b_hanji' };
+const DEFAULT_EQUIP = { piece: 'p_basic', stick: 's_basic', board: 'b_hanji', trail: 'tr_none', pet: 'pet_none', frame: 'fr_none', card: 'nc_none' };
 // 잡을 때 조롱 한 줄 (말 아이템 기준)
 function tauntFor(pieceId, victim) {
   const it = byId(pieceId) || byId('p_basic');

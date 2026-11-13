@@ -32,6 +32,13 @@ const pieceArt = id => artOf(id || 'p_basic') || { pat: 'dot', c1: '#5c3b1e', c2
 const skinPiece = skin => pieceArt(skin && skin.piece);
 const woodOf = skin => ((artOf((skin && skin.stick) || 's_basic') || {}).wood) || '#b9824a';
 const themeOf = skin => ((artOf((skin && skin.board) || 'b_hanji') || {}).theme) || 'hanji';
+const EQ0 = { piece: 'p_basic', stick: 's_basic', board: 'b_hanji', trail: 'tr_none', pet: 'pet_none', frame: 'fr_none', card: 'nc_none' };
+const eqOf = e => Object.assign({}, EQ0, e || {});
+// 펫(말 옆에 따라다님) · 말 테두리 · 이름표
+const petHTML = id => { const a = artOf(id) || {}; return a.em ? `<i class="pet pm-${a.move || 'hop'}${a.glow ? ' pet-glow' : ''}">${a.em}</i>` : ''; };
+const frameHTML = id => { const a = artOf(id) || {}; return a.fr ? `<i class="frm fr-${a.fr}"></i>` : ''; };
+const cardCls = id => { const a = artOf(id) || {}; return a.nc ? ` nc nc-${a.nc}` : ''; };
+const ncDeco = id => { const a = artOf(id) || {}; return a.nc ? `<span class="ncw">${Array.from({ length: 5 }, (_, k) => `<i style="--k:${k}"></i>`).join('')}</span>` : ''; };
 const colorVars = c => `--c:${c};--cl:${Art.light(c, .45)};--cd:${Art.dark(c, .45)}`;
 
 // ---------- 설정 (테마: 기본 / 엑셀) ----------
@@ -275,16 +282,32 @@ function renderBailout() {
   };
 }
 
+// 잔상 미리보기: 말이 좌우로 오가며 효과를 흘림
+function trailPrev(a) {
+  if (!a || !a.kind) return `<div class="trail-prev none">—</div>`;
+  const parts = Array.from({ length: 6 }, (_, k) => {
+    const inner = a.kind === 'emoji' ? a.em : a.kind === 'ghost' ? Art.pieceSVG(pieceArt(eqOf(me.equip).piece), 18) : '';
+    return `<i class="trl-p trl-${a.kind}" style="--k:${k};--h:${k * 50}">${inner}</i>`;
+  }).join('');
+  return `<div class="trail-prev">${parts}<div class="tp-tok" style="${colorVars('#7a5230')}">${Art.pieceSVG(pieceArt(eqOf(me.equip).piece), 22)}</div></div>`;
+}
 function renderShop() {
-  const cats = [['piece', '말', '판 위에서 움직이는 내 말'], ['stick', '윷가락', '던질 때 보이는 윷'], ['board', '말판', '내 화면에 깔리는 판']];
+  const cats = [['piece', '말', '판 위에서 움직이는 내 말'], ['stick', '윷가락', '던질 때 보이는 윷'], ['board', '말판', '내 화면에 깔리는 판'],
+    ['trail', '이동 잔상', '말이 지나간 자리에 남는 효과'], ['pet', '펫', '내 말 옆에 따라다님'], ['frame', '말 테두리', '판 위 내 말 둘레'], ['card', '네임 카드', '게임 화면의 내 이름표']];
+  const eqv = eqOf(me.equip);
   $('tab-shop').innerHTML = `<div class="shop-head glass"><div><span>보유 트로피</span><b>🏆 ${me.trophy || 0}</b></div>
       <p class="hint">판에서 우승할 때마다 🏆 1개를 받아요. 꾸미기는 트로피로만 살 수 있어요.</p></div>
     ${cats.map(([cat, name, sub]) => `<div class="shop-cat">${name} <small>${sub}</small></div>
       <div class="shop-grid">${ITEMS.filter(i => i.cat === cat).map(it => {
-        const owned = (me.owned || []).includes(it.id), on = Object.values(me.equip || {}).includes(it.id);
+        const owned = it.price === 0 || (me.owned || []).includes(it.id), on = eqv[it.cat] === it.id;
         const fx = it.art && it.art.fx;
         const pv = cat === 'piece' ? `<div class="tok-prev${fx ? ' tfx-' + fx : ''}" style="${colorVars('#7a5230')}">${Art.pieceSVG(it.art, 44)}${fxDeco(fx)}</div>`
-          : cat === 'stick' ? `<div class="stick-prev">${fan(it.art.wood)}${sfxDeco(fx)}</div>` : `<div class="pv-bd">${Art.boardSVG({ theme: it.art.theme })}</div>`;
+          : cat === 'stick' ? `<div class="stick-prev">${fan(it.art.wood)}${sfxDeco(fx)}</div>`
+          : cat === 'board' ? `<div class="pv-bd">${Art.boardSVG({ theme: it.art.theme })}</div>`
+          : cat === 'trail' ? trailPrev(it.art)
+          : cat === 'pet' ? `<div class="tok-prev pet-prev" style="${colorVars('#7a5230')}">${Art.pieceSVG(pieceArt(eqv.piece), 44)}${petHTML(it.id)}</div>`
+          : cat === 'frame' ? `<div class="tok-prev frame-prev" style="${colorVars('#7a5230')}">${frameHTML(it.id)}${Art.pieceSVG(pieceArt(eqv.piece), 44)}</div>`
+          : `<div class="nc-prev opp${cardCls(it.id)}" style="${colorVars('#c0303f')}">${ncDeco(it.id)}<div class="who"><b>${esc(me.username)}</b><span>던지는 중</span></div></div>`;
         const [tc, tn] = tierOf(it.price);
         const taunt = cat === 'piece' && it.taunts && it.taunts.length && it.price > 0 ? `<i class="taunt-prev">😈 "${esc(it.taunts[0].replace(/\{n\}/g, '상대'))}"</i>` : '';
         const achName = it.ach ? ((me.ach || []).find(a => a.id === it.ach) || {}).name || '업적' : '';
@@ -395,7 +418,7 @@ function renderGame() {
     const wait = p.nodes.filter(n => n === 'start').length;
     const slots = [...Array(p.done).fill('done'), ...Array(Math.max(0, 4 - p.done - wait)).fill('on'), ...Array(wait).fill('')];
     const stTxt = p.afk ? '💤 자리비움' : p.turn ? '던지는 중' : v.status === 'open' ? '준비 완료' : `${p.done}개 났음`;
-    return `<div class="opp${p.turn ? ' turn' : ''}${p.afk ? ' afk' : ''}" data-name="${esc(p.name)}" style="${colorVars(colorOf(p))}">${avHTML(skinPiece(p.skin))}
+    return `<div class="opp${p.turn ? ' turn' : ''}${p.afk ? ' afk' : ''}${cardCls(p.skin && p.skin.card)}" data-name="${esc(p.name)}" style="${colorVars(colorOf(p))}">${ncDeco(p.skin && p.skin.card)}${avHTML(skinPiece(p.skin))}
       <div class="who"><b>${esc(p.name)}${p.host ? ' 👑' : ''}${shameTag(p.shame)}</b><span>${stTxt}</span>
         <div class="slots">${slots.map(k => `<i class="${k}"></i>`).join('')}</div></div>${p.turn ? '<i class="tbar"></i>' : ''}</div>`;
   }).join('') + Array(empties).fill('<div class="opp empty">빈 자리</div>').join('');
@@ -424,9 +447,9 @@ function renderPlay() {
   const wait = mine.nodes.filter(n => n === 'start').length;
   const st = mine.nodes.map(n => n === 'goal' ? 'done' : n === 'start' ? '' : 'on');
   const by = v.last && v.players.find(p => p.id === v.last.by);
-  $('myPanel').className = 'my-panel' + (mine.turn ? ' turn' : '');
+  $('myPanel').className = 'my-panel' + (mine.turn ? ' turn' : '') + cardCls(mine.skin && mine.skin.card);
   $('myPanel').style.cssText = colorVars(colorOf(mine));
-  $('myPanel').innerHTML = `${avHTML(skinPiece(mine.skin))}<div class="my-info">${mine.shame ? `<span class="mi-label">${shameTag(mine.shame)}</span>` : ''}<span class="mi-label">내 말 · 대기 ${wait} · 판 위 ${st.filter(s => s === 'on').length} · 났음 ${mine.done}</span>
+  $('myPanel').innerHTML = `${ncDeco(mine.skin && mine.skin.card)}${avHTML(skinPiece(mine.skin))}<div class="my-info">${mine.shame ? `<span class="mi-label">${shameTag(mine.shame)}</span>` : ''}<span class="mi-label">내 말 · 대기 ${wait} · 판 위 ${st.filter(s => s === 'on').length} · 났음 ${mine.done}</span>
     <div class="my-slots">${st.map(s => `<div class="my-slot ${s}">${Art.pieceSVG(skinPiece(mine.skin), 20)}</div>`).join('')}</div></div>
     ${v.last ? `<div class="last-chip" id="lastChip" title="던지기 기록">${by ? esc(by.id === v.you ? '나' : by.name) : ''}<b>${esc(v.last.name)}</b></div>` : ''}`;
 
@@ -501,7 +524,7 @@ function placeTokens(v) {
       let el = tokEls.get(key);
       if (!el) {
         el = document.createElement('div'); el.className = 'tok hid'; el.dataset.p = p.id; el.dataset.i = i;
-        el.innerHTML = Art.pieceSVG(art, 20) + fxDeco(art.fx) + '<span class="cnt" hidden></span><span class="xl-lab"></span><b class="sh-tag" hidden></b>';
+        el.innerHTML = frameHTML(p.skin && p.skin.frame) + Art.pieceSVG(art, 20) + fxDeco(art.fx) + petHTML(p.skin && p.skin.pet) + '<span class="cnt" hidden></span><span class="xl-lab"></span><b class="sh-tag" hidden></b>';
         if (art.fx) el.classList.add('tfx-' + art.fx);   // 말 전체용 효과(둥실·무지개·광택). 'fx-' 는 장식 전용이라 말에 붙이면 안 됨
         { const c = colorOf(p); el.style.setProperty('--c', c); el.style.setProperty('--cl', Art.light(c, .45)); el.style.setProperty('--cd', Art.dark(c, .45)); }
         el.querySelector('.xl-lab').textContent = (p.name || '?').slice(0, 1);
@@ -534,7 +557,7 @@ function placeTokens(v) {
       }
       const path = fresh && mv.by === p.id && mv.path[0] === prev ? mv.path : [prev, n];
       el.classList.toggle('hid', onBoard && !primary);
-      hopAlong(el, path, () => { if (!onBoard || !primary) el.classList.add('hid'); });
+      hopAlong(el, path, () => { if (!onBoard || !primary) el.classList.add('hid'); }, fresh && mv.by === p.id && path.length > 1 ? artOf(p.skin && p.skin.trail) : null);
       if (primary) {
         document.querySelectorAll('.tok.last').forEach(t => t !== el && t.classList.remove('last'));
         el.classList.add('last'); clearTimeout(el._lt); el._lt = setTimeout(() => el.classList.remove('last'), 2600);
@@ -551,7 +574,7 @@ function placeTokens(v) {
   }
 }
 const hopTime = n => REDUCED ? 0 : Math.max(1, n) * 230;
-function hopAlong(el, path, done) {
+function hopAlong(el, path, done, trail) {
   const pts = path.map(pct);
   const [fx, fy] = pts[pts.length - 1];
   if (REDUCED || pts.length < 2 || !el.animate) { el.style.left = fx + '%'; el.style.top = fy + '%'; done && done(); return; }
@@ -568,8 +591,28 @@ function hopAlong(el, path, done) {
   frames.forEach((f, k) => f.offset = offs[k]);
   el.style.zIndex = 3;
   const a = el.animate(frames, { duration: (pts.length - 1) * 230, easing: 'linear' });
+  trailFx(el, trail, (pts.length - 1) * 230);
   el.style.left = fx + '%'; el.style.top = fy + '%';
   a.onfinish = () => { el.style.zIndex = ''; done && done(); };
+}
+// 이동 잔상: 말이 지나가는 동안 그 자리에 효과를 떨어뜨림
+function trailFx(el, trail, dur) {
+  if (!trail || !trail.kind || REDUCED) return;
+  const layer = $('tokLayer'), t0 = performance.now(); let k = 0;
+  const gap = { comet: 22, rainbow: 22, ghost: 65, ink: 90 }[trail.kind] || 80;
+  const tick = () => {
+    if (performance.now() - t0 > dur + 40) return;
+    const cs = getComputedStyle(el);
+    const d = document.createElement('i'); d.className = 'trl trl-' + trail.kind;
+    d.style.left = cs.left; d.style.top = cs.top;
+    if (trail.kind === 'emoji') { d.textContent = trail.em; d.style.setProperty('--dx', (Math.random() * 2 - 1) * 16 + 'px'); d.style.setProperty('--rot', (Math.random() * 90 - 45) + 'deg'); }
+    else if (trail.kind === 'ghost') { const pc = el.querySelector('.pc'); if (pc) d.innerHTML = pc.outerHTML; d.style.cssText += ';' + ['--c', '--cl', '--cd'].map(v => v + ':' + el.style.getPropertyValue(v)).join(';'); }
+    else if (trail.kind === 'rainbow') d.style.setProperty('--h', (k * 23) % 360);
+    layer.insertBefore(d, layer.firstChild); k++;
+    setTimeout(() => d.remove(), trail.kind === 'ink' ? 2200 : 1200);
+    setTimeout(tick, gap);
+  };
+  tick();
 }
 // 잡은 사람 말에 딸린 조롱 한 줄을 판 가운데 크게
 function tauntFx(text) {

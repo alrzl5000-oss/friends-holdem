@@ -36,7 +36,7 @@ let getUser, notifyFn, saveFn;
 let shameFn = () => 0, otherBusyFn = () => false;
 function init(opts) { getUser = opts.getUser; notifyFn = opts.notify; saveFn = opts.save; if (opts.shameOf) shameFn = opts.shameOf; if (opts.otherBusy) otherBusyFn = opts.otherBusy; }
 const shameOfId = id => { const u = getUser(id); return u ? shameFn(u) : 0; };
-const skinOf = id => { const u = getUser(id); const e = (u && u.equip) || SHOP.DEFAULT_EQUIP; return { piece: e.piece || 'p_basic', stick: e.stick || 's_basic', board: e.board || 'b_hanji' }; };
+const skinOf = id => { const u = getUser(id); const e = Object.assign({}, SHOP.DEFAULT_EQUIP, (u && u.equip) || {}); return { piece: e.piece, stick: e.stick, board: e.board, trail: e.trail, pet: e.pet, frame: e.frame, card: e.card }; };
 
 const games = new Map();
 const userGame = new Map();
