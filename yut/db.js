@@ -27,13 +27,22 @@ const byId = new Map();
 for (const u of Object.values(data.users)) byId.set(u.id, u);
 // 한 번만 지급: 운영자가 확인한 업적 기록 (보상은 다음 접속 때 업적 확인으로 지급)
 data.grants = data.grants || [];
-for (const [gid, name, stat] of [['grant-2026-11-13-flawless-모잡이백수', '모잡이백수', 'flawless4']]) {
+// 11/13 서버 로그(던지기·이동 기록)에서 다시 계산한 지난 판 기록 — 새 업적에 반영
+const BACKFILL = [
+  ['grant-2026-11-13-flawless-모잡이백수', '모잡이백수', 'flawless4', 1],
+  ['backfill-2026-11-13-nakwin-성윷모', '성윷모', 'nakWin', 2],                 // Q84V · N9FC 판: 낙 3번 하고 우승
+  ['backfill-2026-11-13-bc-모잡이백수', '모잡이백수', 'maxBackCapsGame', 2],    // 3CT6 판: 뒷도로 2번 잡음
+  ['backfill-2026-11-13-bc-도개걸', '도개걸윷모중에모아니면도', 'maxBackCapsGame', 1],
+  ['backfill-2026-11-13-bc-성윷모', '성윷모', 'maxBackCapsGame', 1],
+  ['backfill-2026-11-13-bc-dogkillercho', 'dogkillercho', 'maxBackCapsGame', 1],
+];
+for (const [gid, name, stat, val] of BACKFILL) {
   if (data.grants.includes(gid)) continue;
   const u = Object.values(data.users).find(x => x.username === name);
   if (!u) continue;
-  u.st = u.st || {}; u.st[stat] = Math.max(u.st[stat] || 0, 1);
+  u.st = u.st || {}; u.st[stat] = Math.max(u.st[stat] || 0, val);
   data.grants.push(gid);
-  console.log(`업적 기록 지급: ${name} ${stat}`);
+  console.log(`업적 기록 반영: ${name} ${stat}=${val}`);
 }
 // 서버가 다시 켜졌을 때 되살리지 못한 판의 판돈은 돌려줌 (activeIds: 복원된 판의 참가자)
 function refundOrphans(activeIds) {
