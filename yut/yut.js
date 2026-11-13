@@ -79,21 +79,21 @@ const NAK_TAUNTS = [
   '다들 박수 👏👏 {n} 님이 해냈어요 (낙을)',
 ];   // 낙: 윷가락이 판 밖으로 떨어짐 → 무효, 차례 넘어감
 // 1단계: 낙 3% / 나머지 97%
-// 2단계: 도개걸윷모 (1000 기준) — 실측 배 확률 57.9%(김미경·허명회 1995, 4개 동시 1,120회)로 계산
-const ODDS = [['도', 130], ['뒷도', 43], ['개', 357], ['걸', 327], ['윷', 112], ['모', 31]];
+// 2단계: 윷가락 4개를 하나씩 던짐 — 각각 배(평평한 면) 57.9% (김미경·허명회 1995, 4개 동시 1,120회 실측)
+//        배 개수로 결과: 0 모 · 1 도(첫 번째 가락=뒷도 표시 가락이면 뒷도) · 2 개 · 3 걸 · 4 윷
+const FLAT_PER_MILLE = 579;
 const STEPS = { '도': 1, '뒷도': -1, '개': 2, '걸': 3, '윷': 4, '모': 5 };
-function bitsFor(name) {   // 화면에 보일 윷가락 앞뒷면 (1 = 배·평평한 면)
-  const flat = { '도': 1, '뒷도': 1, '개': 2, '걸': 3, '윷': 4, '모': 0 }[name];
-  if (name === '뒷도') return [1, 0, 0, 0];
-  const idx = name === '도' ? [1, 2, 3] : [0, 1, 2, 3];
-  for (let i = idx.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [idx[i], idx[j]] = [idx[j], idx[i]]; }
-  const bits = [0, 0, 0, 0]; idx.slice(0, flat).forEach(i => { bits[i] = 1; }); return bits;
+const throwSticks = () => [0, 1, 2, 3].map(() => (crypto.randomInt(1000) < FLAT_PER_MILLE ? 1 : 0));   // 1 = 배
+function nameOf(bits) {
+  const n = bits.reduce((a, b) => a + b, 0);
+  if (n === 0) return '모';
+  if (n === 1) return bits[0] ? '뒷도' : '도';
+  return ['', '', '개', '걸', '윷'][n];
 }
 function throwYut() {
-  if (crypto.randomInt(100) < NAK_PCT) return { bits: bitsFor(['도', '개', '걸'][crypto.randomInt(3)]), steps: 0, name: '낙', extra: false, nak: true, taunt: NAK_TAUNTS[crypto.randomInt(NAK_TAUNTS.length)] };
-  let r = crypto.randomInt(1000), name = '개';
-  for (const [n, w] of ODDS) { if (r < w) { name = n; break; } r -= w; }
-  return { bits: bitsFor(name), steps: STEPS[name], name, extra: name === '윷' || name === '모' };
+  if (crypto.randomInt(100) < NAK_PCT) return { bits: throwSticks(), steps: 0, name: '낙', extra: false, nak: true, taunt: NAK_TAUNTS[crypto.randomInt(NAK_TAUNTS.length)] };
+  const bits = throwSticks(), name = nameOf(bits);
+  return { bits, steps: STEPS[name], name, extra: name === '윷' || name === '모' };
 }
 
 // 말 상태: { r: 'main'|'A'|'B'|'done', i } — i=-1 은 출발 전
