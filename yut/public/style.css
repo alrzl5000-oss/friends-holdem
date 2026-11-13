@@ -1192,3 +1192,18 @@ body.excel .pet, body.excel svg.frm, body.excel .trl, body.excel .ncw { display:
 .nc-tycoon { background: linear-gradient(135deg, #2a1a00, #6a4a00) !important; border-color: #f2c94c !important; box-shadow: inset 0 0 14px rgba(242,201,76,.5) !important; }
 .nc-tycoon .who b, .my-panel.nc-tycoon .mi-label { color: #ffe08a; }
 .nc-tycoon .ncw i::before { content: "🪙"; font-size: 10px; } .nc-tycoon .ncw i { top: -12px; left: calc(10% + var(--k) * 19%); animation: fxFall 2.2s linear infinite; animation-delay: calc(var(--k) * -.44s); }
+
+/* ===== 상점: 종류 탭 · 보유 필터 ===== */
+.shop-tabs { position: sticky; top: 0; z-index: 5; flex-shrink: 0; display: flex; gap: 6px; overflow-x: auto; padding: 6px 2px; min-height: 44px;
+  background: linear-gradient(180deg, var(--bg, #07100c) 80%, transparent); scrollbar-width: none; }
+.shop-tabs::-webkit-scrollbar { display: none; }
+.shop-tabs button { flex: 0 0 auto; display: flex; align-items: baseline; gap: 4px; padding: 7px 12px; border-radius: 99px; font: inherit; font-size: 13px; font-weight: 700;
+  color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid var(--line2); cursor: pointer; }
+.shop-tabs button small { font-size: 10px; font-weight: 600; opacity: .8; }
+.shop-tabs button.on { color: #2a1d05; background: linear-gradient(180deg, var(--gold2), var(--gold)); border-color: var(--gold); }
+.shop-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.own-toggle { flex: 0 0 auto; padding: 6px 10px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 700; color: var(--muted);
+  background: rgba(255,255,255,.04); border: 1px solid var(--line2); cursor: pointer; }
+.own-toggle.on { color: var(--gold2); border-color: var(--gold); background: rgba(233,196,106,.12); }
+.shop-tabs button:focus-visible, .own-toggle:focus-visible { outline: 2px solid var(--gold2); outline-offset: 2px; }
+.shop-empty { text-align: center; padding: 24px 0; }

@@ -291,15 +291,26 @@ function trailPrev(a) {
   }).join('');
   return `<div class="trail-prev">${parts}<div class="tp-tok" style="${colorVars('#7a5230')}">${Art.pieceSVG(pieceArt(eqOf(me.equip).piece), 22)}</div></div>`;
 }
+// 상점: 종류 탭 + 보유 중만 보기 (내 브라우저에 기억)
+let shopCat = 'piece', shopOwned = false;
+try { shopCat = localStorage.getItem('fy_shopCat') || 'piece'; shopOwned = localStorage.getItem('fy_shopOwned') === '1'; } catch (e) {}
 function renderShop() {
   const cats = [['piece', '말', '판 위에서 움직이는 내 말'], ['stick', '윷가락', '던질 때 보이는 윷'], ['board', '말판', '내 화면에 깔리는 판'],
     ['trail', '이동 잔상', '말이 지나간 자리에 남는 효과'], ['pet', '펫', '내 말 옆에 따라다님'], ['frame', '말 테두리', '판 위 내 말 둘레'], ['card', '네임 카드', '게임 화면의 내 이름표']];
   const eqv = eqOf(me.equip);
+  if (!cats.some(c => c[0] === shopCat)) shopCat = 'piece';
+  const isOwned = it => it.price === 0 || (me.owned || []).includes(it.id);
+  const cnt = cat => { const all = ITEMS.filter(i => i.cat === cat); return `${all.filter(isOwned).length}/${all.length}`; };
+  const [cat, cname, csub] = cats.find(c => c[0] === shopCat);
+  const list = ITEMS.filter(i => i.cat === cat && (!shopOwned || isOwned(i)));
   $('tab-shop').innerHTML = `<div class="shop-head glass"><div><span>보유 트로피</span><b>🏆 ${me.trophy || 0}</b></div>
       <p class="hint">판에서 우승할 때마다 🏆 1개를 받아요. 꾸미기는 트로피로만 살 수 있어요.</p></div>
-    ${cats.map(([cat, name, sub]) => `<div class="shop-cat">${name} <small>${sub}</small></div>
-      <div class="shop-grid">${ITEMS.filter(i => i.cat === cat).map(it => {
-        const owned = it.price === 0 || (me.owned || []).includes(it.id), on = eqv[it.cat] === it.id;
+    <div class="shop-tabs">${cats.map(([c, n]) => `<button data-scat="${c}" class="${c === cat ? 'on' : ''}">${n}<small>${cnt(c)}</small></button>`).join('')}</div>
+    <div class="shop-bar"><div class="shop-cat">${cname} <small>${csub}</small></div>
+      <button class="own-toggle${shopOwned ? ' on' : ''}" id="shopOwned" aria-pressed="${shopOwned}">${shopOwned ? '☑' : '☐'} 보유 중만</button></div>
+    ${list.length ? '' : `<p class="hint shop-empty">아직 가진 ${esc(cname)}이(가) 없어요. 필터를 끄면 전체를 볼 수 있어요.</p>`}
+    <div class="shop-grid">${list.map(it => {
+        const owned = isOwned(it), on = eqv[it.cat] === it.id;
         const fx = it.art && it.art.fx;
         const pv = cat === 'piece' ? `<div class="tok-prev${fx ? ' tfx-' + fx : ''}" style="${colorVars('#7a5230')}">${Art.pieceSVG(it.art, 44)}${fxDeco(fx)}</div>`
           : cat === 'stick' ? `<div class="stick-prev">${fan(it.art.wood)}${sfxDeco(fx)}</div>`
@@ -316,7 +327,10 @@ function renderShop() {
           : it.ach ? `<button class="btn small" disabled>🔒 업적「${esc(achName)}」</button>`
           : `<button class="btn small gold" data-buy="${it.id}" ${(me.trophy || 0) < it.price ? 'disabled' : ''}>🏆 ${it.price}</button>`;
         return `<div class="shop-item tier-${tc}${on ? ' on' : ''}"><em class="tier">${tn}</em><div class="pv">${pv}</div><b>${esc(it.name)}</b><span>${esc(it.desc)}</span>${taunt}${btn}</div>`;
-      }).join('')}</div>`).join('')}`;
+      }).join('')}</div>`;
+  { const tb = document.querySelector('.shop-tabs'), on = tb && tb.querySelector('button.on'); if (on) tb.scrollLeft = Math.max(0, on.offsetLeft - tb.offsetLeft - 40); }
+  document.querySelectorAll('[data-scat]').forEach(b => b.onclick = () => { shopCat = b.dataset.scat; try { localStorage.setItem('fy_shopCat', shopCat); } catch (e) {} renderShop(); });
+  $('shopOwned').onclick = () => { shopOwned = !shopOwned; try { localStorage.setItem('fy_shopOwned', shopOwned ? '1' : '0'); } catch (e) {} renderShop(); };
   document.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => socket.emit('shop', { op: 'buy', id: b.dataset.buy }, r => r.error ? toast(r.error) : toast('구매했어요! 바로 장착해 보세요', true)));
   document.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => socket.emit('shop', { op: 'equip', id: b.dataset.equip }, r => r.error ? toast(r.error) : toast('장착했어요', true)));
 }
