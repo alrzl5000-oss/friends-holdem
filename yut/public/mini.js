@@ -47,14 +47,8 @@
     };
     draw();
   }
-  function botModal(type) {
-    const title = type === 'gonu' ? '호박고누' : '십이장기';
-    modal(`<h3>🤖 봇과 ${title}</h3><p class="hint" style="text-align:left">판돈·트로피 없이 연습하는 대전이에요. 이기면 업적에는 기록돼요. 선은 무작위.${type === 'gonu' ? '<br>호박고누는 선이 아주 유리해요.' : ''}</p>
-      <div class="bot-levels"><button class="bet-opt" data-lv="mid">중간<small>몇 수 앞을 읽고, 가끔 다른 수도 둠</small></button>
-        <button class="bet-opt" data-lv="hard">어려움<small>시간 안에서 최대한 깊게 읽음</small></button></div>
-      <div class="row2"><button class="btn" data-close>취소</button></div>`);
-    document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
-    document.querySelectorAll('#modalPanel [data-lv]').forEach(b => b.onclick = () => { closeModal(); send('bot', { type, level: b.dataset.lv }, r => enter(r.state)); });
+  function botModal(type) {   // 봇은 난이도 하나 — 누르면 바로 시작
+    send('bot', { type }, r => enter(r.state));
   }
   function join(code) { send('join', { code }, r => enter(r.state)); }
   function enter(state) { R = state; sel = null; chatCode = null; lastSeq = state ? state.seq : 0; renderAll(); }
