@@ -1462,3 +1462,25 @@ body.excel .pet, body.excel svg.frm, body.excel .trl, body.excel .ncw { display:
 
 body.excel .sigw, body.excel .board-fx, body.excel .pet .pfx { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .sigw, .sigw i, .board-fx, .board-fx i, .pet .pfx, .shop-item.tier-ach { animation: none !important; } }
+
+/* ===== 상점 크게 보기 ===== */
+.shop-item .pv { position: relative; cursor: zoom-in; }
+.pv-zoom-ic { position: absolute; right: -4px; bottom: -4px; font-style: normal; font-size: 11px; opacity: .75; pointer-events: none; }
+.shop-item .pv:focus-visible { outline: 2px solid var(--gold2); outline-offset: 3px; border-radius: 8px; }
+.spv { text-align: center; }
+.spv .tier { display: inline-block; font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.1); }
+.spv.tier-ach .tier { background: linear-gradient(90deg, #7b2cff, #c49bff); color: #fff; }
+.spv.tier-legend .tier { background: linear-gradient(90deg, #ffd36a, #ff9a3c); color: #3a2400; }
+.spv h3 { margin: 6px 0 2px; }
+.spv-desc { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.spv-stage { position: relative; height: 230px; margin: 4px -6px 8px; border-radius: 14px; overflow: hidden; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.08), transparent 65%), #0b1511; }
+.spv-zoom { transform: scale(2.6); transform-origin: 50% 50%; display: grid; place-items: center; }
+.spv-board .spv-zoom { transform: none; }
+.spv .pv-bd { width: 210px; height: 210px; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 3px #5a3a20, 0 6px 16px rgba(0,0,0,.6); }
+.spv .pv-bd svg { width: 100%; height: 100%; display: block; }
+.spv-card .spv-zoom { transform: scale(2.4); }
+.spv-trail .spv-zoom { transform: scale(2.5); }
+.spv-stick .spv-zoom { transform: scale(2.2); }
+.spv .row2 { display: flex; gap: 8px; justify-content: center; }
+.spv .row2 .btn { flex: 1; }

@@ -304,6 +304,27 @@ function trailPrev(a) {
 // 상점: 종류 탭 + 보유 중만 보기 (내 브라우저에 기억)
 let shopCat = 'piece', shopOwned = false;
 try { shopCat = localStorage.getItem('fy_shopCat') || 'piece'; shopOwned = localStorage.getItem('fy_shopOwned') === '1'; } catch (e) {}
+// 상점 크게 보기: 카드의 미리보기를 크게 + 말·테두리·펫은 지금 내 장비와 합쳐서 보여줌
+const shopPv = {};
+function bindShopBtns(root) {
+  root.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => socket.emit('shop', { op: 'buy', id: b.dataset.buy }, r => r.error ? toast(r.error) : (toast('구매했어요! 바로 장착해 보세요', true), closeModal())));
+  root.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => socket.emit('shop', { op: 'equip', id: b.dataset.equip }, r => r.error ? toast(r.error) : (toast('장착했어요', true), closeModal())));
+}
+function comboPrev(over) {   // over: 바꿔 볼 아이템 하나 (말/테두리/펫)
+  const eq = eqOf(me.equip), it = ITEM(over); if (it) eq[it.cat] = over;
+  const art = pieceArt(eq.piece), fx = art.fx;
+  return `<div class="tok-prev combo${fx ? ' tfx-' + fx : ''}${achCls(eq.piece, art)}" style="${colorVars('#7a5230')}">${frameHTML(eq.frame)}${achDeco(eq.piece, art)}${Art.pieceSVG(art, 44)}${fxDeco(fx)}${petHTML(eq.pet)}</div>`;
+}
+function shopPreview(id) {
+  const it = ITEM(id), d = shopPv[id]; if (!it || !d) return;
+  const big = ['piece', 'frame', 'pet'].includes(it.cat) ? comboPrev(id) : d.pv;
+  const note = ['piece', 'frame', 'pet'].includes(it.cat) ? '<p class="hint">지금 장착한 말·테두리·펫과 합쳐서 보여줘요</p>' : it.cat === 'board' ? '<p class="hint">방장일 때 모두에게 이 판이 깔려요</p>' : '';
+  modal(`<div class="spv tier-${d.tc}"><em class="tier">${d.tn}</em><h3>${esc(it.name)}</h3><p class="spv-desc">${esc(it.desc)}</p>
+    <div class="spv-stage spv-${it.cat}"><div class="spv-zoom">${big}</div></div>${note}
+    <div class="row2"><button class="btn" data-close>닫기</button>${d.btn}</div></div>`);
+  document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
+  bindShopBtns($('modalPanel'));
+}
 function renderShop() {
   const cats = [['piece', '말', '판 위에서 움직이는 내 말'], ['stick', '윷가락', '던질 때 보이는 윷'], ['board', '말판', '내가 방장인 판에 깔림 (모두에게 보임)'],
     ['trail', '이동 잔상', '말이 지나간 자리에 남는 효과'], ['pet', '펫', '내 말 옆에 따라다님'], ['frame', '말 테두리', '판 위 내 말 둘레'], ['card', '네임 카드', '게임 화면의 내 이름표']];
@@ -336,13 +357,14 @@ function renderShop() {
           : owned ? `<button class="btn small" data-equip="${it.id}">장착</button>`
           : it.ach ? `<button class="btn small" disabled>🔒 업적「${esc(achName)}」</button>`
           : `<button class="btn small gold" data-buy="${it.id}" ${(me.trophy || 0) < it.price ? 'disabled' : ''}>🏆 ${it.price}</button>`;
-        return `<div class="shop-item tier-${tc}${on ? ' on' : ''}"><em class="tier">${tn}</em><div class="pv">${pv}</div><b>${esc(it.name)}</b><span>${esc(it.desc)}</span>${taunt}${btn}</div>`;
+        shopPv[it.id] = { pv, btn, tc, tn };
+        return `<div class="shop-item tier-${tc}${on ? ' on' : ''}"><em class="tier">${tn}</em><div class="pv" data-pv="${it.id}" role="button" tabindex="0" aria-label="${esc(it.name)} 크게 보기">${pv}<i class="pv-zoom-ic">🔍</i></div><b>${esc(it.name)}</b><span>${esc(it.desc)}</span>${taunt}${btn}</div>`;
       }).join('')}</div>`;
   { const tb = document.querySelector('.shop-tabs'), on = tb && tb.querySelector('button.on'); if (on) tb.scrollLeft = Math.max(0, on.offsetLeft - tb.offsetLeft - 40); }
   document.querySelectorAll('[data-scat]').forEach(b => b.onclick = () => { shopCat = b.dataset.scat; try { localStorage.setItem('fy_shopCat', shopCat); } catch (e) {} renderShop(); });
   $('shopOwned').onclick = () => { shopOwned = !shopOwned; try { localStorage.setItem('fy_shopOwned', shopOwned ? '1' : '0'); } catch (e) {} renderShop(); };
-  document.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => socket.emit('shop', { op: 'buy', id: b.dataset.buy }, r => r.error ? toast(r.error) : toast('구매했어요! 바로 장착해 보세요', true)));
-  document.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => socket.emit('shop', { op: 'equip', id: b.dataset.equip }, r => r.error ? toast(r.error) : toast('장착했어요', true)));
+  bindShopBtns(document);
+  document.querySelectorAll('[data-pv]').forEach(el => { el.onclick = () => shopPreview(el.dataset.pv); el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); shopPreview(el.dataset.pv); } }; });
 }
 
 function renderProfile() {
