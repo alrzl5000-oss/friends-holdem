@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const ENGINES = { gonu: require('./games/gonu'), j12: require('./games/janggi12') };
 const BOT = require('./games/bot');
 // 봇 대전: 판돈·트로피 없음, 업적 기록만. 봇 자리는 사람 id 대신 'bot'
-const BOT_ID = 'bot', BOT_LEVEL = 'hard', BOT_NAME = '🤖 봇';   // 난이도는 하나 (시간 안에서 최대한 깊게 읽음)
+const BOT_ID = 'bot', BOT_LEVEL = 'mid', BOT_NAME = '🤖 봇';   // 난이도는 하나 (중간: 몇 수 앞을 읽고, 비슷하게 좋은 수 중에서 고름)
 const isBotRoom = R => !!R.bot;
 const TURN_MS = 30000;          // 한 수 30초, 넘기면 아무 수나 자동으로
 const MIN_BET = 1e6, MAX_BET = 1e8;
