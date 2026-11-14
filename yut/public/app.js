@@ -35,7 +35,8 @@ const themeOf = skin => ((artOf((skin && skin.board) || 'b_hanji') || {}).theme)
 const EQ0 = { piece: 'p_basic', stick: 's_basic', board: 'b_hanji', trail: 'tr_none', pet: 'pet_none', frame: 'fr_none', card: 'nc_none' };
 const eqOf = e => Object.assign({}, EQ0, e || {});
 // 펫(말 옆에 따라다님) · 말 테두리 · 이름표
-const petHTML = id => { const a = artOf(id) || {}; return a.em ? `<i class="pet pm-${a.move || 'hop'}${a.glow ? ' pet-glow' : ''}">${a.em}</i>` : ''; };
+const petHTML = id => { const a = artOf(id) || {}; if (!a.em) return ''; const ach = isAch(id);
+  return `<i class="pet pm-${a.move || 'hop'}${a.glow ? ' pet-glow' : ''}${ach ? ' pet-x-' + id.replace('pet_', '') : ''}"><span class="pet-em">${a.em}</span>${ach ? '<b class="pfx"></b><b class="pfx"></b>' : ''}</i>`; };
 const frameHTML = id => { const a = artOf(id) || {}; return a.fr ? Art.frameSVG(a.fr) : ''; };
 const cardCls = id => { const a = artOf(id) || {}; return a.nc ? ` nc nc-${a.nc}` : ''; };
 const ncDeco = id => { const a = artOf(id) || {}; return a.nc ? `<span class="ncw">${Array.from({ length: 5 }, (_, k) => `<i style="--k:${k}"></i>`).join('')}</span>` : ''; };
@@ -108,6 +109,15 @@ const fxDeco = fx => (fx ? `<span class="fxw fx-${fx}">${Array.from({ length: FX
 const SFX_PARTS = { bubble: 5, snow: 6, ink: 3, confetti: 6, disco: 4, rocket: 3, meteor: 4, chips: 4, leaf: 4, jade: 3, flame: 6, thunder: 2, petals: 6, gold: 5 };
 const sfxDeco = fx => (fx ? `<span class="sfxw sfx-${fx}">${Array.from({ length: SFX_PARTS[fx] || 0 }, (_, k) => `<i style="--k:${k}"></i>`).join('')}</span>` : '');
 // 상점 등급
+// 업적 전용 말: 말마다 완전히 다른 고유 효과(sig) — 공통 오라 없음
+const SIG_PARTS = { legend: 7, shadow: 6, reaper: 4, clown: 3, collector: 6, revenge: 8, ash: 8, tomb: 4, bankrupt: 6, pumpkin: 3, pawn: 6, sandbag: 3, glitch: 8, zzz: 4 };
+const isAch = id => { const it = ITEM(id); return !!(it && it.ach); };
+const achDeco = (id, art) => {
+  if (!isAch(id)) return '';
+  const sig = art.sig ? `<span class="sigw sig-${art.sig}">${Array.from({ length: SIG_PARTS[art.sig] || 0 }, (_, k) => `<i style="--k:${k};--x:${k * 37 % 9};--y:${k * 23 % 9}"></i>`).join('')}</span>` : '';
+  return sig;
+};
+const achCls = (id, art) => (isAch(id) && art && art.sig ? ' tsig-' + art.sig : '');
 const tierOf = price => price == null ? ['ach', '업적'] : price >= 50 ? ['legend', '전설'] : price >= 25 ? ['hero', '영웅'] : price >= 10 ? ['rare', '희귀'] : price > 0 ? ['normal', '일반'] : ['basic', '기본'];
 function fan(wood) {
   const set = [[true, -21, -30], [false, -7, -10], [true, 7, 10], [false, 21, 30]];
@@ -287,7 +297,7 @@ function trailPrev(a) {
   if (!a || !a.kind) return `<div class="trail-prev none">—</div>`;
   const parts = Array.from({ length: 6 }, (_, k) => {
     const inner = a.kind === 'emoji' ? a.em : a.kind === 'ghost' ? Art.pieceSVG(pieceArt(eqOf(me.equip).piece), 18) : '';
-    return `<i class="trl-p trl-${a.kind}" style="--k:${k};--h:${k * 50}">${inner}</i>`;
+    return `<i class="trl-p trl-${a.kind}${a.mv ? ' tpm-' + a.mv : ''}" style="--k:${k};--h:${k * 50}">${inner}</i>`;
   }).join('');
   return `<div class="trail-prev">${parts}<div class="tp-tok" style="${colorVars('#7a5230')}">${Art.pieceSVG(pieceArt(eqOf(me.equip).piece), 22)}</div></div>`;
 }
@@ -312,10 +322,10 @@ function renderShop() {
     <div class="shop-grid">${list.map(it => {
         const owned = isOwned(it), on = eqv[it.cat] === it.id;
         const fx = it.art && it.art.fx;
-        const pv = cat === 'piece' ? `<div class="tok-prev${fx ? ' tfx-' + fx : ''}" style="${colorVars('#7a5230')}">${Art.pieceSVG(it.art, 44)}${fxDeco(fx)}</div>`
+        const pv = cat === 'piece' ? `<div class="tok-prev${fx ? ' tfx-' + fx : ''}${achCls(it.id, it.art)}" style="${colorVars('#7a5230')}">${achDeco(it.id, it.art)}${Art.pieceSVG(it.art, 44)}${fxDeco(fx)}</div>`
           : cat === 'stick' ? `<div class="stick-prev">${fan(it.art.wood)}${sfxDeco(fx)}</div>`
-          : cat === 'board' ? `<div class="pv-bd">${Art.boardSVG({ theme: it.art.theme })}</div>`
-          : cat === 'trail' ? trailPrev(it.art)
+          : cat === 'board' ? `<div class="pv-bd">${Art.boardSVG({ theme: it.art.theme })}${BFX[it.art.theme] ? `<div class="board-fx bfx-${it.art.theme}">${Array.from({ length: BFX[it.art.theme] }, (_, k) => `<i style="--k:${k};--x:${(k * 37 % 100)};--d:${(k * 53 % 97) / 97}"></i>`).join('')}</div>` : ''}</div>`
+          : cat === 'trail' ? trailPrev(Object.assign({ ach: !!it.ach }, it.art))
           : cat === 'pet' ? `<div class="tok-prev pet-prev" style="${colorVars('#7a5230')}">${Art.pieceSVG(pieceArt(eqv.piece), 44)}${petHTML(it.id)}</div>`
           : cat === 'frame' ? `<div class="tok-prev frame-prev" style="${colorVars('#7a5230')}">${frameHTML(it.id)}${Art.pieceSVG(pieceArt(eqv.piece), 44)}</div>`
           : `<div class="nc-prev opp${cardCls(it.id)}" style="${colorVars('#c0303f')}">${ncDeco(it.id)}<div class="who"><b>${esc(me.username)}</b><span>던지는 중</span></div></div>`;
@@ -455,7 +465,9 @@ function renderPlay() {
   const mine = v.players.find(p => p.id === v.you) || { color: '#888', nodes: [], done: 0 };
   const steps = v.last ? v.last.steps : 1;
   const hostP = v.players.find(p => p.host) || mine;   // 판은 방장이 장착한 판으로 모두에게 같게
-  $('boardSvg').innerHTML = Art.boardSVG({ theme: isExcel() ? 'excel' : themeOf(hostP.skin), options: v.canMove ? v.options : [], steps });
+  const bTheme = isExcel() ? 'excel' : themeOf(hostP.skin);
+  $('boardSvg').innerHTML = Art.boardSVG({ theme: bTheme, options: v.canMove ? v.options : [], steps });
+  boardFx($('boardFx'), bTheme);
   placeTokens(v);
 
   // 내 자리
@@ -539,7 +551,9 @@ function placeTokens(v) {
       let el = tokEls.get(key);
       if (!el) {
         el = document.createElement('div'); el.className = 'tok hid'; el.dataset.p = p.id; el.dataset.i = i;
-        el.innerHTML = frameHTML(p.skin && p.skin.frame) + Art.pieceSVG(art, 20) + fxDeco(art.fx) + petHTML(p.skin && p.skin.pet) + '<span class="cnt" hidden></span><span class="xl-lab"></span><b class="sh-tag" hidden></b>';
+        const pid = (p.skin && p.skin.piece) || 'p_basic';
+        el.innerHTML = frameHTML(p.skin && p.skin.frame) + achDeco(pid, art) + Art.pieceSVG(art, 20) + fxDeco(art.fx) + petHTML(p.skin && p.skin.pet) + '<span class="cnt" hidden></span><span class="xl-lab"></span><b class="sh-tag" hidden></b>';
+        if (achCls(pid, art)) el.classList.add(achCls(pid, art).trim());
         if (art.fx) el.classList.add('tfx-' + art.fx);   // 말 전체용 효과(둥실·무지개·광택). 'fx-' 는 장식 전용이라 말에 붙이면 안 됨
         { const c = colorOf(p); el.style.setProperty('--c', c); el.style.setProperty('--cl', Art.light(c, .45)); el.style.setProperty('--cd', Art.dark(c, .45)); }
         el.querySelector('.xl-lab').textContent = (p.name || '?').slice(0, 1);
@@ -572,7 +586,7 @@ function placeTokens(v) {
       }
       const path = fresh && mv.by === p.id && mv.path[0] === prev ? mv.path : [prev, n];
       el.classList.toggle('hid', onBoard && !primary);
-      hopAlong(el, path, () => { if (!onBoard || !primary) el.classList.add('hid'); }, fresh && mv.by === p.id && path.length > 1 ? artOf(p.skin && p.skin.trail) : null);
+      hopAlong(el, path, () => { if (!onBoard || !primary) el.classList.add('hid'); }, fresh && mv.by === p.id && path.length > 1 ? trailSpec(p.skin && p.skin.trail) : null);
       if (primary) {
         document.querySelectorAll('.tok.last').forEach(t => t !== el && t.classList.remove('last'));
         el.classList.add('last'); clearTimeout(el._lt); el._lt = setTimeout(() => el.classList.remove('last'), 2600);
@@ -610,6 +624,14 @@ function hopAlong(el, path, done, trail) {
   el.style.left = fx + '%'; el.style.top = fy + '%';
   a.onfinish = () => { el.style.zIndex = ''; done && done(); };
 }
+const trailSpec = id => { const a = artOf(id); return a && a.kind ? Object.assign({ ach: isAch(id) }, a) : null; };
+// 업적 판 전용 움직이는 장식 (판 위에 겹침, 클릭 막지 않음)
+const BFX = { royal: 14, jade: 6, ink: 6, autumn: 12, hell: 16 };
+function boardFx(box, theme) {
+  if (!box || box.dataset.t === theme) return;
+  box.dataset.t = theme; box.className = 'board-fx' + (BFX[theme] ? ' bfx-' + theme : '');
+  box.innerHTML = BFX[theme] ? Array.from({ length: BFX[theme] }, (_, k) => `<i style="--k:${k};--x:${(k * 37 % 100)};--d:${(k * 53 % 97) / 97}"></i>`).join('') : '';
+}
 // 이동 잔상: 말이 지나가는 동안 그 자리에 효과를 떨어뜨림
 function trailFx(el, trail, dur) {
   if (!trail || !trail.kind || REDUCED) return;
@@ -623,6 +645,7 @@ function trailFx(el, trail, dur) {
     if (trail.kind === 'emoji') { d.textContent = trail.em; d.style.setProperty('--dx', (Math.random() * 2 - 1) * 16 + 'px'); d.style.setProperty('--rot', (Math.random() * 90 - 45) + 'deg'); }
     else if (trail.kind === 'ghost') { const pc = el.querySelector('.pc'); if (pc) d.innerHTML = pc.outerHTML; d.style.cssText += ';' + ['--c', '--cl', '--cd'].map(v => v + ':' + el.style.getPropertyValue(v)).join(';'); }
     else if (trail.kind === 'rainbow') d.style.setProperty('--h', (k * 23) % 360);
+    if (trail.mv) { d.classList.add('trm-' + trail.mv); d.style.setProperty('--k', k); }   // 업적 잔상: 종류마다 다른 움직임
     layer.insertBefore(d, layer.firstChild); k++;
     setTimeout(() => d.remove(), trail.kind === 'ink' ? 2200 : 1200);
     setTimeout(tick, gap);

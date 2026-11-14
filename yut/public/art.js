@@ -124,7 +124,7 @@
           if (d >= 6.3 && d < 7) put('f', x, y, '#cfc6b0');
           for (let k = 0; k < 8; k++) {
             const cx = Math.round(C + Math.cos(k * Math.PI / 4) * 8.2), cy = Math.round(C + Math.sin(k * Math.PI / 4) * 8.2), ox = x - cx, oy = y - cy;
-            if (Math.abs(ox) <= 1 && oy >= -1 && oy <= 1) put('f', x, y, oy === 0 && ox !== 0 ? '#111' : oy === 1 && ox === 0 ? '#555' : '#f4efe2');
+            if (Math.abs(ox) <= 1 && oy >= -1 && oy <= 1) { if (oy === 0 && ox !== 0) put('e', x, y, '#ff2a2a'); else put('f', x, y, oy === 1 && ox === 0 ? '#555' : '#f4efe2'); }
           }
           break;
         case 'sun': for (let k = 0; k < 12; k++) {

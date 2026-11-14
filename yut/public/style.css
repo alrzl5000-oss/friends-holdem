@@ -1088,7 +1088,7 @@ body.excel .ink-splat, body.excel .disco-floor, body.excel .beam, body.excel .sm
 
 /* ================= 펫 (말 옆에 따라다님) ================= */
 .pet { position: absolute; right: -46%; bottom: 30%; z-index: 4; font-style: normal; line-height: 1; pointer-events: none;
-  font-size: calc(var(--s) * .046); filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); transform-origin: 50% 100%; }
+  font-size: calc(var(--s) * .056); filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); transform-origin: 50% 100%; }
 .pet.pm-hop { animation: petHop .9s ease-in-out infinite; }
 .pet.pm-fly { bottom: 62%; animation: petFly 2.4s ease-in-out infinite; }
 .pet.pm-sway { animation: petSway 1.6s ease-in-out infinite; }
@@ -1098,7 +1098,7 @@ body.excel .ink-splat, body.excel .disco-floor, body.excel .beam, body.excel .sm
 @keyframes petFly { 0%, 100% { transform: translate(0, 0) rotate(-6deg); } 25% { transform: translate(-25%, -20%) rotate(4deg); } 50% { transform: translate(-10%, 10%) rotate(-2deg); } 75% { transform: translate(15%, -12%) rotate(6deg); } }
 @keyframes petSway { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
 @keyframes petSide { 0%, 100% { transform: translateX(0) scaleX(1); } 45% { transform: translateX(30%) scaleX(1); } 50% { transform: translateX(30%) scaleX(-1); } 95% { transform: translateX(0) scaleX(-1); } }
-.pet-prev .pet { font-size: 22px; right: -18px; bottom: 6px; }
+.pet-prev .pet { font-size: 30px; right: -26px; bottom: 2px; }
 .pet-prev .pet.pm-fly { bottom: 26px; }
 
 /* ================= 말 테두리 (도트 SVG) ================= */
@@ -1156,8 +1156,8 @@ svg.frm { position: absolute; left: -33.3%; top: -33.3%; width: 166.6%; height: 
 /* ================= 네임 카드 ================= */
 .opp.nc, .my-panel.nc { position: relative; overflow: hidden; }
 .my-panel.nc { margin: 0 12px; padding: 8px 12px 6px; border-radius: 12px; }
-.ncw { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
-.nc > *:not(.ncw) { position: relative; z-index: 1; }
+.ncw { position: absolute; inset: 0; pointer-events: none; z-index: -1; }
+.opp.nc, .my-panel.nc { isolation: isolate; }   /* 장식은 배경 바로 위·내용 아래 (내용 배치는 건드리지 않음) */
 .ncw i { position: absolute; font-style: normal; }
 .nc-hanji { background: linear-gradient(135deg, #f3e6c4, #dcc595) !important; border-color: #a3794a !important; }
 .nc-hanji .who b, .my-panel.nc-hanji .mi-label { color: #3b2a1c; } .nc-hanji .who span { color: #6b4a2a; }
@@ -1210,3 +1210,255 @@ body.excel .pet, body.excel svg.frm, body.excel .trl, body.excel .ncw { display:
 .bot-levels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
 .bot-levels .bet-opt small { white-space: normal; line-height: 1.3; }
 .mc-btns .btn:first-child { grid-column: 1 / -1; }
+
+
+/* =====================================================================
+   업적 전용 아이템 — 공통 효과 없이, 아이템마다 완전히 다른 연출
+   ===================================================================== */
+.sigw { position: absolute; inset: -50%; pointer-events: none; z-index: 1; container-type: size; }
+.sigw i { position: absolute; font-style: normal; line-height: 1; }
+.tok[class*="tsig-"] .pc, .tok-prev[class*="tsig-"] .pc { position: relative; z-index: 2; }
+@keyframes sgTwinkle { 0%, 100% { transform: scale(.4) rotate(0); opacity: .3; } 50% { transform: scale(1.15) rotate(45deg); opacity: 1; } }
+.star4 { clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+
+/* 전설의 윷꾼: 머리 위에 왕관이 둥실 + 황금 별 여섯이 공전 */
+.sig-legend i:nth-child(-n+6) { width: 9%; height: 9%; left: 45.5%; top: 45.5%; background: #ffe28a; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: drop-shadow(0 0 3px #ffd36a); animation: starOrbit 6s linear infinite; }
+@keyframes starOrbit { from { transform: rotate(calc(var(--k) * 60deg)) translateX(420%) rotate(0); } to { transform: rotate(calc(var(--k) * 60deg + 360deg)) translateX(420%) rotate(720deg); } }
+.sig-legend i:nth-child(7) { left: 50%; top: 4%; font-size: 22cqw; transform: translateX(-50%); filter: drop-shadow(0 0 4px #ffd36a); animation: crownBob 1.6s ease-in-out infinite; }
+.sig-legend i:nth-child(7)::before { content: "👑"; }
+@keyframes crownBob { 50% { transform: translate(-50%, -12%) rotate(-6deg); } }
+
+/* 그림자: 검보라 연기가 피어오르고, 말이 둘로 겹쳐 흔들림 */
+.sig-shadow i { width: 22%; height: 22%; border-radius: 50%; background: radial-gradient(circle, rgba(40,0,70,.85), rgba(10,0,20,.5) 55%, transparent 70%); filter: blur(1.5px);
+  left: calc(22% + var(--k) * 11%); top: 60%; animation: smokeUp 2.6s ease-in infinite; animation-delay: calc(var(--k) * -.43s); }
+@keyframes smokeUp { 0% { transform: translateY(0) scale(.6); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-160%) scale(1.6); opacity: 0; } }
+.tok.tsig-shadow .pc, .tok-prev.tsig-shadow .pc { animation: shadowDbl 2.2s steps(1) infinite; }
+@keyframes shadowDbl { 0%, 100% { filter: none; } 30% { filter: drop-shadow(-3px 0 0 rgba(120,60,255,.8)) drop-shadow(3px 0 0 rgba(0,0,0,.9)); } 34% { filter: none; } 70% { filter: drop-shadow(2px 1px 0 rgba(120,60,255,.8)); } 72% { filter: none; } }
+
+/* 저승사자: 낫이 말 둘레를 돌고, 넋이 떠오름 */
+.sig-reaper i:nth-child(1) { inset: 6%; animation: fxSpin 3.2s linear infinite; }
+.sig-reaper i:nth-child(1)::before { content: ""; position: absolute; left: 50%; top: 0; width: 3%; height: 40%; background: linear-gradient(#6b4a2a, #2a1a0a); transform: translateX(-50%); border-radius: 2px; }
+.sig-reaper i:nth-child(1)::after { content: ""; position: absolute; left: 50%; top: -2%; width: 26%; height: 14%; border-top: 3px solid #e8eef5; border-radius: 100% 0 0 0; transform: translateX(-4%) rotate(-10deg); filter: drop-shadow(0 0 3px #aee); }
+.sig-reaper i:nth-child(n+2) { width: 11%; height: 15%; border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%; background: radial-gradient(circle at 50% 70%, #fff, #9fe8ff 40%, rgba(80,160,255,.4) 70%, transparent 75%);
+  left: calc(26% + (var(--k) - 1) * 18%); top: 62%; filter: drop-shadow(0 0 4px #7fd8ff); animation: soulUp 2.8s ease-in infinite; animation-delay: calc(var(--k) * -.9s); }
+@keyframes soulUp { 0% { transform: translateY(0) scale(.5); opacity: 0; } 25% { opacity: .95; } 100% { transform: translateY(-180%) translateX(10%) scale(1); opacity: 0; } }
+
+/* 광대: 공 세 개로 저글링 + 말이 통통 찌그러짐 */
+.sig-clown i { width: 12%; height: 12%; border-radius: 50%; left: 44%; top: 10%; animation: juggle 1.5s linear infinite; animation-delay: calc(var(--k) * -.5s); box-shadow: inset -2px -2px 0 rgba(0,0,0,.25); }
+.sig-clown i:nth-child(1) { background: #ff3d5a; } .sig-clown i:nth-child(2) { background: #ffd23f; } .sig-clown i:nth-child(3) { background: #2f9bff; }
+@keyframes juggle { 0% { transform: translate(-130%, 120%); } 25% { transform: translate(-70%, -10%); } 50% { transform: translate(0, -40%); } 75% { transform: translate(70%, -10%); } 100% { transform: translate(130%, 120%); } }
+.tok.tsig-clown .pc, .tok-prev.tsig-clown .pc { animation: squash 1s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes squash { 0%, 100% { transform: scale(1, 1); } 40% { transform: scale(1.12, .86); } 60% { transform: scale(.92, 1.1) translateY(-6%); } }
+
+/* 수집가: 보석 여섯 개가 타원 궤도를 앞뒤로 돎 */
+.sig-collector i { width: 10%; height: 13%; clip-path: polygon(50% 0, 100% 40%, 50% 100%, 0 40%); left: 45%; top: 43%; animation: gemOrbit 3.6s linear infinite; animation-delay: calc(var(--k) * -.6s); filter: drop-shadow(0 0 3px #fff); }
+.sig-collector i:nth-child(6n+1) { background: linear-gradient(135deg, #fff, #ff3d6e); } .sig-collector i:nth-child(6n+2) { background: linear-gradient(135deg, #fff, #3ddc84); } .sig-collector i:nth-child(6n+3) { background: linear-gradient(135deg, #fff, #2f9bff); }
+.sig-collector i:nth-child(6n+4) { background: linear-gradient(135deg, #fff, #ffd23f); } .sig-collector i:nth-child(6n+5) { background: linear-gradient(135deg, #fff, #c86bff); } .sig-collector i:nth-child(6n) { background: linear-gradient(135deg, #fff, #ff8a1a); }
+@keyframes gemOrbit { 0% { transform: translate(380%, 0) scale(1); z-index: 3; } 25% { transform: translate(0, 140%) scale(1.25); z-index: 3; } 50% { transform: translate(-380%, 0) scale(1); z-index: 0; } 75% { transform: translate(0, -140%) scale(.7); z-index: 0; } 100% { transform: translate(380%, 0) scale(1); z-index: 3; } }
+
+/* 복수귀: 말 밑에서 불길 혀가 날름거리고 불티가 튐 */
+.sig-revenge i:nth-child(-n+5) { width: 16%; height: 26%; bottom: 30%; left: calc(22% + var(--k) * 11%); border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%;
+  background: radial-gradient(ellipse at 50% 85%, #fff3a0 0 12%, #ffb000 30%, #ff3a00 60%, transparent 72%); transform-origin: 50% 100%; filter: blur(.4px); animation: tongue .5s ease-in-out infinite alternate; animation-delay: calc(var(--k) * -.17s); }
+.sig-revenge i:nth-child(3) { height: 34%; }
+@keyframes tongue { from { transform: scaleY(.75) skewX(-6deg); } to { transform: scaleY(1.15) skewX(6deg); } }
+.sig-revenge i:nth-child(n+6) { width: 4%; height: 4%; border-radius: 50%; background: #ffcf3a; box-shadow: 0 0 4px #ff3a00; left: calc(30% + (var(--k) - 5) * 14%); top: 60%; animation: emberUp 1.6s ease-out infinite; animation-delay: calc(var(--k) * -.4s); }
+@keyframes emberUp { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(calc((var(--k) - 6) * 60%), -800%); opacity: 0; } }
+.tok.tsig-revenge .pc, .tok-prev.tsig-revenge .pc { animation: bloodPulse 1.2s ease-in-out infinite; }
+@keyframes bloodPulse { 50% { filter: drop-shadow(0 0 4px #ff1a1a) brightness(1.25); } }
+
+/* 잿더미: 밑에서 불씨가 숨 쉬고 재가 빙글빙글 날림 */
+.sig-ash::before { content: ""; position: absolute; left: 25%; right: 25%; top: 58%; height: 16%; border-radius: 50%; background: radial-gradient(ellipse, rgba(255,120,30,.9), rgba(255,60,0,.4) 50%, transparent 70%); animation: ember 1.6s ease-in-out infinite; }
+@keyframes ember { 50% { opacity: .45; transform: scaleX(.85); } }
+.sig-ash i { width: 3.5%; height: 3.5%; background: #cfcfcf; left: calc(26% + var(--k) * 6.5%); top: 60%; animation: ashUp 2.6s linear infinite; animation-delay: calc(var(--k) * -.33s); }
+.sig-ash i:nth-child(3n) { background: #ff8a3a; box-shadow: 0 0 3px #ff5a00; }
+@keyframes ashUp { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(calc((var(--k) - 4) * 30%), -900%) rotate(270deg); opacity: 0; } }
+
+/* 비석: 위에서 달빛 기둥 + 넋 셋 + 바닥 안개 */
+.sig-tomb::before { content: ""; position: absolute; left: 30%; right: 30%; top: -10%; height: 70%; background: linear-gradient(rgba(200,220,255,.55), transparent); clip-path: polygon(35% 0, 65% 0, 100% 100%, 0 100%); animation: ember 3s ease-in-out infinite; }
+.sig-tomb i:nth-child(-n+3) { width: 13%; height: 17%; border-radius: 50% 50% 30% 30%; background: radial-gradient(circle at 40% 40%, rgba(255,255,255,.95), rgba(200,220,255,.5) 60%, transparent 72%);
+  left: calc(22% + var(--k) * 20%); top: 55%; animation: soulUp 3.4s ease-in infinite; animation-delay: calc(var(--k) * -1.1s); }
+.sig-tomb i:nth-child(4) { left: 15%; right: 15%; top: 66%; height: 12%; border-radius: 50%; background: radial-gradient(ellipse, rgba(220,230,255,.6), transparent 70%); filter: blur(2px); animation: mistDrift 4s ease-in-out infinite alternate; }
+@keyframes mistDrift { from { transform: translateX(-10%); } to { transform: translateX(10%); } }
+
+/* 빈털터리: 블랙홀이 돌며 엽전을 빨아들임 */
+.sig-bankrupt::before { content: ""; position: absolute; inset: 20%; border-radius: 50%; background: conic-gradient(from 0deg, #000, #3a0a5a, #000, #2a0040, #000);
+  -webkit-mask: radial-gradient(circle, transparent 46%, #000 52%, transparent 72%); mask: radial-gradient(circle, transparent 46%, #000 52%, transparent 72%); animation: fxSpin 1.2s linear infinite reverse; }
+.sig-bankrupt i { width: 8%; height: 8%; border-radius: 50%; left: 50%; top: 50%; background: radial-gradient(circle, transparent 20%, #e0b93a 24%, #ffe28a 50%, #a07a10 72%); box-shadow: 0 0 3px #ffd36a;
+  animation: suckIn 2.4s ease-in infinite; animation-delay: calc(var(--k) * -.4s); }
+@keyframes suckIn { 0% { transform: translate(-50%, -50%) rotate(calc(var(--k) * 60deg)) translateX(520%) scale(1); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(-50%, -50%) rotate(calc(var(--k) * 60deg + 540deg)) translateX(0) scale(.1); opacity: 0; } }
+
+/* 호박: 속에서 촛불이 일렁 + 박쥐 셋이 날개 치며 맴돎 */
+.sig-pumpkin { animation: fxSpin 4s linear infinite; }
+.sig-pumpkin i { left: 50%; top: 50%; font-size: 14cqw; transform: translate(-50%, -50%) rotate(calc(var(--k) * 120deg)) translateY(-280%); }
+.sig-pumpkin i::before { content: "🦇"; display: block; animation: batFlap .25s steps(2) infinite; }
+@keyframes batFlap { 50% { transform: scaleX(.6); } }
+.tok.tsig-pumpkin .pc, .tok-prev.tsig-pumpkin .pc { animation: candle .5s steps(3) infinite; }
+@keyframes candle { 0% { filter: drop-shadow(0 0 3px #ff9a1a) brightness(1.05); } 50% { filter: drop-shadow(0 0 7px #ffb84a) brightness(1.3); } 100% { filter: drop-shadow(0 0 4px #ff7a00) brightness(1.1); } }
+
+/* 반란군: 깃발이 펄럭 + 칼 두 자루가 번쩍 들림 */
+.sig-pawn i:nth-child(1) { left: 66%; top: 4%; width: 2.5%; height: 36%; background: #6b4a2a; }
+.sig-pawn i:nth-child(2) { left: 68.5%; top: 4%; width: 18%; height: 12%; background: linear-gradient(90deg, #1f8a4c, #3ddc84); clip-path: polygon(0 0, 100% 20%, 80% 50%, 100% 80%, 0 100%); transform-origin: 0 50%; animation: flagWave .6s ease-in-out infinite alternate; }
+@keyframes flagWave { from { transform: skewY(-8deg) scaleX(1); } to { transform: skewY(8deg) scaleX(.85); } }
+.sig-pawn i:nth-child(3) { left: 14%; top: 8%; font-size: 16cqw; animation: swordsUp 1.8s ease-in-out infinite; }
+.sig-pawn i:nth-child(3)::before { content: "⚔️"; }
+@keyframes swordsUp { 0%, 100% { transform: translateY(20%) scale(.9); } 40% { transform: translateY(-15%) scale(1.15); filter: drop-shadow(0 0 4px #fff); } }
+.sig-pawn i:nth-child(n+4) { width: 6%; height: 6%; background: #fff2b0; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); left: calc(18% + (var(--k) - 3) * 9%); top: 6%; animation: sgTwinkle 1s ease-in-out infinite; animation-delay: calc(var(--k) * .25s); }
+
+/* 샌드백: 글러브가 퍽! + 먼지 + 💢 */
+.sig-sandbag i:nth-child(1) { left: 2%; top: 38%; font-size: 15cqw; animation: punch 1.4s ease-in infinite; }
+.sig-sandbag i:nth-child(1)::before { content: "🥊"; }
+@keyframes punch { 0%, 60% { transform: translateX(-40%) scale(.9); opacity: 0; } 70% { opacity: 1; } 78% { transform: translateX(110%) scale(1.1); } 100% { transform: translateX(-20%); opacity: 0; } }
+.sig-sandbag i:nth-child(n+2) { width: 16%; height: 16%; border-radius: 50%; background: radial-gradient(circle, rgba(220,200,170,.8), transparent 70%); left: 30%; top: calc(30% + var(--k) * 12%); animation: dust 1.4s ease-out infinite; }
+@keyframes dust { 0%, 76% { transform: scale(0); opacity: 0; } 80% { opacity: 1; } 100% { transform: scale(2) translateX(-30%); opacity: 0; } }
+
+/* 버그: 픽셀 조각이 튀고, 말 위로 주사선이 흐름 */
+.sig-glitch i { width: 7%; height: 7%; left: calc(var(--x) * 10% + 5%); top: calc(var(--y) * 10% + 5%); animation: pix 1.1s steps(1) infinite; animation-delay: calc(var(--k) * -.14s); }
+.sig-glitch i:nth-child(3n) { background: #ff00aa; } .sig-glitch i:nth-child(3n+1) { background: #00ffee; } .sig-glitch i:nth-child(3n+2) { background: #00ff66; }
+@keyframes pix { 0%, 100% { opacity: 0; } 10% { opacity: 1; transform: translate(0, 0); } 30% { opacity: 1; transform: translate(40%, -30%) scaleX(2); } 40% { opacity: 0; } }
+.sig-glitch::after { content: ""; position: absolute; inset: 25%; border-radius: 50%; z-index: 3; background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 3px); animation: scan 2s linear infinite; }
+@keyframes scan { to { background-position: 0 12px; } }
+
+/* 잠꾸러기: 꿈 거품 속 별이 돌고, 초승달이 말 둘레를 맴돎 */
+.sig-zzz i:nth-child(1) { left: 58%; top: 2%; width: 34%; height: 34%; border-radius: 50%; border: 1.5px solid rgba(220,210,255,.8); background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.5), rgba(160,130,255,.25) 60%, transparent 70%); animation: dreamBob 3s ease-in-out infinite; }
+.sig-zzz i:nth-child(1)::before { content: "✦ ✧ ✦"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff6b0; font-size: 6cqw; animation: fxSpin 4s linear infinite; }
+.sig-zzz i:nth-child(2), .sig-zzz i:nth-child(3) { width: 7%; height: 7%; border-radius: 50%; border: 1.5px solid rgba(220,210,255,.8); left: 54%; top: 34%; }
+.sig-zzz i:nth-child(3) { left: 50%; top: 42%; width: 4.5%; height: 4.5%; }
+.sig-zzz i:nth-child(4) { inset: 4%; border-radius: 50%; animation: fxSpin 6s linear infinite; }
+.sig-zzz i:nth-child(4)::before { content: ""; position: absolute; left: 44%; top: 0; width: 12%; height: 12%; border-radius: 50%; box-shadow: inset -3px 1px 0 0 #ffe680; transform: rotate(-30deg); filter: drop-shadow(0 0 3px #ffe680); }
+@keyframes dreamBob { 50% { transform: translateY(-8%) scale(1.05); } }
+
+/* ---- 업적 펫: 펫마다 다른 행동 ---- */
+.pet .pet-em { position: relative; z-index: 1; display: inline-block; }
+.pet .pfx { position: absolute; font-style: normal; font-weight: 800; pointer-events: none; z-index: 2; }
+/* 병아리: 노란 깃털이 팔랑 떨어짐 */
+.pet-x-chick .pfx { width: 30%; height: 14%; border-radius: 50% 0; background: #ffe14d; left: 30%; top: 0; animation: feather 2s ease-in infinite; }
+.pet-x-chick .pfx + .pfx { animation-delay: -1s; left: 60%; }
+@keyframes feather { 0% { transform: translate(0, -40%) rotate(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(-60%, 220%) rotate(200deg); opacity: 0; } }
+/* 고양이: 앞발로 툭툭 + 발자국 */
+.pet-x-cat .pfx::before { content: "🐾"; font-size: 60%; } .pet-x-cat .pfx { left: -50%; bottom: -10%; animation: pawStep 1.6s steps(1) infinite; } .pet-x-cat .pfx + .pfx { left: -10%; bottom: -30%; animation-delay: .8s; }
+@keyframes pawStep { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+/* 아기 용: 불을 뿜고 연기 */
+.pet-x-dragon .pfx:first-of-type::before { content: "🔥"; font-size: 70%; } .pet-x-dragon .pfx:first-of-type { left: -60%; top: 10%; animation: breath 2.2s ease-out infinite; }
+.pet-x-dragon .pfx + .pfx { left: -90%; top: 0; width: 60%; height: 60%; border-radius: 50%; background: radial-gradient(circle, rgba(200,200,200,.7), transparent 70%); animation: breathSmoke 2.2s ease-out infinite; }
+@keyframes breath { 0%, 55% { opacity: 0; transform: translateX(40%) scale(.3); } 65% { opacity: 1; } 100% { opacity: 0; transform: translateX(-70%) scale(1.4); } }
+@keyframes breathSmoke { 0%, 75% { opacity: 0; transform: scale(.3); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-40%, -40%) scale(1.6); } }
+/* 부엉이: 뒤에 보름달 + 눈 깜빡 */
+.pet-x-owl .pfx:first-of-type { left: -30%; top: -40%; width: 160%; height: 160%; border-radius: 50%; z-index: 0; background: radial-gradient(circle, rgba(255,240,170,.85) 0 40%, rgba(255,230,140,.25) 55%, transparent 70%); }
+.pet-x-owl .pet-em { animation: blink 3s steps(1) infinite; } @keyframes blink { 0%, 92% { transform: scaleY(1); } 93%, 96% { transform: scaleY(.15); } }
+/* 여우: 푸른 여우불 둘이 빙빙 */
+.pet-x-fox .pfx { width: 34%; height: 44%; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: radial-gradient(circle at 50% 70%, #fff, #7ff6ff 35%, rgba(60,140,255,.5) 65%, transparent 72%); left: 33%; top: 30%; animation: foxfire 2s linear infinite; }
+.pet-x-fox .pfx + .pfx { animation-delay: -1s; }
+@keyframes foxfire { 0% { transform: rotate(0) translateX(140%) rotate(0); } 100% { transform: rotate(360deg) translateX(140%) rotate(-360deg); } }
+/* 박쥐: 초음파 고리가 퍼짐 */
+.pet-x-bat .pfx { left: 10%; top: 10%; width: 80%; height: 80%; border-radius: 50%; border: 2px solid rgba(190,140,255,.8); animation: sonar 1.4s ease-out infinite; } .pet-x-bat .pfx + .pfx { animation-delay: .7s; }
+@keyframes sonar { from { transform: scale(.4); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+/* 꽃게: 거품 뽀글 + 집게 딱딱 */
+.pet-x-crab .pfx { width: 22%; height: 22%; border-radius: 50%; border: 1.5px solid rgba(200,240,255,.9); left: 40%; top: -10%; animation: bubbleUp 1.8s ease-out infinite; } .pet-x-crab .pfx + .pfx { left: 64%; animation-delay: -.9s; }
+@keyframes bubbleUp { from { transform: translateY(0) scale(.5); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(-200%) scale(1.1); opacity: 0; } }
+.pet-x-crab .pet-em { animation: pinch .4s steps(2) infinite; } @keyframes pinch { 50% { transform: scale(1.1, .92); } }
+/* 원혼: 반투명하게 깜빡 + 우~ */
+.pet-x-ghost .pet-em { animation: ghostBlink 2.4s ease-in-out infinite; }
+.pet-x-ghost .pfx:first-of-type::before { content: "우~"; font-size: 45%; color: #e8f4ff; text-shadow: 0 0 4px #7fd8ff; } .pet-x-ghost .pfx:first-of-type { right: -70%; top: -40%; animation: noteUp 2.4s ease-out infinite; }
+/* 먹방 햄스터: 볼 오물오물 + 해바라기씨가 톡톡 */
+.pet-x-hamster .pet-em { animation: chew .3s steps(2) infinite; } @keyframes chew { 50% { transform: scale(1.12, .92); } }
+.pet-x-hamster .pfx { width: 14%; height: 24%; border-radius: 50%; background: linear-gradient(90deg, #333 0 30%, #e8e0c8 30% 70%, #333 70%); left: 50%; top: 0; animation: seedPop 1.2s ease-out infinite; } .pet-x-hamster .pfx + .pfx { animation-delay: -.6s; left: 30%; }
+@keyframes seedPop { 0% { transform: translate(0, 60%) rotate(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(80%, -120%) rotate(300deg); opacity: 0; } }
+/* 달팽이 · 거북이: 지나간 자리에 끈적한 / 물결 자국 */
+.pet-x-snail .pfx:first-of-type { left: 60%; bottom: 0; width: 130%; height: 16%; border-radius: 9px; background: linear-gradient(90deg, rgba(180,255,220,.75), transparent); animation: slime 2s ease-in-out infinite; }
+@keyframes slime { 50% { opacity: .4; } }
+.pet-x-turtle .pfx { left: -10%; bottom: -14%; width: 120%; height: 30%; border-radius: 50%; border: 1.5px solid rgba(160,220,255,.8); animation: ripple 1.8s ease-out infinite; } .pet-x-turtle .pfx + .pfx { animation-delay: .9s; }
+@keyframes ripple { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+/* 앵무새: 음표가 흘러나옴 */
+.pet-x-parrot .pfx::before { content: "♪"; font-size: 60%; color: #fff; text-shadow: 0 0 3px #3ddc84; } .pet-x-parrot .pfx + .pfx::before { content: "♫"; }
+.pet-x-parrot .pfx { right: -50%; top: -30%; animation: noteUp 1.6s ease-out infinite; } .pet-x-parrot .pfx + .pfx { animation-delay: -.8s; }
+@keyframes noteUp { 0% { opacity: 0; transform: translate(0, 0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(60%, -120%); } }
+/* 황소: 콧김 + 방울이 딸랑 */
+.pet-x-cow .pfx:first-of-type { left: -40%; top: 40%; width: 40%; height: 30%; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.85), transparent 70%); animation: snort 1.5s ease-out infinite; }
+@keyframes snort { 0%, 60% { opacity: 0; transform: scale(.3); } 70% { opacity: 1; } 100% { opacity: 0; transform: translateX(-80%) scale(1.5); } }
+.pet-x-cow .pfx + .pfx::before { content: "🔔"; font-size: 45%; } .pet-x-cow .pfx + .pfx { left: 30%; bottom: -20%; transform-origin: 50% 0; animation: bell .5s ease-in-out infinite alternate; }
+@keyframes bell { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+/* 나무늘보: 아주 느릿느릿 + z */
+.pet-x-sloth .pet-em { animation: slowSway 4s ease-in-out infinite; } @keyframes slowSway { 50% { transform: rotate(14deg) translateY(10%); } }
+.pet-x-sloth .pfx::before { content: "z"; font-size: 50%; color: #d8c8ff; } .pet-x-sloth .pfx { right: -40%; top: -30%; animation: noteUp 3s ease-out infinite; } .pet-x-sloth .pfx + .pfx { animation-delay: -1.5s; }
+/* 새우: 뒤로 톡톡 튀며 거품 */
+.pet-x-shrimp .pet-em { animation: backHop 1.2s ease-in-out infinite; } @keyframes backHop { 0%, 100% { transform: translateX(0); } 30% { transform: translate(40%, -30%) rotate(20deg); } 60% { transform: translateX(20%); } }
+.pet-x-shrimp .pfx { width: 20%; height: 20%; border-radius: 50%; border: 1.5px solid rgba(200,240,255,.9); left: 20%; top: -10%; animation: bubbleUp 1.6s ease-out infinite; } .pet-x-shrimp .pfx + .pfx { left: 50%; animation-delay: -.8s; }
+/* 저금통 돼지: 엽전이 쏙 */
+.pet-x-pig .pfx:first-of-type::before { content: "🪙"; font-size: 55%; } .pet-x-pig .pfx:first-of-type { left: 25%; top: -70%; animation: coinDrop 1.6s ease-in infinite; }
+@keyframes coinDrop { 0% { transform: translateY(-60%); opacity: 0; } 30% { opacity: 1; } 70% { transform: translateY(80%); opacity: 1; } 80%, 100% { opacity: 0; } }
+
+/* ---- 업적 잔상: 종류마다 다른 움직임 ---- */
+.trl.trl-emoji[class*="trm-"] { font-size: calc(var(--s) * .048); }
+.trm-star { animation: trStar .9s ease-in forwards !important; filter: drop-shadow(0 0 4px #ffe28a); }
+@keyframes trStar { 0% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; } 100% { transform: translate(calc(-50% + 34px), calc(-50% + 30px)) scale(.2) rotate(180deg); opacity: 0; } }
+.trm-spark { animation: trSpark .7s ease-out forwards !important; }
+@keyframes trSpark { 0% { transform: translate(-50%, -50%) scale(0) rotate(0); opacity: 1; } 40% { transform: translate(-50%, -50%) scale(1.7) rotate(90deg); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(0) rotate(200deg); opacity: 0; } }
+.trm-petal { animation: trPetal 1.6s ease-in-out forwards !important; }
+@keyframes trPetal { 0% { transform: translate(-50%, -50%) rotate(0); opacity: 1; } 33% { transform: translate(calc(-50% - 12px), calc(-50% + 8px)) rotate(120deg); } 66% { transform: translate(calc(-50% + 10px), calc(-50% + 16px)) rotate(240deg); } 100% { transform: translate(calc(-50% - 6px), calc(-50% + 26px)) rotate(360deg); opacity: 0; } }
+.trm-fire { animation: trFire 1s steps(6) forwards !important; transform-origin: 50% 100%; }
+@keyframes trFire { 0% { transform: translate(-50%, -50%) scale(.6, .6); opacity: 1; } 30% { transform: translate(-50%, -70%) scale(1.1, 1.5); } 60% { transform: translate(-50%, -90%) scale(.9, 1.2); opacity: .9; } 100% { transform: translate(-50%, -130%) scale(.4, .6); opacity: 0; } }
+.trm-coin { animation: trCoin 1.1s cubic-bezier(.3,.6,.4,1) forwards !important; }
+@keyframes trCoin { 0% { transform: translate(-50%, -50%) rotateY(0); opacity: 1; } 35% { transform: translate(-50%, calc(-50% - 22px)) rotateY(360deg); } 70% { transform: translate(-50%, -50%) rotateY(720deg); } 85% { transform: translate(-50%, calc(-50% - 6px)) rotateY(900deg); } 100% { transform: translate(-50%, -50%) rotateY(1080deg); opacity: 0; } }
+.trm-skull { animation: trSkull 1.2s ease-out forwards !important; }
+@keyframes trSkull { 0% { transform: translate(-50%, -50%) rotate(0); opacity: 1; } 30% { transform: translate(calc(-50% + 10px), calc(-50% - 10px)) rotate(120deg); } 60% { transform: translate(calc(-50% + 20px), -50%) rotate(260deg); } 100% { transform: translate(calc(-50% + 28px), -50%) rotate(360deg); opacity: 0; } }
+.trm-bubble { animation: trBubble 1.3s ease-out forwards !important; }
+@keyframes trBubble { 0% { transform: translate(-50%, -50%) scale(.5); opacity: 1; } 75% { transform: translate(calc(-50% + 6px), calc(-50% - 26px)) scale(1.1); opacity: 1; } 85% { transform: translate(calc(-50% + 6px), calc(-50% - 28px)) scale(1.6); opacity: .5; } 100% { transform: translate(calc(-50% + 6px), calc(-50% - 28px)) scale(2); opacity: 0; } }
+.trm-bolt { animation: trBolt .6s steps(1) forwards !important; }
+@keyframes trBolt { 0% { transform: translate(-50%, calc(-50% - 20px)) scale(1.8); opacity: 1; filter: drop-shadow(0 0 8px #fff) brightness(2); } 25% { transform: translate(calc(-50% + 3px), -50%) scale(1.4); opacity: 1; filter: drop-shadow(0 0 6px #6cf); } 50% { opacity: 0; } 70% { transform: translate(calc(-50% - 3px), -50%) scale(1.2); opacity: 1; } 100% { opacity: 0; } }
+.trm-clover { animation: trClover 1.6s ease-out forwards !important; }
+@keyframes trClover { 0% { transform: translate(-50%, -50%) rotate(0) scale(.6); opacity: 1; } 100% { transform: translate(calc(-50% + 8px), calc(-50% - 24px)) rotate(540deg) scale(1.1); opacity: 0; } }
+.trm-banana { animation: trBanana 1.3s cubic-bezier(.2,.8,.3,1) forwards !important; }
+@keyframes trBanana { 0% { transform: translate(-50%, -50%) rotate(0); opacity: 1; } 60% { transform: translate(calc(-50% + 30px), calc(-50% + 4px)) rotate(600deg); opacity: 1; } 100% { transform: translate(calc(-50% + 36px), calc(-50% + 4px)) rotate(700deg); opacity: 0; } }
+/* 상점 미리보기도 같은 움직임 */
+.trail-prev .trl-p[class*="tpm-"] { animation-duration: 2.4s; animation-iteration-count: infinite; animation-delay: calc(var(--k) * .38s); }
+.trail-prev .tpm-star { animation-name: trStar; } .trail-prev .tpm-spark { animation-name: trSpark; } .trail-prev .tpm-petal { animation-name: trPetal; } .trail-prev .tpm-fire { animation-name: trFire; }
+.trail-prev .tpm-coin { animation-name: trCoin; } .trail-prev .tpm-skull { animation-name: trSkull; } .trail-prev .tpm-bubble { animation-name: trBubble; } .trail-prev .tpm-bolt { animation-name: trBolt; }
+.trail-prev .tpm-clover { animation-name: trClover; } .trail-prev .tpm-banana { animation-name: trBanana; }
+
+/* ---- 업적 테두리: 각자 다르게 ---- */
+.frm.fr-skull { animation: fxSpin 18s linear infinite; }
+.frm.fr-skull .g-e { animation: eyeGlow 1.2s ease-in-out infinite; } @keyframes eyeGlow { 50% { filter: drop-shadow(0 0 1px #ff2a2a); opacity: .55; } }
+.frm.fr-sun .g-s { animation: fxSpin 6s linear infinite; }
+.frm.fr-sun { animation: sunCorona 1.8s ease-in-out infinite; } @keyframes sunCorona { 50% { filter: drop-shadow(0 0 6px #ffb300) drop-shadow(0 0 12px #ff6a00); } }
+.frm.fr-jang .g-f { animation: jangShine 2.4s linear infinite; } @keyframes jangShine { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35) sepia(.3); } }
+
+/* ---- 업적 이름표: 각자 다르게 ---- */
+.nc-scroll .ncw i:nth-child(1) { right: 8px; top: 5px; width: 16px; height: 16px; background: #c0303f; border-radius: 3px; box-shadow: inset 0 0 0 2px #e8505f; transform: rotate(8deg); animation: stamp 3s ease-out infinite; }
+.nc-scroll .ncw i:nth-child(1)::before { content: "印"; display: grid; place-items: center; width: 100%; height: 100%; color: #ffe; font-size: 11px; font-weight: 800; }
+@keyframes stamp { 0%, 70% { transform: rotate(8deg) scale(1); } 75% { transform: rotate(8deg) scale(1.4); opacity: .6; } 82% { transform: rotate(8deg) scale(.95); opacity: 1; } 100% { transform: rotate(8deg) scale(1); } }
+.nc-scroll .ncw i:nth-child(n+2) { display: none; }
+.nc-pumpkin { animation: pumpkinGlow 1.2s steps(3) infinite; } @keyframes pumpkinGlow { 0% { box-shadow: inset 0 0 14px rgba(255,200,60,.5); } 50% { box-shadow: inset 0 0 22px rgba(255,230,120,.8); } }
+.nc-tycoon::before { content: ""; position: absolute; right: 6px; bottom: 4px; width: 46px; height: 22px; z-index: -1; pointer-events: none;
+  background: linear-gradient(180deg, #fff2b0, #e0a800 40%, #8a6200) 0 100% / 22px 8px no-repeat, linear-gradient(180deg, #fff2b0, #e0a800 40%, #8a6200) 23px 100% / 22px 8px no-repeat, linear-gradient(180deg, #fff2b0, #e0a800 40%, #8a6200) 11px 60% / 22px 8px no-repeat;
+  filter: drop-shadow(0 0 4px rgba(255,210,90,.8)); }
+
+/* ---- 업적 판: 판 위에 움직이는 장식 (판마다 다름) ---- */
+.board-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+.board-fx i { position: absolute; font-style: normal; line-height: 1; }
+.bfx-royal i { width: 1.2%; height: 1.2%; background: #ffe28a; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); left: calc(var(--x) * 1%); top: calc(var(--d) * 100%);
+  filter: drop-shadow(0 0 3px #ffd36a); animation: sgTwinkle 2.2s ease-in-out infinite; animation-delay: calc(var(--d) * -2.2s); }
+.bfx-royal i:nth-child(odd) { width: .7%; height: .7%; animation: goldDust 7s linear infinite; animation-delay: calc(var(--d) * -7s); }
+@keyframes goldDust { from { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(-900%); opacity: 0; } }
+.bfx-jade i { width: 16%; height: 8%; border-radius: 50%; background: radial-gradient(ellipse, rgba(255,255,255,.35), transparent 70%); left: calc(var(--x) * 1% - 8%); top: calc(var(--d) * 90%); filter: blur(4px); animation: mist 14s linear infinite; animation-delay: calc(var(--d) * -14s); }
+@keyframes mist { from { transform: translateX(-60%); } to { transform: translateX(160%); } }
+.bfx-ink i { width: 22%; height: 22%; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,.18), transparent 65%); left: calc(var(--x) * 1% - 11%); top: calc(var(--d) * 80%); animation: inkBloom 8s ease-in-out infinite; animation-delay: calc(var(--d) * -8s); }
+@keyframes inkBloom { 0%, 100% { transform: scale(.2); opacity: 0; } 40% { opacity: 1; } 80% { transform: scale(1.3); opacity: 0; } }
+.bfx-autumn { container-type: size; }
+.bfx-autumn i { left: calc(var(--x) * 1%); top: -6%; animation: leafFall 9s linear infinite; animation-delay: calc(var(--d) * -9s); }
+.bfx-autumn i::before { content: "🍁"; font-size: 4cqw; display: block; animation: leafSway 2s ease-in-out infinite alternate; }
+.bfx-autumn i:nth-child(3n)::before { content: "🍂"; }
+@keyframes leafFall { to { transform: translateY(115cqh) rotate(320deg); } }
+@keyframes leafSway { from { transform: translateX(-30%) rotate(-20deg); } to { transform: translateX(30%) rotate(25deg); } }
+.bfx-hell { container-type: size; background: linear-gradient(0deg, rgba(255,60,0,.22), transparent 40%); }
+.bfx-hell i { width: .9%; height: .9%; border-radius: 50%; background: #ffcf3a; box-shadow: 0 0 5px #ff3a00, 0 0 9px #ff6a00; left: calc(var(--x) * 1%); bottom: -2%; animation: emberRise 5s linear infinite; animation-delay: calc(var(--d) * -5s); }
+@keyframes emberRise { from { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } to { transform: translate(calc((var(--d) - .5) * 400%), -100cqh); opacity: 0; } }
+.pv-bd { position: relative; }
+
+/* ---- 상점: 업적 카드 테두리 ---- */
+.shop-item.tier-ach { background: linear-gradient(#111a16, #111a16) padding-box, conic-gradient(from var(--na, 0deg), #b07bff, #ffd36a, #fff6c0, #ff7ab6, #7b2cff, #b07bff) border-box; border: 1.5px solid transparent; animation: naSpin 4s linear infinite; box-shadow: 0 0 18px rgba(176,123,255,.35); }
+@property --na { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes naSpin { to { --na: 360deg; } }
+
+body.excel .sigw, body.excel .board-fx, body.excel .pet .pfx { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .sigw, .sigw i, .board-fx, .board-fx i, .pet .pfx, .shop-item.tier-ach { animation: none !important; } }
