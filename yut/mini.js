@@ -156,9 +156,9 @@ function act(u, op, arg = {}) {
     if (!ENGINES[type]) return { error: '없는 게임이에요' };
     unwatch(u.id);
     const B = { code: newCode(), type, bot: level, host: u.id, players: [u.id, BOT_ID], names: { [u.id]: u.username, [BOT_ID]: BOT_NAME }, bet: 0, status: 'play', state: ENGINES[type].init(), seq: 1, chat: [], watchers: [], deadline: 0, timer: null };
-    if (crypto.randomInt(2)) B.players.reverse();
+    // 봇 대전은 항상 사람이 선 (players[0] = 선)
     rooms.set(B.code, B); userRoom.set(u.id, B.code);
-    say(B, `${BOT_NAME}과 연습 대전 — 판돈·트로피 없이 업적만 기록돼요. 선: ${B.names[B.players[0]]}`);
+    say(B, `${BOT_NAME}과 연습 대전 — 판돈·트로피 없이 업적만 기록돼요. 선: ${B.names[B.players[0]]} 님`);
     arm(B); push(B);
     return { ok: true, state: view(B, u.id) };
   }
