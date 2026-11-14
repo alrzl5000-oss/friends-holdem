@@ -1,6 +1,10 @@
 // 미니게임 (1대1): 고누 · 십이장기 — 판돈 걸고 이긴 사람이 다 가져감, 무승부면 돌려줌
 const crypto = require('crypto');
 const ENGINES = { gonu: require('./games/gonu'), j12: require('./games/janggi12') };
+const BOT = require('./games/bot');
+// 봇 대전: 판돈·트로피 없음, 업적 기록만. 봇 자리는 사람 id 대신 'bot'
+const BOT_ID = 'bot', BOT_NAME = { mid: '🤖 봇 (중간)', hard: '🤖 봇 (어려움)' };
+const isBotRoom = R => !!R.bot;
 const TURN_MS = 30000;          // 한 수 30초, 넘기면 아무 수나 자동으로
 const MIN_BET = 1e6, MAX_BET = 1e8;
 
@@ -29,7 +33,7 @@ function view(R, uid) {
   const side = R.players.indexOf(uid);
   const myTurn = R.status === 'play' && side === R.state.turn;
   return {
-    mini: true, code: R.code, type: R.type, title: E.name, host: R.names[R.host], bet: R.bet, pot: R.bet * R.players.length,
+    mini: true, bot: R.bot || null, code: R.code, type: R.type, title: E.name, host: R.names[R.host], bet: R.bet, pot: R.bet * R.players.length,
     status: R.status, you: uid, side, spectating: side < 0, watchers: R.watchers.length,
     players: R.players.map((id, i) => { const u = getUser(id); const e = (u && u.equip) || {}; return { id, name: R.names[id], side: i, host: id === R.host, piece: e.piece || 'p_basic', shame: u ? shameFn(u) : 0 }; }),
     state: R.state, turn: R.state ? R.state.turn : 0, deadline: R.deadline, seq: R.seq,
@@ -40,11 +44,11 @@ function view(R, uid) {
 }
 function push(R) {
   for (const m of R.chat) if (m.n == null) m.n = (R.chatN = (R.chatN || 0) + 1);
-  for (const id of [...R.players, ...R.watchers]) notifyFn(id, 'miniState', view(R, id));
+  for (const id of [...R.players, ...R.watchers]) if (id !== BOT_ID) notifyFn(id, 'miniState', view(R, id));
   saveFn();
 }
 function lobbyList() {
-  return [...rooms.values()].filter(R => R.status !== 'done')
+  return [...rooms.values()].filter(R => R.status !== 'done' && !isBotRoom(R))
     .map(R => ({ code: R.code, type: R.type, title: ENGINES[R.type].name, host: R.names[R.host], bet: R.bet, n: R.players.length, status: R.status, watchers: R.watchers.length }));
 }
 let pushListFn = () => {};
@@ -53,6 +57,15 @@ const pushList = () => pushListFn();
 function arm(R) {
   clearTimeout(R.timer);
   R.deadline = Date.now() + TURN_MS;
+  if (isBotRoom(R) && R.players[R.state.turn] === BOT_ID) {   // 봇 차례: 잠깐 생각하는 척 후 둠
+    R.timer = setTimeout(() => {
+      if (R.status !== 'play' || R.players[R.state.turn] !== BOT_ID) return;
+      const side = R.state.turn, m = BOT.choose(R.type, R.state, R.bot);
+      if (!m) return finishCheck(R);
+      doMove(R, side, ENGINES[R.type].legal(R.state, side).find(x => x.id === m.id) || m);
+    }, 500 + crypto.randomInt(600));
+    return;
+  }
   R.timer = setTimeout(() => {
     if (R.status !== 'play') return;
     const side = R.state.turn, E = ENGINES[R.type];
@@ -79,11 +92,13 @@ function finish(R, winSide, reason) {
   const pot = R.bet * R.players.length;
   R.players.forEach((id, i) => {
     const u = getUser(id); if (!u) return;
-    const back = winSide == null ? R.bet : (i === winSide ? pot : 0);
-    release(u, R.bet, back);
-    const st = stats(u, R.type); st.games++; st.net += back - R.bet;
-    if (winSide == null) st.draw++; else if (i === winSide) st.win++;
-    if (winSide != null && i === winSide) { u.st = u.st || {}; u.st.prize = (u.st.prize || 0) + pot; }   // 누적 상금
+    if (!isBotRoom(R)) {   // 봇 대전은 돈·전적 없음 (업적만)
+      const back = winSide == null ? R.bet : (i === winSide ? pot : 0);
+      release(u, R.bet, back);
+      const st = stats(u, R.type); st.games++; st.net += back - R.bet;
+      if (winSide == null) st.draw++; else if (i === winSide) st.win++;
+      if (winSide != null && i === winSide) { u.st = u.st || {}; u.st.prize = (u.st.prize || 0) + pot; }   // 누적 상금
+    }
     if (winSide != null && i === winSide) {   // 업적 기록
       const S = (u.st = u.st || {});
       if (R.type === 'gonu') S.gonuWin = (S.gonuWin || 0) + 1;
@@ -97,6 +112,7 @@ function finish(R, winSide, reason) {
     userRoom.delete(id); notifyFn(id, 'me');
   });
   if (winSide == null) { R.draw = true; say(R, `무승부 — ${reason}. 판돈을 돌려받았어요`); }
+  else if (isBotRoom(R)) { R.winner = winSide; say(R, `${R.names[R.players[winSide]]} 승리! (${reason})${R.players[winSide] === BOT_ID ? '' : ' — 업적에 기록됐어요'}`); }
   else { R.winner = winSide; say(R, `${R.names[R.players[winSide]]} 님 승리! (${reason}) 판돈 ${pot.toLocaleString('ko-KR')}원 획득`); }
   push(R); pushList();
   setTimeout(() => close(R, false), 60000);
@@ -132,6 +148,19 @@ function act(u, op, arg = {}) {
     rooms.set(N.code, N); userRoom.set(u.id, N.code);
     notifyFn(u.id, 'me'); push(N); pushList();
     return { ok: true, state: view(N, u.id) };
+  }
+  if (op === 'bot') {   // 봇과 바로 시작
+    if (R) return { error: '이미 참여 중인 판이 있어요' };
+    if (otherBusy(u.id)) return { error: '윷놀이 판에 참여 중이에요' };
+    const type = arg.type, level = arg.level === 'hard' ? 'hard' : 'mid';
+    if (!ENGINES[type]) return { error: '없는 게임이에요' };
+    unwatch(u.id);
+    const B = { code: newCode(), type, bot: level, host: u.id, players: [u.id, BOT_ID], names: { [u.id]: u.username, [BOT_ID]: BOT_NAME[level] }, bet: 0, status: 'play', state: ENGINES[type].init(), seq: 1, chat: [], watchers: [], deadline: 0, timer: null };
+    if (crypto.randomInt(2)) B.players.reverse();
+    rooms.set(B.code, B); userRoom.set(u.id, B.code);
+    say(B, `${BOT_NAME[level]}와 연습 대전 — 판돈·트로피 없이 업적만 기록돼요. 선: ${B.names[B.players[0]]}`);
+    arm(B); push(B);
+    return { ok: true, state: view(B, u.id) };
   }
   if (op === 'join') {
     if (R) return { error: '이미 참여 중인 판이 있어요' };

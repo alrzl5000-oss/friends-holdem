@@ -29,6 +29,7 @@
     if ($('ill-gonu') && !$('ill-gonu').innerHTML) { $('ill-gonu').innerHTML = gonuSVG(null, true); $('ill-j12').innerHTML = j12Mini(); }
   }
   document.querySelectorAll('[data-mnew]').forEach(b => b.onclick = () => createModal(b.dataset.mnew));
+  document.querySelectorAll('[data-mbot]').forEach(b => b.onclick = () => botModal(b.dataset.mbot));
   document.querySelectorAll('[data-mrule]').forEach(b => b.onclick = () => rulebook(b.dataset.mrule));
   socket.on('minis', l => { list = l; if (!R) renderLobby(); });
   function refreshList() { socket.emit('miniList', r => { if (r && r.list) { list = r.list; renderLobby(); } }); }
@@ -46,6 +47,15 @@
     };
     draw();
   }
+  function botModal(type) {
+    const title = type === 'gonu' ? '호박고누' : '십이장기';
+    modal(`<h3>🤖 봇과 ${title}</h3><p class="hint" style="text-align:left">판돈·트로피 없이 연습하는 대전이에요. 이기면 업적에는 기록돼요. 선은 무작위.${type === 'gonu' ? '<br>호박고누는 선이 아주 유리해요.' : ''}</p>
+      <div class="bot-levels"><button class="bet-opt" data-lv="mid">중간<small>몇 수 앞을 읽고, 가끔 다른 수도 둠</small></button>
+        <button class="bet-opt" data-lv="hard">어려움<small>시간 안에서 최대한 깊게 읽음</small></button></div>
+      <div class="row2"><button class="btn" data-close>취소</button></div>`);
+    document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
+    document.querySelectorAll('#modalPanel [data-lv]').forEach(b => b.onclick = () => { closeModal(); send('bot', { type, level: b.dataset.lv }, r => enter(r.state)); });
+  }
   function join(code) { send('join', { code }, r => enter(r.state)); }
   function enter(state) { R = state; sel = null; chatCode = null; lastSeq = state ? state.seq : 0; renderAll(); }
   function leaveView() { R = null; sel = null; clearInterval(tick); refreshList(); renderAll(); }
@@ -58,7 +68,7 @@
     if (R.spectating) return send('unwatch', {}, leaveView);
     if (R.status === 'done') return leaveView();   // 끝난 판은 서버에서 이미 정리됨
     if (R.status === 'play') {
-      modal(`<h3>기권할까요?</h3><p class="hint" style="text-align:left">진행 중에는 나갈 수 없어요. 기권하면 판돈을 상대가 가져가요.</p>
+      modal(`<h3>기권할까요?</h3><p class="hint" style="text-align:left">${R.bot ? '기권하면 봇이 이긴 걸로 끝나요.' : '진행 중에는 나갈 수 없어요. 기권하면 판돈을 상대가 가져가요.'}</p>
         <div class="row2"><button class="btn" data-close>계속하기</button><button class="btn red" id="mResign">기권</button></div>`);
       document.querySelectorAll('#modalPanel [data-close]').forEach(el => el.onclick = closeModal);
       $('mResign').onclick = () => { closeModal(); send('resign'); };
@@ -75,7 +85,7 @@
     const v = R;
     $('mName').textContent = `${v.host}님의 ${v.title}`;
     const plyTxt = v.state && v.status === 'play' ? ` · ${v.state.ply}/${v.type === 'gonu' ? 60 : 200}수` : '';
-    $('mSub').textContent = `판돈 ${won(v.pot)} · 코드 ${v.code}${plyTxt}${v.watchers ? ` · 👀 ${v.watchers}` : ''}`;
+    $('mSub').textContent = v.bot ? `🤖 연습 대전 · 판돈 없음 · 업적만 기록${plyTxt}` : `판돈 ${won(v.pot)} · 코드 ${v.code}${plyTxt}${v.watchers ? ` · 👀 ${v.watchers}` : ''}`;
     const my = v.players.find(p => p.side === vside() && !v.spectating) || v.players.find(p => p.side === vside());
     const op = v.players.find(p => p !== my);
     $('mOpp').innerHTML = sideHTML(op, false);
