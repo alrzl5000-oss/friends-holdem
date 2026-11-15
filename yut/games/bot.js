@@ -73,8 +73,57 @@ function jSearch(s, depth, a, b, T) {
   return best;
 }
 
+// ---------------- 호박고누 완전 풀이 ----------------
+// 판이 작아서(도달 가능한 모양 약 2,500개) 시작할 때 모든 모양의 승패를 미리 계산해 둠.
+// GW: 모양 → 둘 차례인 쪽 기준 1(이김)·-1(짐)·없음(서로 잘 두면 무승부), GD: 끝날 때까지 남은 수
+const gKey = (b, t) => b.map(o => (o === null ? '-' : o)).join('') + t;
+const GW = new Map(), GD = new Map();
+(function solveGonu() {
+  const succ = new Map(), pred = new Map(), st = GONU.init(), stack = [[st.board.slice(), 0]];
+  while (stack.length) {
+    const [b, t] = stack.pop(), k = gKey(b, t); if (succ.has(k)) continue;
+    const nx = [];
+    for (const m of GONU.legal({ board: b }, t)) {
+      const nb = b.slice(); nb[m.to] = t; nb[m.from] = null; const nk = gKey(nb, 1 - t);
+      nx.push(nk); if (!pred.has(nk)) pred.set(nk, []); pred.get(nk).push(k);
+      if (!succ.has(nk)) stack.push([nb, 1 - t]);
+    }
+    succ.set(k, nx);
+  }
+  const cnt = new Map(), Q = [];
+  for (const [k, n] of succ) { cnt.set(k, n.length); if (!n.length) { GW.set(k, -1); GD.set(k, 0); Q.push(k); } }
+  for (let i = 0; i < Q.length; i++) {
+    const k = Q[i];
+    for (const p of pred.get(k) || []) {
+      if (GW.has(p)) continue;
+      if (GW.get(k) === -1) { GW.set(p, 1); GD.set(p, GD.get(k) + 1); Q.push(p); }
+      else { cnt.set(p, cnt.get(p) - 1); if (!cnt.get(p)) { GW.set(p, -1); GD.set(p, GD.get(k) + 1); Q.push(p); } }
+    }
+  }
+})();
+// 중간: 이기는 수가 있으면 대개(75%) 가장 빨리 이기는 수, 아니면 지는 수는 피하고
+//       같은 모양 반복은 피하면서 상대가 실수할 여지가 많은 수(상대 이동 수가 적은 수)를 고름
+function gonuChoose(state, level) {
+  const side = state.turn, L = GONU.legal(state, side);
+  const info = L.map(m => {
+    const nb = state.board.slice(); nb[m.to] = side; nb[m.from] = null;
+    const k = gKey(nb, 1 - side), w = GW.get(k);            // 상대 기준
+    const rep = (state.seen && state.seen[k]) || 0;
+    const oppMob = GONU.legal({ board: nb }, 1 - side).length;
+    return { m, res: w === -1 ? 1 : w === 1 ? -1 : 0, d: GD.get(k) || 0, rep, oppMob };
+  });
+  const wins = info.filter(x => x.res === 1).sort((a, b) => a.d - b.d);
+  if (wins.length && (level === 'hard' || rnd(100) < 75)) return wins[0].m;
+  let pool = info.filter(x => x.res >= 0); if (!pool.length) pool = info.slice().sort((a, b) => b.d - a.d).slice(0, 1);   // 다 지면 최대한 오래 버팀
+  const fresh = pool.filter(x => x.rep < 2); if (fresh.length) pool = fresh;   // 3번째 반복(무승부)은 피함
+  const best = Math.min(...pool.map(x => x.oppMob + x.rep * 2));
+  const top = pool.filter(x => x.oppMob + x.rep * 2 <= best + (level === 'hard' ? 0 : 1));
+  return top[rnd(top.length)].m;
+}
+
 // ---------------- 수 고르기 ----------------
 function choose(type, state, level) {
+  if (type === 'gonu') return gonuChoose(state, level);
   const cfg = (LEVELS[level] || LEVELS.mid)[type];
   const side = state.turn;
   const legal = type === 'gonu' ? GONU.legal(state, side) : J12.legal(state, side);
