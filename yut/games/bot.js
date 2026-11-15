@@ -76,6 +76,7 @@ function jSearch(s, depth, a, b, T) {
 // ---------------- 호박고누 완전 풀이 ----------------
 // 판이 작아서(도달 가능한 모양 약 2,500개) 시작할 때 모든 모양의 승패를 미리 계산해 둠.
 // GW: 모양 → 둘 차례인 쪽 기준 1(이김)·-1(짐)·없음(서로 잘 두면 무승부), GD: 끝날 때까지 남은 수
+const GONU_SLIP = +(process.env.GONU_SLIP || 30);   // 중간 봇이 아무 수나 둘 확률(%)
 const gKey = (b, t) => b.map(o => (o === null ? '-' : o)).join('') + t;
 const GW = new Map(), GD = new Map();
 (function solveGonu() {
@@ -112,6 +113,8 @@ function gonuChoose(state, level) {
     const oppMob = GONU.legal({ board: nb }, 1 - side).length;
     return { m, res: w === -1 ? 1 : w === 1 ? -1 : 0, d: GD.get(k) || 0, rep, oppMob };
   });
+  // 중간 난이도는 가끔 아무 수나 둠 (옛 규칙은 선이 완벽히 두면 무조건 이겨서, 사람이 이길 틈을 줌)
+  if (level !== 'hard' && rnd(100) < GONU_SLIP) return L[rnd(L.length)];
   const wins = info.filter(x => x.res === 1).sort((a, b) => a.d - b.d);
   if (wins.length && (level === 'hard' || rnd(100) < 75)) return wins[0].m;
   let pool = info.filter(x => x.res >= 0); if (!pool.length) pool = info.slice().sort((a, b) => b.d - a.d).slice(0, 1);   // 다 지면 최대한 오래 버팀
